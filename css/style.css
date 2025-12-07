@@ -240,23 +240,23 @@ body {
     white-space: nowrap;
 }
 
-/* --- Today / Current Date Marker --- */
+/* --- Today / Past Visualization --- */
 
-/* 1. The Label in the Header (e.g., "Today") */
+/* 1. Header Marker (Keep this to show "Today" label) */
 .today-header-marker {
     position: absolute;
     top: 0;
-    bottom: 0; /* Stretch full height of header */
-    width: 2px;
-    background-color: #ff4d4d; /* Bright Red */
-    z-index: 2000; /* Above ticks */
+    bottom: 0;
+    width: 2px; /* Restore width for visibility since border is gone */
+    background-color: #0d6efd; 
+    z-index: 2000;
 }
 
 .today-label {
     position: absolute;
     top: 0;
-    left: 2px; /* Offset slightly right of the line */
-    background-color: #ff4d4d;
+    left: 2px;
+    background-color: #0d6efd;
     color: #fff;
     font-size: 9px;
     padding: 2px 4px;
@@ -265,14 +265,20 @@ body {
     white-space: nowrap;
 }
 
-/* 2. The Vertical Line in the Project Body */
-.today-body-line {
+/* 2. Past Time Zone (Gray Background) */
+.past-time-zone {
     position: absolute;
     top: 0;
     bottom: 0;
-    width: 2px;
-    border-left: 2px dashed #ff4d4d; /* Dashed red line looks professional */
-    z-index: 50; /* Above bars (20) and grid, but below sticky cols */
-    opacity: 0.7;
-    pointer-events: none; /* Let clicks pass through */
+    left: 0; 
+    
+    /* Darker gray tint (0.04 -> 0.08) for better visibility */
+    background-color: rgba(0, 0, 0, 0.08); 
+    
+    /* Removed border-right per request */
+    border-right: none; 
+    
+    /* Z-Index: Behind bars (10+) but above row bg (0) */
+    z-index: 5; 
+    pointer-events: none; 
 }

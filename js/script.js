@@ -78,32 +78,28 @@ $(document).ready(function () {
         }
         $headerTicks.css('min-width', totalTimelineWidth + 'px');
 
-        // --- NEW: Render Today Line ---
+        // --- NEW: Render "Past Zone" (Gray Background) ---
         const todayOffsetDays = getDaysDiff(TRACKER_START_DATE, CURRENT_DATE);
         
         if (todayOffsetDays >= 0) {
             const todayLeft = todayOffsetDays * PIXELS_PER_DAY;
 
-            // 1. Get the width of the left sidebar (usually 220px)
-            // This ensures dynamic alignment even if you change the width in CSS
+            // 1. Get Sidebar width
             const sidebarWidth = $('.header-corner-placeholder').outerWidth() || 220;
 
-            // A. Add Marker to Header
-            // The Header Ticks container is already positioned to the right of the sidebar, 
-            // so we use todayLeft directly.
+            // A. Header Marker (Label Only)
+            // Stays in header container, relative to timeline start
             $headerTicks.append(`
                 <div class="today-header-marker" style="left: ${todayLeft}px;">
                     <span class="today-label">Today</span>
                 </div>
             `);
 
-            // B. Add Full Line to Body
-            // The main Container starts from the absolute left of the screen (0px), 
-            // so we must add sidebarWidth to align with the header.
-            // Note: The z-index here is 50, while the sticky left column is 900.
-            // This ensures the red line slides *under* the frozen column when scrolling right.
+            // B. Past Zone (Gray Background)
+            // Instead of a line, we render a box spanning from 0 to Today
+            // z-index=5 ensures it sits BEHIND the bars (z=10+) but ABOVE the row background
             $container.append(`
-                <div class="today-body-line" style="left: ${todayLeft + sidebarWidth}px;"></div>
+                <div class="past-time-zone" style="width: ${todayLeft + sidebarWidth}px;"></div>
             `);
         }
 
