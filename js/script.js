@@ -1,17 +1,17 @@
 $(document).ready(function () {
     // --- Configuration ---
-    // CHANGED: Changed from const to let to allow zooming
     let pixelsPerDay = 6;
     const DEFAULT_PIXELS_PER_DAY = 6;
     const TRACKER_START_DATE = new Date("2025-01-01");
     const RENDER_MONTHS_COUNT = 15;
 
-    // DEMO DATE
+    // DEMO DATE: Fixed for demonstration (Use new Date() in production)
     const CURRENT_DATE = new Date("2025-03-15");
 
-    // --- Data ---
+    // --- Data Source (Global State) ---
+    // This is the source of truth. We update THIS object when editing.
     const rawTrackerData = {
-        "tracker_title": "Enterprise IT Roadmap 2025",
+        "tracker_title": "Enterprise IT Roadmap 2025 (Editable)",
         "projects": [
             {
                 "project_id": "PRJ-001",
@@ -127,6 +127,9 @@ $(document).ready(function () {
                     <span>Progress: <b>${progressPct}%</b></span>
                 </div>
                 ${status.extraInfo ? `<div class="info-row text-danger mt-1 border-top pt-1"><small>${status.extraInfo}</small></div>` : ''}
+                <div class="mt-2 text-center text-muted" style="font-size:10px; border-top:1px solid #eee; padding-top:4px;">
+                    <i>(Click bar to edit)</i>
+                </div>
             </div>
         `;
     }
@@ -150,74 +153,43 @@ $(document).ready(function () {
 
         // 2. Render Header
         let totalTimelineWidth = 0;
-        // NEW: Define a threshold for showing individual days
-        // If pixelsPerDay is >= 10, we show dates. Otherwise, only months.
-        const SHOW_DAYS_THRESHOLD = 10;
+        const SHOW_DAYS_THRESHOLD = 4;
 
-        for(let i=0; i < RENDER_MONTHS_COUNT; i++) {
+        for (let i = 0; i < RENDER_MONTHS_COUNT; i++) {
             let targetMonthDate = new Date(TRACKER_START_DATE);
             targetMonthDate.setMonth(targetMonthDate.getMonth() + i);
-            
             let daysFromStart = getDaysDiff(TRACKER_START_DATE, targetMonthDate);
-            let leftPos = daysFromStart * pixelsPerDay; // Uses current zoom level
+            let leftPos = daysFromStart * pixelsPerDay;
             let monthName = targetMonthDate.toLocaleString('default', { month: 'short' });
-            
-            // Render Month Label
-            $headerTicks.append(`<div class="time-mark" style="left: ${leftPos}px">${monthName}</div>`);
-            
-            // --- NEW: Render Daily Ticks (Logic) ---
-            // 修改点：阈值从 8 降到 4
-            // Default(6px): 显示
-            // Zoom Out(4px): 显示
-            // Zoom Out(2px): 消失
-            const SHOW_DAYS_THRESHOLD = 4; 
 
+            $headerTicks.append(`<div class="time-mark" style="left: ${leftPos}px">${monthName}</div>`);
+
+            // Daily Ticks
             if (pixelsPerDay >= SHOW_DAYS_THRESHOLD) {
                 let daysInMonth = new Date(targetMonthDate.getFullYear(), targetMonthDate.getMonth() + 1, 0).getDate();
-
-                // Advanced Logic: Step intervals based on zoom level
                 let step;
-                if (pixelsPerDay >= 18) {
-                    step = 1;  // Show Every Day
-                } else if (pixelsPerDay >= 10) {
-                    step = 5;  // Show Every 5 Days (调整了分界线，让 10px 时显示 5,10,15...)
-                } else {
-                    step = 15; // Show Every 15 Days (覆盖 4px - 8px 范围)
-                }
+                if (pixelsPerDay >= 18) { step = 1; }
+                else if (pixelsPerDay >= 10) { step = 5; }
+                else { step = 15; }
 
                 for (let d = 1; d <= daysInMonth; d++) {
-                    // 1. Basic Step Check
-                    // 2. Day 1 Check (Skip overlap)
-                    if (d % step === 0 && d !== 1) { 
-                        
-                        // --- FIX: Prevent Overlap at End of Month ---
-                        // If showing every 15 days, hide 30th to avoid overlap with next month
-                        if (step > 1 && d >= 30) {
-                            continue; 
-                        }
-
+                    if (d % step === 0 && d !== 1) {
+                        if (step > 1 && d >= 30) continue;
                         let dayDate = new Date(targetMonthDate);
                         dayDate.setDate(d);
-                        
                         let dayOffset = getDaysDiff(TRACKER_START_DATE, dayDate);
                         let dayLeft = dayOffset * pixelsPerDay;
-                        
                         $headerTicks.append(`<div class="day-tick" style="left: ${dayLeft}px">${d}</div>`);
                     }
                 }
             }
-            // ---------------------------------------
-
-            // Update total width tracking
-            // We add a buffer to ensure the last month isn't cut off
-            totalTimelineWidth = leftPos + (30 * pixelsPerDay); 
+            totalTimelineWidth = leftPos + 100;
         }
         $headerTicks.css('min-width', totalTimelineWidth + 'px');
 
-        // Render "Past Zone" & "Today Marker"
+        // Past Zone & Today Marker
         const todayOffsetDays = getDaysDiff(TRACKER_START_DATE, CURRENT_DATE);
         if (todayOffsetDays >= 0) {
-            // USAGE: Use the variable pixelsPerDay
             const todayLeft = todayOffsetDays * pixelsPerDay;
             const sidebarWidth = $('.header-corner-placeholder').outerWidth() || 220;
 
@@ -232,7 +204,8 @@ $(document).ready(function () {
         }
 
         // 3. Render Projects
-        data.projects.forEach(project => {
+        // Note the addition of index 'pIndex'
+        data.projects.forEach((project, pIndex) => {
             let projectHTML = `
                 <div class="project-row">
                     <div class="project-name-label">
@@ -249,22 +222,22 @@ $(document).ready(function () {
             const $rowContext = $(`#milestones-${project.project_id}`);
             let currentDemandAnchor = project.start_date;
 
-            project.milestones.forEach(ms => {
+            // Note the addition of index 'mIndex'
+            project.milestones.forEach((ms, mIndex) => {
 
                 // --- A. Demand Track ---
                 const demandEndDate = ms.demand_due_date ? ms.demand_due_date : ms.planned_end;
                 const demandDuration = getDaysDiff(currentDemandAnchor, demandEndDate);
                 const demandOffset = getDaysDiff(TRACKER_START_DATE, currentDemandAnchor);
-
-                // USAGE: Use the variable pixelsPerDay
                 const demandWidth = Math.max(demandDuration * pixelsPerDay, 2);
                 const demandLeft = demandOffset * pixelsPerDay;
-
                 const demandPopover = `Demand: ${ms.name}<br>Due: ${demandEndDate}`;
 
+                // ADDED: data-p-idx and data-m-idx attributes
                 $rowContext.append(`
-                    <div class="gantt-bar demand-bar" 
+                    <div class="gantt-bar demand-bar clickable" 
                          style="left: ${demandLeft}px; width: ${demandWidth}px; background-color: ${ms.color};"
+                         data-p-idx="${pIndex}" data-m-idx="${mIndex}"
                          data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-placement="top"
                          data-bs-content="${demandPopover}"></div>
                 `);
@@ -304,23 +277,21 @@ $(document).ready(function () {
 
                 const planDuration = getDaysDiff(revisedStart, solidBarEnd);
                 const planOffset = getDaysDiff(TRACKER_START_DATE, revisedStart);
-
-                // USAGE: Use the variable pixelsPerDay
                 const planWidth = Math.max(planDuration * pixelsPerDay, 2);
                 const planLeft = planOffset * pixelsPerDay;
                 const progressPct = Math.round(ms.status_progress * 100);
-
                 const popContent = createPopoverContent(ms, revisedStart, solidBarEnd, statusInfo);
 
                 let innerContent = '';
-                // Adjust text threshold based on zoom level (show text earlier if zoomed in)
                 if (planWidth > 60) {
                     innerContent = `<div class="plan-bar-content"><span class="plan-name">${ms.name}</span><span class="plan-pct">${progressPct}%</span></div>`;
                 }
 
+                // ADDED: data-p-idx and data-m-idx attributes
                 $rowContext.append(`
-                    <div class="gantt-bar plan-bar" 
+                    <div class="gantt-bar plan-bar clickable" 
                          style="left: ${planLeft}px; width: ${planWidth}px; background-color: ${ms.color};"
+                         data-p-idx="${pIndex}" data-m-idx="${mIndex}"
                          data-bs-toggle="popover" 
                          data-bs-trigger="hover focus" 
                          data-bs-html="true" 
@@ -336,17 +307,17 @@ $(document).ready(function () {
                     const tEnd = new Date(tailEnd);
                     const tailDuration = (tEnd - tStart) / (1000 * 60 * 60 * 24);
                     const tailOffset = getDaysDiff(TRACKER_START_DATE, tStart);
-                    // USAGE: Use the variable pixelsPerDay
                     const tailWidth = Math.max(tailDuration * pixelsPerDay, 2);
                     const tailLeft = tailOffset * pixelsPerDay;
                     const tailClass = tailType === 'late' ? 'gantt-tail-delay' : 'gantt-tail-early';
-
                     const tailPopover = tailType === 'late'
                         ? `Delay Segment<br>From: ${tailStart}<br>To: ${tailEnd}`
                         : `Saved Segment<br>Orig End: ${tailEnd}`;
 
-                    $rowContext.append(`<div class="gantt-bar ${tailClass}" 
+                    // ADDED: data-p-idx and data-m-idx attributes (Clicking tail also edits)
+                    $rowContext.append(`<div class="gantt-bar ${tailClass} clickable" 
                         style="left: ${tailLeft}px; width: ${tailWidth}px;"
+                        data-p-idx="${pIndex}" data-m-idx="${mIndex}"
                         data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-content="${tailPopover}"></div>`);
                 }
 
@@ -354,36 +325,115 @@ $(document).ready(function () {
             });
         });
 
+        // Initialize Popovers
         const popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]');
         [...popoverTriggerList].map(popoverTriggerEl => new bootstrap.Popover(popoverTriggerEl));
     }
 
-    // --- NEW: Zoom Control Logic ---
-    function initZoomControls(finalData) {
+    // --- NEW: Edit & Interaction Logic ---
+    function initEditHandlers() {
+        const modalEl = document.getElementById('editMilestoneModal');
+        const modal = new bootstrap.Modal(modalEl);
+
+        // 1. Click on Bar to Open Modal
+        // Use delegated event binding since bars are re-rendered
+        $('#projects-container').on('click', '.clickable', function () {
+            // Hide any active popover first
+            const popover = bootstrap.Popover.getInstance(this);
+            if (popover) popover.hide();
+
+            const pIdx = $(this).data('p-idx');
+            const mIdx = $(this).data('m-idx');
+
+            // Load original data from Source of Truth
+            const msData = rawTrackerData.projects[pIdx].milestones[mIdx];
+
+            // Populate Form
+            $('#edit-p-index').val(pIdx);
+            $('#edit-m-index').val(mIdx);
+            $('#edit-name').val(msData.name);
+            $('#edit-planned-end').val(msData.planned_end);
+            $('#edit-actual-date').val(msData.actual_completion_date || '');
+            $('#edit-demand-date').val(msData.demand_due_date || '');
+
+            // Progress Slider
+            $('#edit-progress').val(msData.status_progress);
+            $('#edit-progress-val').text(Math.round(msData.status_progress * 100) + '%');
+
+            modal.show();
+        });
+
+        // 2. Update Progress Badge on Slider Change
+        $('#edit-progress').on('input', function () {
+            $('#edit-progress-val').text(Math.round($(this).val() * 100) + '%');
+        });
+
+        // 3. Save Changes
+        $('#btn-save-changes').click(function () {
+            const pIdx = $('#edit-p-index').val();
+            const mIdx = $('#edit-m-index').val();
+
+            // Update Source Data
+            const msData = rawTrackerData.projects[pIdx].milestones[mIdx];
+
+            msData.name = $('#edit-name').val();
+            msData.planned_end = $('#edit-planned-end').val(); // Important: Affects duration
+            msData.demand_due_date = $('#edit-demand-date').val();
+
+            const actualDateInput = $('#edit-actual-date').val();
+            msData.actual_completion_date = actualDateInput ? actualDateInput : null;
+
+            msData.status_progress = parseFloat($('#edit-progress').val());
+
+            // --- CRITICAL: Re-calculate and Re-render ---
+            const newFinalData = reviseProjectData(rawTrackerData);
+            renderTracker(newFinalData);
+
+            // Update the data passed to zoom controls reference if needed
+            // But since we use closure scope 'rawTrackerData', 
+            // we just need to re-bind zoom controls or let them call a refresh
+            // Simply re-rendering is enough for the view, 
+            // but the Zoom buttons callback needs fresh data if it captures 'finalData'.
+            // Simple fix: Re-init Zoom or update a shared reference.
+            // For simplicity here, we assume zoom buttons work on a variable or we re-init.
+            // Better approach: Update the 'currentRevisedData' variable used by Zoom.
+            currentRevisedData = newFinalData;
+
+            modal.hide();
+        });
+    }
+
+    // --- Zoom Controls ---
+    // Shared variable to hold currently displayed data
+    let currentRevisedData = null;
+
+    function initZoomControls() {
         $('#btn-zoom-in').click(function () {
-            pixelsPerDay += 2; // Increase scale
-            if (pixelsPerDay > 20) pixelsPerDay = 20; // Max zoom
-            renderTracker(finalData);
+            pixelsPerDay += 2;
+            if (pixelsPerDay > 20) pixelsPerDay = 20;
+            renderTracker(currentRevisedData);
         });
 
         $('#btn-zoom-out').click(function () {
-            pixelsPerDay -= 2; // Decrease scale
-            if (pixelsPerDay < 2) pixelsPerDay = 2; // Min zoom
-            renderTracker(finalData);
+            pixelsPerDay -= 2;
+            if (pixelsPerDay < 2) pixelsPerDay = 2;
+            renderTracker(currentRevisedData);
         });
 
         $('#btn-zoom-reset').click(function () {
             pixelsPerDay = DEFAULT_PIXELS_PER_DAY;
-            renderTracker(finalData);
+            renderTracker(currentRevisedData);
         });
     }
 
-    // --- Execute ---
-    const finalData = reviseProjectData(rawTrackerData);
+    // --- Execution Flow ---
+    // 1. Initial Calc
+    currentRevisedData = reviseProjectData(rawTrackerData);
 
-    // Initialize Renderer
-    renderTracker(finalData);
+    // 2. Initial Render
+    renderTracker(currentRevisedData);
 
-    // Initialize Controls
-    initZoomControls(finalData);
+    // 3. Init Handlers
+    initZoomControls();
+    initEditHandlers();
 });
