@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProjectTracker Pro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        #tracker-wrapper {
+            position: relative;
+            overflow-x: auto;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            min-height: 500px;
+        }
+
+        /* Timeline Header Scale */
+        #timeline-header {
+            height: 40px;
+            position: relative;
+            border-bottom: 2px solid #dee2e6;
+            background: #fff;
+            display: flex;
+        }
+
+        .time-mark {
+            position: absolute;
+            border-left: 1px solid #e0e0e0;
+            padding-left: 5px;
+            font-size: 11px;
+            color: #6c757d;
+            height: 100%;
+        }
+
+        .project-row {
+            height: 100px;
+            position: relative;
+            border-bottom: 1px solid #dee2e6;
+            background-color: #fff;
+            display: flex;
+            align-items: center;
+        }
+
+        .project-name-label {
+            position: sticky;
+            left: 0;
+            z-index: 10;
+            background: #fff;
+            width: 200px;
+            padding: 10px;
+            font-weight: bold;
+            border-right: 2px solid #dee2e6;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .milestone-container {
+            position: relative;
+            flex-grow: 1;
+            height: 100%;
+        }
+
+        /* Milestone Bar Styling */
+        .milestone-bar {
+            position: absolute;
+            height: 40px;
+            top: 30px;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Progress Overlay */
+        .progress-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.15);
+            z-index: 0;
+        }
+
+        .milestone-text {
+            position: relative;
+            z-index: 2;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container-fluid py-4">
+        <h3 class="mb-4">ProjectTracker Pro</h3>
+
+        <div id="tracker-wrapper">
+            <div id="timeline-header"></div>
+            <div id="projects-container"></div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            // Config
+            const PIXELS_PER_DAY = 5;
+            const TRACKER_START_DATE = new Date("2025-01-01");
+
+            // Sample Data
+            const projectData = [
+                {
+                    "project_id": "PRJ-001",
+                    "project_name": "E-Commerce platform",
+                    "start_date": "2025-01-05",
+                    "milestones": [
+                        { "name": "UI Design", "status_progress": 1.0, "planned_end": "2025-02-15", "color": "#0d6efd" },
+                        { "name": "Frontend", "status_progress": 0.6, "planned_end": "2025-03-20", "color": "#198754" },
+                        { "name": "Backend", "status_progress": 0.2, "planned_end": "2025-05-10", "color": "#6f42c1" }
+                    ]
+                },
+                {
+                    "project_id": "PRJ-002",
+                    "project_name": "Mobile App Launch",
+                    "start_date": "2025-02-01",
+                    "milestones": [
+                        { "name": "Planning", "status_progress": 1.0, "planned_end": "2025-03-01", "color": "#fd7e14" },
+                        { "name": "Development", "status_progress": 0.3, "planned_end": "2025-06-15", "color": "#20c997" }
+                    ]
+                }
+            ];
+
+            function getDaysDiff(start, end) {
+                const s = new Date(start);
+                const e = new Date(end);
+                return Math.floor((e - s) / (1000 * 60 * 60 * 24));
+            }
+
+            function renderTracker() {
+                const $container = $('#projects-container');
+                const $header = $('#timeline-header');
+
+                // 1. Render Timeline Header (Months as simple marks)
+                for (let i = 0; i < 12; i++) {
+                    let leftPos = i * 30 * PIXELS_PER_DAY;
+                    $header.append(`<div class="time-mark" style="left: ${leftPos}px">Month ${i + 1}</div>`);
+                }
+
+                // 2. Render Project Rows
+                projectData.forEach(project => {
+                    let projectHTML = `
+                <div class="project-row">
+                    <div class="project-name-label">${project.project_name}</div>
+                    <div class="milestone-container" id="milestones-${project.project_id}"></div>
+                </div>
+            `;
+                    $container.append(projectHTML);
+
+                    let currentAnchorDate = project.start_date;
+
+                    project.milestones.forEach(ms => {
+                        const daysDuration = getDaysDiff(currentAnchorDate, ms.planned_end);
+                        const offsetDays = getDaysDiff(TRACKER_START_DATE, currentAnchorDate);
+
+                        const width = daysDuration * PIXELS_PER_DAY;
+                        const left = offsetDays * PIXELS_PER_DAY;
+                        const progressWidth = ms.status_progress * 100;
+
+                        const msHTML = `
+                    <div class="milestone-bar" style="left: ${left}px; width: ${width}px; background-color: ${ms.color};" title="${ms.name}">
+                        <div class="progress-overlay" style="width: ${progressWidth}%"></div>
+                        <span class="milestone-text">${ms.name} (${progressWidth}%)</span>
+                    </div>
+                `;
+
+                        $(`#milestones-${project.project_id}`).append(msHTML);
+
+                        // Update anchor for next sequential milestone
+                        currentAnchorDate = ms.planned_end;
+                    });
+                });
+            }
+
+            renderTracker();
+        });
+    </script>
+</body>
+
+</html>
