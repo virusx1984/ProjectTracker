@@ -426,6 +426,68 @@ $(document).ready(function () {
         });
     }
 
+    // --- NEW: Make Modal Draggable Logic (Fixed Width Issue) ---
+    function makeModalDraggable(modalId) {
+        const $modal = $(modalId);
+        const $dialog = $modal.find('.modal-dialog');
+        const $header = $modal.find('.modal-header');
+        
+        let isDragging = false;
+        let startX, startY, startLeft, startTop;
+
+        $header.on('mousedown', function(e) {
+            if (e.which !== 1) return;
+
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            
+            // 1. 关键修复：在改变定位之前，先获取当前的实际宽度
+            const currentWidth = $dialog.outerWidth();
+            
+            const offset = $dialog.offset();
+            startLeft = offset.left;
+            startTop = offset.top;
+            
+            // 2. 关键修复：在设置 absolute 的同时，锁死 width
+            $dialog.css({
+                'width': currentWidth + 'px', // <--- 加上这一行，锁死宽度
+                'margin': '0', 
+                'position': 'absolute',
+                'left': startLeft + 'px',
+                'top': startTop + 'px'
+            });
+
+            e.preventDefault();
+        });
+
+        $(document).on('mousemove', function(e) {
+            if (!isDragging) return;
+            
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            
+            $dialog.css({
+                'left': (startLeft + dx) + 'px',
+                'top': (startTop + dy) + 'px'
+            });
+        });
+
+        $(document).on('mouseup', function() {
+            isDragging = false;
+        });
+
+        $modal.on('hidden.bs.modal', function () {
+            $dialog.css({
+                'left': '',
+                'top': '',
+                'margin': '',
+                'position': '',
+                'width': '' // <--- 3. 关闭时清除固定宽度，恢复 Bootstrap 的响应式能力
+            });
+        });
+    }
+
     // --- Execution Flow ---
     // 1. Initial Calc
     currentRevisedData = reviseProjectData(rawTrackerData);
@@ -436,4 +498,7 @@ $(document).ready(function () {
     // 3. Init Handlers
     initZoomControls();
     initEditHandlers();
+
+    // 4. Init Draggable Modal (别忘了这句，不然弹窗不能拖动)
+    makeModalDraggable('#editMilestoneModal');
 });
