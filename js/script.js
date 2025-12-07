@@ -1,6 +1,8 @@
 $(document).ready(function () {
     // --- Configuration ---
-    const PIXELS_PER_DAY = 6;
+    // CHANGED: Changed from const to let to allow zooming
+    let pixelsPerDay = 6;
+    const DEFAULT_PIXELS_PER_DAY = 6;
     const TRACKER_START_DATE = new Date("2025-01-01");
     const RENDER_MONTHS_COUNT = 15;
 
@@ -9,7 +11,7 @@ $(document).ready(function () {
 
     // --- Data ---
     const rawTrackerData = {
-        "tracker_title": "Enterprise IT Roadmap 2025 (Dynamic Revision)",
+        "tracker_title": "Enterprise IT Roadmap 2025",
         "projects": [
             {
                 "project_id": "PRJ-001",
@@ -55,7 +57,7 @@ $(document).ready(function () {
         return result;
     }
 
-    // --- CORE LOGIC: Dynamic Schedule Revision (Same as before) ---
+    // --- CORE LOGIC: Dynamic Schedule Revision ---
     function reviseProjectData(originalData) {
         const revisedData = JSON.parse(JSON.stringify(originalData));
         revisedData.projects.forEach(project => {
@@ -71,7 +73,7 @@ $(document).ready(function () {
 
                 ms.revised_start_date = revisedStart.toISOString().split('T')[0];
                 ms.revised_end_date = revisedEnd.toISOString().split('T')[0];
-                ms.duration_days = Math.floor(durationDays); // Store for tooltip
+                ms.duration_days = Math.floor(durationDays);
 
                 if (ms.actual_completion_date) {
                     chainCursor = new Date(ms.actual_completion_date);
@@ -90,7 +92,6 @@ $(document).ready(function () {
 
     // --- Popover Content Generator ---
     function createPopoverContent(ms, startDate, endDate, status) {
-        // Status Badge Logic
         let badgeClass = 'bg-secondary';
         let statusText = 'Pending';
 
@@ -107,7 +108,6 @@ $(document).ready(function () {
 
         const progressPct = Math.round(ms.status_progress * 100);
 
-        // Build HTML
         return `
             <div class="popover-body-content">
                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -136,7 +136,7 @@ $(document).ready(function () {
         const $headerTicks = $('#header-ticks-container');
         const $mainTitle = $('#tracker-main-title');
 
-        // Cleanup old popovers to avoid memory leaks
+        // Cleanup old popovers
         $('.gantt-bar').each(function () {
             const popover = bootstrap.Popover.getInstance(this);
             if (popover) popover.dispose();
@@ -154,7 +154,8 @@ $(document).ready(function () {
             let targetMonthDate = new Date(TRACKER_START_DATE);
             targetMonthDate.setMonth(targetMonthDate.getMonth() + i);
             let daysFromStart = getDaysDiff(TRACKER_START_DATE, targetMonthDate);
-            let leftPos = daysFromStart * PIXELS_PER_DAY;
+            // USAGE: Use the variable pixelsPerDay
+            let leftPos = daysFromStart * pixelsPerDay;
             let monthName = targetMonthDate.toLocaleString('default', { month: 'short' });
 
             $headerTicks.append(`<div class="time-mark" style="left: ${leftPos}px">${monthName}</div>`);
@@ -165,7 +166,8 @@ $(document).ready(function () {
         // Render "Past Zone" & "Today Marker"
         const todayOffsetDays = getDaysDiff(TRACKER_START_DATE, CURRENT_DATE);
         if (todayOffsetDays >= 0) {
-            const todayLeft = todayOffsetDays * PIXELS_PER_DAY;
+            // USAGE: Use the variable pixelsPerDay
+            const todayLeft = todayOffsetDays * pixelsPerDay;
             const sidebarWidth = $('.header-corner-placeholder').outerWidth() || 220;
 
             $headerTicks.append(`
@@ -178,7 +180,7 @@ $(document).ready(function () {
             `);
         }
 
-        // 3. Render Projects using REVISED Data
+        // 3. Render Projects
         data.projects.forEach(project => {
             let projectHTML = `
                 <div class="project-row">
@@ -198,14 +200,15 @@ $(document).ready(function () {
 
             project.milestones.forEach(ms => {
 
-                // --- A. Demand Track (Simplified Tooltip) ---
+                // --- A. Demand Track ---
                 const demandEndDate = ms.demand_due_date ? ms.demand_due_date : ms.planned_end;
                 const demandDuration = getDaysDiff(currentDemandAnchor, demandEndDate);
                 const demandOffset = getDaysDiff(TRACKER_START_DATE, currentDemandAnchor);
-                const demandWidth = Math.max(demandDuration * PIXELS_PER_DAY, 2);
-                const demandLeft = demandOffset * PIXELS_PER_DAY;
 
-                // Simple popover for Demand
+                // USAGE: Use the variable pixelsPerDay
+                const demandWidth = Math.max(demandDuration * pixelsPerDay, 2);
+                const demandLeft = demandOffset * pixelsPerDay;
+
                 const demandPopover = `Demand: ${ms.name}<br>Due: ${demandEndDate}`;
 
                 $rowContext.append(`
@@ -215,7 +218,7 @@ $(document).ready(function () {
                          data-bs-content="${demandPopover}"></div>
                 `);
 
-                // --- B. Plan Track (Rich Tooltip) ---
+                // --- B. Plan Track ---
                 const revisedStart = ms.revised_start_date;
                 const revisedEnd = ms.revised_end_date;
                 const actualDate = ms.actual_completion_date;
@@ -224,8 +227,6 @@ $(document).ready(function () {
                 let tailType = null;
                 let tailStart = null;
                 let tailEnd = null;
-
-                // Status object for popover
                 let statusInfo = { isOverdue: false, extraInfo: '' };
 
                 if (actualDate) {
@@ -252,14 +253,16 @@ $(document).ready(function () {
 
                 const planDuration = getDaysDiff(revisedStart, solidBarEnd);
                 const planOffset = getDaysDiff(TRACKER_START_DATE, revisedStart);
-                const planWidth = Math.max(planDuration * PIXELS_PER_DAY, 2);
-                const planLeft = planOffset * PIXELS_PER_DAY;
+
+                // USAGE: Use the variable pixelsPerDay
+                const planWidth = Math.max(planDuration * pixelsPerDay, 2);
+                const planLeft = planOffset * pixelsPerDay;
                 const progressPct = Math.round(ms.status_progress * 100);
 
-                // Generate RICH Content
                 const popContent = createPopoverContent(ms, revisedStart, solidBarEnd, statusInfo);
 
                 let innerContent = '';
+                // Adjust text threshold based on zoom level (show text earlier if zoomed in)
                 if (planWidth > 60) {
                     innerContent = `<div class="plan-bar-content"><span class="plan-name">${ms.name}</span><span class="plan-pct">${progressPct}%</span></div>`;
                 }
@@ -282,11 +285,11 @@ $(document).ready(function () {
                     const tEnd = new Date(tailEnd);
                     const tailDuration = (tEnd - tStart) / (1000 * 60 * 60 * 24);
                     const tailOffset = getDaysDiff(TRACKER_START_DATE, tStart);
-                    const tailWidth = Math.max(tailDuration * PIXELS_PER_DAY, 2);
-                    const tailLeft = tailOffset * PIXELS_PER_DAY;
+                    // USAGE: Use the variable pixelsPerDay
+                    const tailWidth = Math.max(tailDuration * pixelsPerDay, 2);
+                    const tailLeft = tailOffset * pixelsPerDay;
                     const tailClass = tailType === 'late' ? 'gantt-tail-delay' : 'gantt-tail-early';
 
-                    // Tail tooltip
                     const tailPopover = tailType === 'late'
                         ? `Delay Segment<br>From: ${tailStart}<br>To: ${tailEnd}`
                         : `Saved Segment<br>Orig End: ${tailEnd}`;
@@ -300,12 +303,36 @@ $(document).ready(function () {
             });
         });
 
-        // 4. Initialize Bootstrap Popovers (CRITICAL STEP)
         const popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]');
         [...popoverTriggerList].map(popoverTriggerEl => new bootstrap.Popover(popoverTriggerEl));
     }
 
+    // --- NEW: Zoom Control Logic ---
+    function initZoomControls(finalData) {
+        $('#btn-zoom-in').click(function () {
+            pixelsPerDay += 2; // Increase scale
+            if (pixelsPerDay > 20) pixelsPerDay = 20; // Max zoom
+            renderTracker(finalData);
+        });
+
+        $('#btn-zoom-out').click(function () {
+            pixelsPerDay -= 2; // Decrease scale
+            if (pixelsPerDay < 2) pixelsPerDay = 2; // Min zoom
+            renderTracker(finalData);
+        });
+
+        $('#btn-zoom-reset').click(function () {
+            pixelsPerDay = DEFAULT_PIXELS_PER_DAY;
+            renderTracker(finalData);
+        });
+    }
+
     // --- Execute ---
     const finalData = reviseProjectData(rawTrackerData);
+
+    // Initialize Renderer
     renderTracker(finalData);
+
+    // Initialize Controls
+    initZoomControls(finalData);
 });
