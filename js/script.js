@@ -330,23 +330,29 @@ $(document).ready(function () {
         [...popoverTriggerList].map(popoverTriggerEl => new bootstrap.Popover(popoverTriggerEl));
     }
 
-    // --- NEW: Edit & Interaction Logic ---
+    // --- Edit & Interaction Logic (Updated with Fix) ---
     function initEditHandlers() {
         const modalEl = document.getElementById('editMilestoneModal');
         const modal = new bootstrap.Modal(modalEl);
-        const $errorMsg = $('#edit-error-msg');
+        const $errorMsg = $('#edit-error-msg'); // 错误提示框
+
+        // --- FIX: Ensure error is cleared whenever modal is closed ---
+        // 无论是点击关闭按钮、点击背景还是按 ESC 关闭，都会触发这个事件
+        $(modalEl).on('hidden.bs.modal', function () {
+            $errorMsg.addClass('d-none').text('');
+        });
 
         // 1. Click on Bar to Open Modal
-        // Use delegated event binding since bars are re-rendered
         $('#projects-container').on('click', '.clickable', function () {
-            // Hide any active popover first
+            // Hide active popovers
             const popover = bootstrap.Popover.getInstance(this);
             if (popover) popover.hide();
 
+            // Clear previous errors (Double insurance)
+            $errorMsg.addClass('d-none').text('');
+
             const pIdx = $(this).data('p-idx');
             const mIdx = $(this).data('m-idx');
-
-            // Load original data from Source of Truth
             const msData = rawTrackerData.projects[pIdx].milestones[mIdx];
 
             // Populate Form
@@ -356,32 +362,30 @@ $(document).ready(function () {
             $('#edit-planned-end').val(msData.planned_end);
             $('#edit-actual-date').val(msData.actual_completion_date || '');
             $('#edit-demand-date').val(msData.demand_due_date || '');
-
-            // Progress Slider
             $('#edit-progress').val(msData.status_progress);
             $('#edit-progress-val').text(Math.round(msData.status_progress * 100) + '%');
 
             modal.show();
         });
 
-        // 2. Update Progress Badge on Slider Change
+        // 2. Slider Update
         $('#edit-progress').on('input', function () {
             $('#edit-progress-val').text(Math.round($(this).val() * 100) + '%');
         });
 
         // 3. Save Changes (With Strict Validation)
-        $('#btn-save-changes').click(function() {
+        $('#btn-save-changes').click(function () {
             // Hide error first
             $errorMsg.addClass('d-none');
 
             const pIdx = parseInt($('#edit-p-index').val());
             const mIdx = parseInt($('#edit-m-index').val());
-            
+
             // Get Inputs
             const inputName = $('#edit-name').val().trim();
             const inputPlannedEnd = $('#edit-planned-end').val();
             const inputDemandDate = $('#edit-demand-date').val();
-            const inputActualDate = $('#edit-actual-date').val(); // Empty string if null
+            const inputActualDate = $('#edit-actual-date').val();
             const inputProgress = parseFloat($('#edit-progress').val());
 
             // Get Context Data for Validation
@@ -400,12 +404,12 @@ $(document).ready(function () {
             // Rule 1: Actual Date vs Progress Consistency
             else if (inputProgress < 1.0 && inputActualDate) {
                 errorText = "Cannot set Actual Completion Date if progress is less than 100%.";
-            } 
+            }
             else if (inputProgress === 1.0 && !inputActualDate) {
                 errorText = "Must set Actual Completion Date if progress is 100%.";
             }
 
-            // Rule 5: Project Boundaries (Basic Sanity)
+            // Rule 5: Project Boundaries
             else if (inputPlannedEnd < projectStart) {
                 errorText = `Planned End (${inputPlannedEnd}) cannot be earlier than Project Start (${projectStart}).`;
             }
@@ -418,32 +422,28 @@ $(document).ready(function () {
                 // 4.1 & 4.3: Check against Previous Milestone
                 if (mIdx > 0) {
                     const prevMs = milestones[mIdx - 1];
-                    
-                    // 4.1 Date Order
+
                     if (inputPlannedEnd < prevMs.planned_end) {
                         errorText = `Planned End cannot be earlier than previous task's Planned End (${prevMs.planned_end}).`;
                     }
                     else if (inputDemandDate < prevMs.demand_due_date) {
                         errorText = `Demand Date cannot be earlier than previous task's Demand Date (${prevMs.demand_due_date}).`;
                     }
-                    // 4.3 Progress Dependency (Prev not done, Current cannot be done)
                     else if (prevMs.status_progress < 1.0 && inputProgress === 1.0) {
                         errorText = `Cannot mark this task as 100% complete because the previous task ("${prevMs.name}") is not finished yet.`;
                     }
                 }
 
-                // 4.2 & 4.4: Check against Next Milestone (only if no error found yet)
+                // 4.2 & 4.4: Check against Next Milestone
                 if (!errorText && mIdx < milestones.length - 1) {
                     const nextMs = milestones[mIdx + 1];
 
-                    // 4.2 Date Order
                     if (inputPlannedEnd > nextMs.planned_end) {
                         errorText = `Planned End cannot be later than next task's Planned End (${nextMs.planned_end}).`;
                     }
                     else if (inputDemandDate > nextMs.demand_due_date) {
-                         errorText = `Demand Date cannot be later than next task's Demand Date (${nextMs.demand_due_date}).`;
+                        errorText = `Demand Date cannot be later than next task's Demand Date (${nextMs.demand_due_date}).`;
                     }
-                    // 4.4 Progress Dependency (Next is done, Current cannot be undone)
                     else if (nextMs.status_progress === 1.0 && inputProgress < 1.0) {
                         errorText = `Cannot reduce progress below 100% because the next task ("${nextMs.name}") is already finished.`;
                     }
@@ -453,17 +453,15 @@ $(document).ready(function () {
             // Check Result
             if (errorText) {
                 $errorMsg.text(errorText).removeClass('d-none');
-                // Shake effect for visual feedback (optional)
                 $('.modal-content').addClass('shake-animation');
                 setTimeout(() => $('.modal-content').removeClass('shake-animation'), 500);
                 return; // STOP SAVE
             }
             // --- VALIDATION END ---
 
-
             // --- UPDATE DATA ---
             const msData = rawTrackerData.projects[pIdx].milestones[mIdx];
-            
+
             msData.name = inputName;
             msData.planned_end = inputPlannedEnd;
             msData.demand_due_date = inputDemandDate;
@@ -472,15 +470,13 @@ $(document).ready(function () {
 
             // Re-calc and Render
             const newFinalData = reviseProjectData(rawTrackerData);
-            
+
             // Update shared state for zoom
             currentRevisedData = newFinalData;
-            
+
             renderTracker(newFinalData);
             modal.hide();
         });
-
-        
     }
 
     // --- Zoom Controls ---
@@ -511,28 +507,28 @@ $(document).ready(function () {
         const $modal = $(modalId);
         const $dialog = $modal.find('.modal-dialog');
         const $header = $modal.find('.modal-header');
-        
+
         let isDragging = false;
         let startX, startY, startLeft, startTop;
 
-        $header.on('mousedown', function(e) {
+        $header.on('mousedown', function (e) {
             if (e.which !== 1) return;
 
             isDragging = true;
             startX = e.clientX;
             startY = e.clientY;
-            
+
             // 1. 关键修复：在改变定位之前，先获取当前的实际宽度
             const currentWidth = $dialog.outerWidth();
-            
+
             const offset = $dialog.offset();
             startLeft = offset.left;
             startTop = offset.top;
-            
+
             // 2. 关键修复：在设置 absolute 的同时，锁死 width
             $dialog.css({
                 'width': currentWidth + 'px', // <--- 加上这一行，锁死宽度
-                'margin': '0', 
+                'margin': '0',
                 'position': 'absolute',
                 'left': startLeft + 'px',
                 'top': startTop + 'px'
@@ -541,19 +537,19 @@ $(document).ready(function () {
             e.preventDefault();
         });
 
-        $(document).on('mousemove', function(e) {
+        $(document).on('mousemove', function (e) {
             if (!isDragging) return;
-            
+
             const dx = e.clientX - startX;
             const dy = e.clientY - startY;
-            
+
             $dialog.css({
                 'left': (startLeft + dx) + 'px',
                 'top': (startTop + dy) + 'px'
             });
         });
 
-        $(document).on('mouseup', function() {
+        $(document).on('mouseup', function () {
             isDragging = false;
         });
 
