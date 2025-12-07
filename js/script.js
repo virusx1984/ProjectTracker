@@ -124,17 +124,29 @@ $(document).ready(function () {
                 // --- B. PLAN TRACK (Bottom Bar) ---
                 const planDuration = getDaysDiff(currentPlanAnchor, ms.planned_end);
                 const planOffset = getDaysDiff(TRACKER_START_DATE, currentPlanAnchor);
-
+                
                 const planWidth = Math.max(planDuration * PIXELS_PER_DAY, 2);
                 const planLeft = planOffset * PIXELS_PER_DAY;
                 const progressPct = Math.round(ms.status_progress * 100);
 
+                // 核心邏輯：如果寬度大於 60px，才生成文字內容
+                // 否則 innerContent 為空，只依賴 title (hover) 顯示資訊
+                let innerContent = '';
+                if (planWidth > 60) {
+                    innerContent = `
+                        <div class="plan-bar-content">
+                            <span class="plan-name">${ms.name}</span>
+                            <span class="plan-pct">${progressPct}%</span>
+                        </div>
+                    `;
+                }
+
                 const planHTML = `
                     <div class="gantt-bar plan-bar" 
                          style="left: ${planLeft}px; width: ${planWidth}px; background-color: ${ms.color};"
-                         title="Plan: ${ms.name} (End: ${ms.planned_end})">
+                         title="Plan: ${ms.name} (End: ${ms.planned_end}) - ${progressPct}%">
                         <div class="progress-overlay" style="width: ${progressPct}%"></div>
-                        <span class="bar-label" style="margin-left:auto; margin-right:5px;">${progressPct}%</span>
+                        ${innerContent}
                     </div>
                 `;
                 $rowContext.append(planHTML);
