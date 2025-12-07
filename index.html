@@ -34,7 +34,8 @@
         }
 
         .project-row {
-            height: 100px;
+            height: 60px;
+            /* Reduced from 100px */
             position: relative;
             border-bottom: 1px solid #dee2e6;
             background-color: #fff;
@@ -47,11 +48,15 @@
             left: 0;
             z-index: 10;
             background: #fff;
-            width: 200px;
-            padding: 10px;
+            width: 180px;
+            /* Slightly narrower */
+            padding: 5px 10px;
+            font-size: 14px;
             font-weight: bold;
             border-right: 2px solid #dee2e6;
-            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+            height: 100%;
+            display: flex;
+            align-items: center;
         }
 
         .milestone-container {
@@ -63,17 +68,19 @@
         /* Milestone Bar Styling */
         .milestone-bar {
             position: absolute;
-            height: 40px;
-            top: 30px;
-            border-radius: 4px;
+            height: 30px;
+            /* Reduced from 40px */
+            top: 15px;
+            /* Center calculation: (Row Height 60 - Bar Height 30) / 2 */
+            border-radius: 3px;
             color: #fff;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 500;
             display: flex;
             align-items: center;
-            padding: 0 10px;
+            padding: 0 8px;
             overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
         /* Progress Overlay */
@@ -147,20 +154,24 @@
                 const $container = $('#projects-container');
                 const $header = $('#timeline-header');
 
-                // 1. Render Timeline Header (Months as simple marks)
+                // 1. Clear previous content if needed
+                $container.empty();
+                $header.empty();
+
+                // 2. Render Timeline Scale
                 for (let i = 0; i < 12; i++) {
                     let leftPos = i * 30 * PIXELS_PER_DAY;
                     $header.append(`<div class="time-mark" style="left: ${leftPos}px">Month ${i + 1}</div>`);
                 }
 
-                // 2. Render Project Rows
+                // 3. Render Projects
                 projectData.forEach(project => {
                     let projectHTML = `
-                <div class="project-row">
-                    <div class="project-name-label">${project.project_name}</div>
-                    <div class="milestone-container" id="milestones-${project.project_id}"></div>
-                </div>
-            `;
+            <div class="project-row">
+                <div class="project-name-label">${project.project_name}</div>
+                <div class="milestone-container" id="milestones-${project.project_id}"></div>
+            </div>
+        `;
                     $container.append(projectHTML);
 
                     let currentAnchorDate = project.start_date;
@@ -171,23 +182,26 @@
 
                         const width = daysDuration * PIXELS_PER_DAY;
                         const left = offsetDays * PIXELS_PER_DAY;
-                        const progressWidth = ms.status_progress * 100;
+                        const progressWidth = Math.round(ms.status_progress * 100);
 
                         const msHTML = `
-                    <div class="milestone-bar" style="left: ${left}px; width: ${width}px; background-color: ${ms.color};" title="${ms.name}">
-                        <div class="progress-overlay" style="width: ${progressWidth}%"></div>
-                        <span class="milestone-text">${ms.name} (${progressWidth}%)</span>
-                    </div>
-                `;
+                <div class="milestone-bar" 
+                     style="left: ${left}px; width: ${width}px; background-color: ${ms.color};" 
+                     title="${project.project_name} - ${ms.name}">
+                    <div class="progress-overlay" style="width: ${progressWidth}%"></div>
+                    <span class="milestone-text">${ms.name} (${progressWidth}%)</span>
+                </div>
+            `;
 
                         $(`#milestones-${project.project_id}`).append(msHTML);
 
-                        // Update anchor for next sequential milestone
+                        // Move anchor forward
                         currentAnchorDate = ms.planned_end;
                     });
                 });
             }
 
+            
             renderTracker();
         });
     </script>
