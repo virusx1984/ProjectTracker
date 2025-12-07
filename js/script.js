@@ -150,16 +150,67 @@ $(document).ready(function () {
 
         // 2. Render Header
         let totalTimelineWidth = 0;
-        for (let i = 0; i < RENDER_MONTHS_COUNT; i++) {
+        // NEW: Define a threshold for showing individual days
+        // If pixelsPerDay is >= 10, we show dates. Otherwise, only months.
+        const SHOW_DAYS_THRESHOLD = 10;
+
+        for(let i=0; i < RENDER_MONTHS_COUNT; i++) {
             let targetMonthDate = new Date(TRACKER_START_DATE);
             targetMonthDate.setMonth(targetMonthDate.getMonth() + i);
+            
             let daysFromStart = getDaysDiff(TRACKER_START_DATE, targetMonthDate);
-            // USAGE: Use the variable pixelsPerDay
-            let leftPos = daysFromStart * pixelsPerDay;
+            let leftPos = daysFromStart * pixelsPerDay; // Uses current zoom level
             let monthName = targetMonthDate.toLocaleString('default', { month: 'short' });
-
+            
+            // Render Month Label
             $headerTicks.append(`<div class="time-mark" style="left: ${leftPos}px">${monthName}</div>`);
-            totalTimelineWidth = leftPos + 100;
+            
+            // --- NEW: Render Daily Ticks (Logic) ---
+            // 修改点：阈值从 8 降到 4
+            // Default(6px): 显示
+            // Zoom Out(4px): 显示
+            // Zoom Out(2px): 消失
+            const SHOW_DAYS_THRESHOLD = 4; 
+
+            if (pixelsPerDay >= SHOW_DAYS_THRESHOLD) {
+                let daysInMonth = new Date(targetMonthDate.getFullYear(), targetMonthDate.getMonth() + 1, 0).getDate();
+
+                // Advanced Logic: Step intervals based on zoom level
+                let step;
+                if (pixelsPerDay >= 18) {
+                    step = 1;  // Show Every Day
+                } else if (pixelsPerDay >= 10) {
+                    step = 5;  // Show Every 5 Days (调整了分界线，让 10px 时显示 5,10,15...)
+                } else {
+                    step = 15; // Show Every 15 Days (覆盖 4px - 8px 范围)
+                }
+
+                for (let d = 1; d <= daysInMonth; d++) {
+                    // 1. Basic Step Check
+                    // 2. Day 1 Check (Skip overlap)
+                    if (d % step === 0 && d !== 1) { 
+                        
+                        // --- FIX: Prevent Overlap at End of Month ---
+                        // If showing every 15 days, hide 30th to avoid overlap with next month
+                        if (step > 1 && d >= 30) {
+                            continue; 
+                        }
+
+                        let dayDate = new Date(targetMonthDate);
+                        dayDate.setDate(d);
+                        
+                        let dayOffset = getDaysDiff(TRACKER_START_DATE, dayDate);
+                        let dayLeft = dayOffset * pixelsPerDay;
+                        
+                        $headerTicks.append(`<div class="day-tick" style="left: ${dayLeft}px">${d}</div>`);
+                    }
+                }
+            }
+            // ---------------------------------------
+
+            // Update total width tracking
+            // We add a buffer to ensure the last month isn't cut off
+            totalTimelineWidth = leftPos + (30 * pixelsPerDay); 
         }
         $headerTicks.css('min-width', totalTimelineWidth + 'px');
 
