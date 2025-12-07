@@ -1,21 +1,42 @@
 $(document).ready(function () {
     // --- Configuration ---
-    const PIXELS_PER_DAY = 6; // Adjust width of days
+    const PIXELS_PER_DAY = 6;
     const TRACKER_START_DATE = new Date("2025-01-01");
-    const RENDER_MONTHS_COUNT = 15; // Render enough months to scroll horizontally
+    const RENDER_MONTHS_COUNT = 15;
 
-    // --- Data Structure: Root Object with Title & Projects ---
+    // --- Data with 'actual_completion_date' ---
     const trackerData = {
-        "tracker_title": "Enterprise IT Roadmap 2025", // Displayed in H3
+        "tracker_title": "Enterprise IT Roadmap 2025",
         "projects": [
             {
                 "project_id": "PRJ-001",
                 "project_name": "E-Commerce Platform",
                 "start_date": "2025-01-05",
                 "milestones": [
-                    { "name": "UI Design", "status_progress": 1.0, "planned_end": "2025-02-15", "demand_due_date": "2025-02-15", "color": "#0d6efd" },
-                    { "name": "Frontend", "status_progress": 0.8, "planned_end": "2025-03-25", "demand_due_date": "2025-03-15", "color": "#198754" },
-                    { "name": "Backend", "status_progress": 0.2, "planned_end": "2025-05-15", "demand_due_date": "2025-05-01", "color": "#6f42c1" }
+                    { 
+                        "name": "UI Design", 
+                        "status_progress": 1.0, 
+                        "planned_end": "2025-02-15", 
+                        "actual_completion_date": "2025-02-10", // Case: Early
+                        "demand_due_date": "2025-02-15", 
+                        "color": "#0d6efd" 
+                    },
+                    { 
+                        "name": "Frontend", 
+                        "status_progress": 1.0, 
+                        "planned_end": "2025-03-25", 
+                        "actual_completion_date": "2025-04-15", // Case: Late
+                        "demand_due_date": "2025-03-25", 
+                        "color": "#198754" 
+                    },
+                    { 
+                        "name": "Backend", 
+                        "status_progress": 0.2, 
+                        "planned_end": "2025-05-15", 
+                        "actual_completion_date": null, // Case: In Progress
+                        "demand_due_date": "2025-05-01", 
+                        "color": "#6f42c1" 
+                    }
                 ]
             },
             {
@@ -23,28 +44,22 @@ $(document).ready(function () {
                 "project_name": "Mobile App Launch",
                 "start_date": "2025-02-01",
                 "milestones": [
-                    { "name": "Requirement", "status_progress": 1.0, "planned_end": "2025-02-20", "demand_due_date": "2025-02-25", "color": "#fd7e14" },
-                    { "name": "Alpha Ver.", "status_progress": 0.4, "planned_end": "2025-05-10", "demand_due_date": "2025-05-10", "color": "#20c997" }
-                ]
-            },
-            {
-                "project_id": "PRJ-003",
-                "project_name": "CRM Integration",
-                "start_date": "2025-01-15",
-                "milestones": [
-                    { "name": "Setup", "status_progress": 1.0, "planned_end": "2025-02-01", "demand_due_date": "2025-02-01", "color": "#6610f2" },
-                    { "name": "Data Migration", "status_progress": 0.9, "planned_end": "2025-03-10", "demand_due_date": "2025-03-01", "color": "#d63384" },
-                    { "name": "Training", "status_progress": 0.0, "planned_end": "2025-04-01", "demand_due_date": "2025-04-01", "color": "#0dcaf0" }
-                ]
-            },
-            {
-                "project_id": "PRJ-004",
-                "project_name": "Data Warehouse",
-                "start_date": "2025-02-10",
-                "milestones": [
-                    { "name": "Schema Design", "status_progress": 1.0, "planned_end": "2025-03-01", "demand_due_date": "2025-02-28", "color": "#343a40" },
-                    { "name": "ETL Pipeline", "status_progress": 0.5, "planned_end": "2025-05-20", "demand_due_date": "2025-05-15", "color": "#0d6efd" },
-                    { "name": "Validation", "status_progress": 0.0, "planned_end": "2025-06-30", "demand_due_date": "2025-06-25", "color": "#198754" }
+                    { 
+                        "name": "Requirement", 
+                        "status_progress": 1.0, 
+                        "planned_end": "2025-02-20", 
+                        "actual_completion_date": "2025-02-20", // Case: On Time
+                        "demand_due_date": "2025-02-25", 
+                        "color": "#fd7e14" 
+                    },
+                    { 
+                        "name": "Alpha Ver.", 
+                        "status_progress": 0.4, 
+                        "planned_end": "2025-05-10", 
+                        "actual_completion_date": null,
+                        "demand_due_date": "2025-05-10", 
+                        "color": "#20c997" 
+                    }
                 ]
             },
             {
@@ -52,73 +67,9 @@ $(document).ready(function () {
                 "project_name": "Legacy System Mig.",
                 "start_date": "2025-01-01",
                 "milestones": [
-                    { "name": "Audit", "status_progress": 1.0, "planned_end": "2025-01-20", "demand_due_date": "2025-01-20", "color": "#dc3545" },
-                    { "name": "Strategy", "status_progress": 1.0, "planned_end": "2025-02-10", "demand_due_date": "2025-02-10", "color": "#ffc107" },
-                    { "name": "Execution", "status_progress": 0.3, "planned_end": "2025-08-01", "demand_due_date": "2025-07-15", "color": "#0d6efd" }
-                ]
-            },
-            {
-                "project_id": "PRJ-006",
-                "project_name": "Security Audit",
-                "start_date": "2025-03-01",
-                "milestones": [
-                    { "name": "Pen-Testing", "status_progress": 0.1, "planned_end": "2025-03-20", "demand_due_date": "2025-03-20", "color": "#212529" },
-                    { "name": "Fixes", "status_progress": 0.0, "planned_end": "2025-04-15", "demand_due_date": "2025-04-10", "color": "#198754" }
-                ]
-            },
-            {
-                "project_id": "PRJ-007",
-                "project_name": "Cloud Infra Setup",
-                "start_date": "2025-01-20",
-                "milestones": [
-                    { "name": "AWS Setup", "status_progress": 1.0, "planned_end": "2025-02-15", "demand_due_date": "2025-02-15", "color": "#fd7e14" },
-                    { "name": "K8s Config", "status_progress": 0.7, "planned_end": "2025-04-05", "demand_due_date": "2025-03-30", "color": "#6f42c1" }
-                ]
-            },
-            {
-                "project_id": "PRJ-008",
-                "project_name": "AI Recommendation",
-                "start_date": "2025-04-01",
-                "milestones": [
-                    { "name": "Data Collection", "status_progress": 0.0, "planned_end": "2025-05-01", "demand_due_date": "2025-05-01", "color": "#0dcaf0" },
-                    { "name": "Model Training", "status_progress": 0.0, "planned_end": "2025-07-01", "demand_due_date": "2025-06-20", "color": "#6610f2" }
-                ]
-            },
-            {
-                "project_id": "PRJ-009",
-                "project_name": "Payment Gateway v2",
-                "start_date": "2025-02-15",
-                "milestones": [
-                    { "name": "Compliance", "status_progress": 0.5, "planned_end": "2025-03-15", "demand_due_date": "2025-03-10", "color": "#d63384" },
-                    { "name": "Integration", "status_progress": 0.0, "planned_end": "2025-05-01", "demand_due_date": "2025-04-30", "color": "#0d6efd" }
-                ]
-            },
-            {
-                "project_id": "PRJ-010",
-                "project_name": "Internal Dashboard",
-                "start_date": "2025-01-10",
-                "milestones": [
-                    { "name": "UX Research", "status_progress": 1.0, "planned_end": "2025-01-30", "demand_due_date": "2025-01-30", "color": "#20c997" },
-                    { "name": "Dev Phase 1", "status_progress": 1.0, "planned_end": "2025-03-01", "demand_due_date": "2025-03-01", "color": "#0dcaf0" },
-                    { "name": "Dev Phase 2", "status_progress": 0.2, "planned_end": "2025-05-01", "demand_due_date": "2025-05-01", "color": "#fd7e14" }
-                ]
-            },
-            {
-                "project_id": "PRJ-011",
-                "project_name": "Marketing Website",
-                "start_date": "2025-03-10",
-                "milestones": [
-                    { "name": "Content", "status_progress": 0.2, "planned_end": "2025-04-01", "demand_due_date": "2025-03-30", "color": "#ffc107" },
-                    { "name": "Design", "status_progress": 0.0, "planned_end": "2025-04-20", "demand_due_date": "2025-04-15", "color": "#dc3545" }
-                ]
-            },
-            {
-                "project_id": "PRJ-012",
-                "project_name": "Global Rollout",
-                "start_date": "2025-05-01",
-                "milestones": [
-                    { "name": "Localization", "status_progress": 0.0, "planned_end": "2025-06-01", "demand_due_date": "2025-06-01", "color": "#6f42c1" },
-                    { "name": "Launch", "status_progress": 0.0, "planned_end": "2025-07-01", "demand_due_date": "2025-07-01", "color": "#198754" }
+                    { "name": "Audit", "status_progress": 1.0, "planned_end": "2025-01-15", "actual_completion_date": "2025-01-10", "color": "#dc3545" },
+                    { "name": "Strategy", "status_progress": 1.0, "planned_end": "2025-02-05", "actual_completion_date": "2025-02-15", "color": "#ffc107" },
+                    { "name": "Execution", "status_progress": 0.1, "planned_end": "2025-08-01", "actual_completion_date": null, "color": "#0d6efd" }
                 ]
             }
         ]
@@ -134,36 +85,27 @@ $(document).ready(function () {
     function renderTracker() {
         const $container = $('#projects-container');
         const $headerTicks = $('#header-ticks-container'); 
-        const $mainTitle = $('#tracker-main-title'); // Select the H3
+        const $mainTitle = $('#tracker-main-title'); 
 
-        // 1. Set the Title from JSON dynamically
-        // Using .html() to allow keeping the <small> tag if desired, or replace entirely
+        // 1. Set Title
         $mainTitle.html(`${trackerData.tracker_title} <small class="text-muted fs-6">Target vs Actual</small>`);
 
-        // 2. Clear previous content
+        // 2. Clear content
         $container.empty();
         $headerTicks.empty(); 
 
-        // --- Calculate Timeline Width ---
+        // 3. Render Header & Calc Width
         let totalTimelineWidth = 0;
-
-        // 3. Render Timeline Header
         for(let i=0; i < RENDER_MONTHS_COUNT; i++) {
             let targetMonthDate = new Date(TRACKER_START_DATE);
             targetMonthDate.setMonth(targetMonthDate.getMonth() + i);
-            
             let daysFromStart = getDaysDiff(TRACKER_START_DATE, targetMonthDate);
             let leftPos = daysFromStart * PIXELS_PER_DAY;
-            
             let monthName = targetMonthDate.toLocaleString('default', { month: 'short' });
             
             $headerTicks.append(`<div class="time-mark" style="left: ${leftPos}px">${monthName}</div>`);
-            
-            // Add buffer to ensure no cutoff for the last month
             totalTimelineWidth = leftPos + 100;
         }
-
-        // Apply calculated width to header container to enable scrolling
         $headerTicks.css('min-width', totalTimelineWidth + 'px');
 
         // 4. Render Projects
@@ -182,8 +124,6 @@ $(document).ready(function () {
             $container.append(projectHTML);
 
             const $rowContext = $(`#milestones-${project.project_id}`);
-
-            // Initialize Dual Track Anchors
             let currentPlanAnchor = project.start_date;
             let currentDemandAnchor = project.start_date;
 
@@ -196,23 +136,53 @@ $(document).ready(function () {
                 const demandWidth = Math.max(demandDuration * PIXELS_PER_DAY, 2);
                 const demandLeft = demandOffset * PIXELS_PER_DAY;
 
-                const demandHTML = `
+                $rowContext.append(`
                     <div class="gantt-bar demand-bar" 
                          style="left: ${demandLeft}px; width: ${demandWidth}px; background-color: ${ms.color};"
                          title="Demand: ${ms.name} (Due: ${demandEndDate})">
                     </div>
-                `;
-                $rowContext.append(demandHTML);
+                `);
 
-                // --- B. PLAN TRACK (Bottom Bar) ---
-                const planDuration = getDaysDiff(currentPlanAnchor, ms.planned_end);
-                const planOffset = getDaysDiff(TRACKER_START_DATE, currentPlanAnchor);
+                // --- B. PLAN TRACK (Bottom Bar with Actuals) ---
                 
+                const actualDate = ms.actual_completion_date;
+                const plannedDate = ms.planned_end;
+                
+                // Determine visualization endpoints
+                let solidBarEnd = plannedDate; 
+                let tailType = null; // 'late' or 'early'
+                let tailStart = null;
+                let tailEnd = null;
+                let effectiveEndDate = plannedDate; // Determines where the NEXT task starts
+
+                if (actualDate) {
+                    if (new Date(actualDate) > new Date(plannedDate)) {
+                        // CASE: LATE
+                        solidBarEnd = plannedDate;
+                        tailType = 'late';
+                        tailStart = plannedDate;
+                        tailEnd = actualDate;
+                        effectiveEndDate = actualDate; 
+                    } else if (new Date(actualDate) < new Date(plannedDate)) {
+                        // CASE: EARLY
+                        solidBarEnd = actualDate;
+                        tailType = 'early';
+                        tailStart = actualDate;
+                        tailEnd = plannedDate;
+                        effectiveEndDate = actualDate; 
+                    } else {
+                        // CASE: ON TIME
+                        effectiveEndDate = actualDate;
+                    }
+                }
+
+                // 1. Render Solid Main Bar
+                const planDuration = getDaysDiff(currentPlanAnchor, solidBarEnd);
+                const planOffset = getDaysDiff(TRACKER_START_DATE, currentPlanAnchor);
                 const planWidth = Math.max(planDuration * PIXELS_PER_DAY, 2);
                 const planLeft = planOffset * PIXELS_PER_DAY;
                 const progressPct = Math.round(ms.status_progress * 100);
 
-                // Determine if text should be displayed (Threshold: 60px)
                 let innerContent = '';
                 if (planWidth > 60) {
                     innerContent = `
@@ -223,23 +193,39 @@ $(document).ready(function () {
                     `;
                 }
 
-                const planHTML = `
+                $rowContext.append(`
                     <div class="gantt-bar plan-bar" 
                          style="left: ${planLeft}px; width: ${planWidth}px; background-color: ${ms.color};"
-                         title="Plan: ${ms.name} (End: ${ms.planned_end}) - ${progressPct}%">
+                         title="Plan: ${ms.name} (End: ${solidBarEnd})">
                         <div class="progress-overlay" style="width: ${progressPct}%"></div>
                         ${innerContent}
                     </div>
-                `;
-                $rowContext.append(planHTML);
+                `);
+
+                // 2. Render Tail (if exists)
+                if (tailType) {
+                    const tailDuration = getDaysDiff(tailStart, tailEnd);
+                    const tailOffset = getDaysDiff(TRACKER_START_DATE, tailStart);
+                    const tailWidth = Math.max(tailDuration * PIXELS_PER_DAY, 2);
+                    const tailLeft = tailOffset * PIXELS_PER_DAY;
+                    
+                    const tailClass = tailType === 'late' ? 'gantt-tail-delay' : 'gantt-tail-early';
+                    const tailTitle = tailType === 'late' ? `Overrun: ${tailEnd}` : `Saved Time: ${tailEnd}`;
+
+                    $rowContext.append(`
+                        <div class="gantt-bar ${tailClass}" 
+                             style="left: ${tailLeft}px; width: ${tailWidth}px;"
+                             title="${tailTitle}">
+                        </div>
+                    `);
+                }
 
                 // --- C. Update Anchors ---
                 currentDemandAnchor = demandEndDate;
-                currentPlanAnchor = ms.planned_end;
+                currentPlanAnchor = effectiveEndDate;
             });
         });
     }
 
-    // Execute
     renderTracker();
 });

@@ -61,7 +61,7 @@ body {
     flex-shrink: 0;
     background: #f8f9fa;
     
-    /* Update: Removed border-right and border-bottom per request */
+    /* Removed borders for flat look */
     border-right: none;
     border-bottom: none; 
     
@@ -152,6 +152,7 @@ body {
     transition: all 0.2s;
 }
 
+/* Demand Bar (Top layer) */
 .demand-bar {
     height: 8px;
     top: 10px;
@@ -163,6 +164,7 @@ body {
     font-size: 0;
 }
 
+/* Plan Bar (Bottom layer - Main) */
 .plan-bar {
     height: 32px;
     top: 20px;
@@ -173,6 +175,37 @@ body {
     border-radius: 0 0 2px 2px;
 }
 
+/* --- Status Tails for Actual Completion --- */
+
+/* 1. Delay Tail (Red Stripes) - Used when Actual > Planned */
+.gantt-tail-delay {
+    height: 32px;
+    top: 20px;
+    
+    background-color: #dc3545; 
+    background-image: linear-gradient(45deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent);
+    background-size: 10px 10px;
+    
+    z-index: 19;
+    border-radius: 0 2px 2px 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    cursor: help;
+}
+
+/* 2. Early/Saved Tail (Ghost/Dashed) - Used when Actual < Planned */
+.gantt-tail-early {
+    height: 32px;
+    top: 20px;
+    
+    background-color: rgba(255, 255, 255, 0.5);
+    border: 1px dashed #adb5bd;
+    
+    z-index: 15;
+    border-radius: 0 2px 2px 0;
+    cursor: help;
+}
+
+/* --- Internal Content --- */
 .progress-overlay {
     position: absolute;
     top: 0;
