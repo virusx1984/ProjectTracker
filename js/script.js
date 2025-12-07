@@ -3,6 +3,10 @@ $(document).ready(function () {
     const PIXELS_PER_DAY = 6;
     const TRACKER_START_DATE = new Date("2025-01-01");
     const RENDER_MONTHS_COUNT = 15;
+    
+    // DEMO ONLY: Simulate "Today" as March 15, 2025 to show overdue effects
+    // In production, use: const CURRENT_DATE = new Date();
+    const CURRENT_DATE = new Date("2025-03-15"); 
 
     // --- Data with 'actual_completion_date' ---
     const trackerData = {
@@ -17,7 +21,7 @@ $(document).ready(function () {
                         "name": "UI Design", 
                         "status_progress": 1.0, 
                         "planned_end": "2025-02-15", 
-                        "actual_completion_date": "2025-02-10", // Case: Early
+                        "actual_completion_date": "2025-02-10", // Done: Early
                         "demand_due_date": "2025-02-15", 
                         "color": "#0d6efd" 
                     },
@@ -25,7 +29,7 @@ $(document).ready(function () {
                         "name": "Frontend", 
                         "status_progress": 1.0, 
                         "planned_end": "2025-03-25", 
-                        "actual_completion_date": "2025-04-15", // Case: Late
+                        "actual_completion_date": "2025-04-05", // Done: Late
                         "demand_due_date": "2025-03-25", 
                         "color": "#198754" 
                     },
@@ -33,8 +37,32 @@ $(document).ready(function () {
                         "name": "Backend", 
                         "status_progress": 0.2, 
                         "planned_end": "2025-05-15", 
-                        "actual_completion_date": null, // Case: In Progress
+                        "actual_completion_date": null, // In Progress: On Track (May > March)
                         "demand_due_date": "2025-05-01", 
+                        "color": "#6f42c1" 
+                    }
+                ]
+            },
+            {
+                "project_id": "PRJ-007",
+                "project_name": "Cloud Infra Setup",
+                "start_date": "2025-01-20",
+                "milestones": [
+                    { 
+                        "name": "AWS Setup", 
+                        "status_progress": 0.8, // <--- 80% done, BUT...
+                        "planned_end": "2025-02-15", 
+                        "actual_completion_date": null, // <--- Not finished yet!
+                        "demand_due_date": "2025-02-15", 
+                        "color": "#fd7e14" 
+                        // Result: Since Today (Mar 15) > Planned (Feb 15), this shows RED TAIL to Today.
+                    },
+                    { 
+                        "name": "K8s Config", 
+                        "status_progress": 0.0, 
+                        "planned_end": "2025-04-05", 
+                        "actual_completion_date": null,
+                        "demand_due_date": "2025-03-30", 
                         "color": "#6f42c1" 
                     }
                 ]
@@ -48,7 +76,7 @@ $(document).ready(function () {
                         "name": "Requirement", 
                         "status_progress": 1.0, 
                         "planned_end": "2025-02-20", 
-                        "actual_completion_date": "2025-02-20", // Case: On Time
+                        "actual_completion_date": "2025-02-20", // Done: On Time
                         "demand_due_date": "2025-02-25", 
                         "color": "#fd7e14" 
                     },
@@ -60,16 +88,6 @@ $(document).ready(function () {
                         "demand_due_date": "2025-05-10", 
                         "color": "#20c997" 
                     }
-                ]
-            },
-            {
-                "project_id": "PRJ-005",
-                "project_name": "Legacy System Mig.",
-                "start_date": "2025-01-01",
-                "milestones": [
-                    { "name": "Audit", "status_progress": 1.0, "planned_end": "2025-01-15", "actual_completion_date": "2025-01-10", "color": "#dc3545" },
-                    { "name": "Strategy", "status_progress": 1.0, "planned_end": "2025-02-05", "actual_completion_date": "2025-02-15", "color": "#ffc107" },
-                    { "name": "Execution", "status_progress": 0.1, "planned_end": "2025-08-01", "actual_completion_date": null, "color": "#0d6efd" }
                 ]
             }
         ]
@@ -143,36 +161,52 @@ $(document).ready(function () {
                     </div>
                 `);
 
-                // --- B. PLAN TRACK (Bottom Bar with Actuals) ---
-                
+                // --- B. PLAN TRACK (Bottom Bar) ---
                 const actualDate = ms.actual_completion_date;
                 const plannedDate = ms.planned_end;
                 
-                // Determine visualization endpoints
+                // Visualization Variables
                 let solidBarEnd = plannedDate; 
                 let tailType = null; // 'late' or 'early'
                 let tailStart = null;
                 let tailEnd = null;
-                let effectiveEndDate = plannedDate; // Determines where the NEXT task starts
+                let effectiveEndDate = plannedDate; // Controls next task start
 
                 if (actualDate) {
+                    // --- Case 1: Task Completed ---
                     if (new Date(actualDate) > new Date(plannedDate)) {
-                        // CASE: LATE
+                        // Completed Late
                         solidBarEnd = plannedDate;
                         tailType = 'late';
                         tailStart = plannedDate;
                         tailEnd = actualDate;
                         effectiveEndDate = actualDate; 
                     } else if (new Date(actualDate) < new Date(plannedDate)) {
-                        // CASE: EARLY
+                        // Completed Early
                         solidBarEnd = actualDate;
                         tailType = 'early';
                         tailStart = actualDate;
                         tailEnd = plannedDate;
                         effectiveEndDate = actualDate; 
                     } else {
-                        // CASE: ON TIME
+                        // On Time
                         effectiveEndDate = actualDate;
+                    }
+                } else {
+                    // --- Case 2: Task In Progress (Not Finished) ---
+                    // Check if Overdue relative to CURRENT_DATE (Today)
+                    if (CURRENT_DATE > new Date(plannedDate)) {
+                        // OVERDUE: Extend red tail from Planned End to Today
+                        solidBarEnd = plannedDate;
+                        tailType = 'late';
+                        tailStart = plannedDate;
+                        tailEnd = CURRENT_DATE.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+                        
+                        // IMPORTANT: Next task is pushed to Today
+                        effectiveEndDate = tailEnd; 
+                    } else {
+                        // On Track (Not overdue yet)
+                        effectiveEndDate = plannedDate;
                     }
                 }
 
@@ -204,13 +238,23 @@ $(document).ready(function () {
 
                 // 2. Render Tail (if exists)
                 if (tailType) {
-                    const tailDuration = getDaysDiff(tailStart, tailEnd);
-                    const tailOffset = getDaysDiff(TRACKER_START_DATE, tailStart);
+                    // Handle edge case where tailEnd might be string or Date object
+                    const tStart = new Date(tailStart);
+                    const tEnd = new Date(tailEnd);
+                    
+                    const tailDuration = (tEnd - tStart) / (1000 * 60 * 60 * 24);
+                    const tailOffset = getDaysDiff(TRACKER_START_DATE, tStart);
                     const tailWidth = Math.max(tailDuration * PIXELS_PER_DAY, 2);
                     const tailLeft = tailOffset * PIXELS_PER_DAY;
                     
                     const tailClass = tailType === 'late' ? 'gantt-tail-delay' : 'gantt-tail-early';
-                    const tailTitle = tailType === 'late' ? `Overrun: ${tailEnd}` : `Saved Time: ${tailEnd}`;
+                    // Dynamic tooltip based on status
+                    let tailTitle = "";
+                    if (!actualDate && tailType === 'late') {
+                        tailTitle = `Overdue: ${Math.floor(tailDuration)} days (In Progress)`;
+                    } else {
+                        tailTitle = tailType === 'late' ? `Overrun: ${tailEnd}` : `Saved Time: ${tailEnd}`;
+                    }
 
                     $rowContext.append(`
                         <div class="gantt-bar ${tailClass}" 
