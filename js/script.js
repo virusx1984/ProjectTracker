@@ -180,15 +180,34 @@ $(document).ready(function () {
                     </div>
                 `);
 
+                // 2. Render Tail (if exists)
                 if (tailType) {
                     const tStart = new Date(tailStart);
                     const tEnd = new Date(tailEnd);
+                    
                     const tailDuration = (tEnd - tStart) / (1000 * 60 * 60 * 24);
                     const tailOffset = getDaysDiff(TRACKER_START_DATE, tStart);
                     const tailWidth = Math.max(tailDuration * PIXELS_PER_DAY, 2);
                     const tailLeft = tailOffset * PIXELS_PER_DAY;
+                    
                     const tailClass = tailType === 'late' ? 'gantt-tail-delay' : 'gantt-tail-early';
-                    $rowContext.append(`<div class="gantt-bar ${tailClass}" style="left: ${tailLeft}px; width: ${tailWidth}px;"></div>`);
+                    
+                    // Dynamic tooltip based on status
+                    let tailTitle = "";
+                    if (!actualDate && tailType === 'late') {
+                        // "In Progress" Delay Case
+                        tailTitle = `Overdue: ${Math.floor(tailDuration)} days (In Progress)`;
+                    } else {
+                        // Completed Case
+                        tailTitle = tailType === 'late' ? `Overrun: ${Math.floor(tailDuration)} days` : `Saved Time: ${Math.floor(tailDuration)} days`;
+                    }
+
+                    $rowContext.append(`
+                        <div class="gantt-bar ${tailClass}" 
+                             style="left: ${tailLeft}px; width: ${tailWidth}px;"
+                             title="${tailTitle}">
+                        </div>
+                    `);
                 }
 
                 currentDemandAnchor = demandEndDate;
