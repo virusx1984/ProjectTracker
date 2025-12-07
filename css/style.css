@@ -103,10 +103,14 @@ body {
     box-shadow: 2px 0 5px rgba(0,0,0,0.02);
 }
 
+/* 修改後：增加 min-width 繼承 */
 .milestone-container {
     position: relative;
     flex-grow: 1;
     height: 100%;
+    /* 關鍵：確保這裡的寬度至少能包容下所有的子元素，
+       具體的數值我們會在 JS 裡動態計算賦值 */
+    min-width: 0; 
 }
 
 /* --- Gantt Bars (Common) --- */

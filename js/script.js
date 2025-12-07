@@ -64,7 +64,7 @@ $(document).ready(function () {
         return (e - s) / (1000 * 60 * 60 * 24);
     }
 
-    function renderTracker() {
+function renderTracker() {
         const $container = $('#projects-container');
         const $headerTicks = $('#header-ticks-container'); 
 
@@ -72,21 +72,28 @@ $(document).ready(function () {
         $container.empty();
         $headerTicks.empty(); 
 
+        // --- 核心修復開始：計算總寬度 ---
+        let totalTimelineWidth = 0;
+
         // 2. Render Timeline Header
-        // FIXED: Use real Date objects to calculate position instead of assuming 30 days per month
         for(let i=0; i < RENDER_MONTHS_COUNT; i++) {
-            // Calculate exact date for the start of the month
             let targetMonthDate = new Date(TRACKER_START_DATE);
             targetMonthDate.setMonth(targetMonthDate.getMonth() + i);
             
-            // Calculate exact pixels from start
             let daysFromStart = getDaysDiff(TRACKER_START_DATE, targetMonthDate);
             let leftPos = daysFromStart * PIXELS_PER_DAY;
             
             let monthName = targetMonthDate.toLocaleString('default', { month: 'short' });
             
             $headerTicks.append(`<div class="time-mark" style="left: ${leftPos}px">${monthName}</div>`);
+            
+            // 記錄最遠的位置 (加上 100px 的緩衝區，確保最後一個月的文字不會被切掉)
+            totalTimelineWidth = leftPos + 100;
         }
+
+        // 強制設置 Header 容器的寬度
+        $headerTicks.css('min-width', totalTimelineWidth + 'px');
+        // --- 核心修復結束 ---
 
         // 3. Render Projects
         projectData.forEach(project => {
@@ -98,7 +105,7 @@ $(document).ready(function () {
                             ID: ${project.project_id}
                         </div>
                     </div>
-                    <div class="milestone-container" id="milestones-${project.project_id}"></div>
+                    <div class="milestone-container" id="milestones-${project.project_id}" style="min-width: ${totalTimelineWidth}px"></div>
                 </div>
             `;
             $container.append(projectHTML);
@@ -110,12 +117,10 @@ $(document).ready(function () {
             let currentDemandAnchor = project.start_date;
 
             project.milestones.forEach(ms => {
-                // --- A. DEMAND TRACK (Top Bar) ---
+                // --- A. DEMAND TRACK ---
                 const demandEndDate = ms.demand_due_date ? ms.demand_due_date : ms.planned_end;
-                
                 const demandDuration = getDaysDiff(currentDemandAnchor, demandEndDate);
                 const demandOffset = getDaysDiff(TRACKER_START_DATE, currentDemandAnchor);
-                
                 const demandWidth = Math.max(demandDuration * PIXELS_PER_DAY, 2);
                 const demandLeft = demandOffset * PIXELS_PER_DAY;
 
@@ -127,15 +132,13 @@ $(document).ready(function () {
                 `;
                 $rowContext.append(demandHTML);
 
-                // --- B. PLAN TRACK (Bottom Bar) ---
+                // --- B. PLAN TRACK ---
                 const planDuration = getDaysDiff(currentPlanAnchor, ms.planned_end);
                 const planOffset = getDaysDiff(TRACKER_START_DATE, currentPlanAnchor);
-                
                 const planWidth = Math.max(planDuration * PIXELS_PER_DAY, 2);
                 const planLeft = planOffset * PIXELS_PER_DAY;
                 const progressPct = Math.round(ms.status_progress * 100);
 
-                // Determine if text should be displayed (Threshold: 60px)
                 let innerContent = '';
                 if (planWidth > 60) {
                     innerContent = `
@@ -156,13 +159,13 @@ $(document).ready(function () {
                 `;
                 $rowContext.append(planHTML);
 
-                // --- C. Update Anchors ---
+                // Update Anchors
                 currentDemandAnchor = demandEndDate;
                 currentPlanAnchor = ms.planned_end;
             });
         });
     }
-
+    
     // Execute
     renderTracker();
 });
