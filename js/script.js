@@ -8,19 +8,39 @@ $(document).ready(function () {
     // Change this to `new Date()` for production
     const CURRENT_DATE = new Date("2025-03-15"); 
 
-    // --- Data (Same as before) ---
+    // --- Data with 'demand_due_date' RESTORED ---
     const trackerData = {
         "tracker_title": "Enterprise IT Roadmap 2025",
         "projects": [
-            // ... (Use previous project data) ...
             {
                 "project_id": "PRJ-001",
                 "project_name": "E-Commerce Platform",
                 "start_date": "2025-01-05",
                 "milestones": [
-                    { "name": "UI Design", "status_progress": 1.0, "planned_end": "2025-02-15", "actual_completion_date": "2025-02-10", "color": "#0d6efd" },
-                    { "name": "Frontend", "status_progress": 1.0, "planned_end": "2025-03-25", "actual_completion_date": "2025-04-05", "color": "#198754" },
-                    { "name": "Backend", "status_progress": 0.2, "planned_end": "2025-05-15", "actual_completion_date": null, "color": "#6f42c1" }
+                    { 
+                        "name": "UI Design", 
+                        "status_progress": 1.0, 
+                        "planned_end": "2025-02-15", 
+                        "actual_completion_date": "2025-02-10", // Done: Early
+                        "demand_due_date": "2025-02-15",        // <--- Restored
+                        "color": "#0d6efd" 
+                    },
+                    { 
+                        "name": "Frontend", 
+                        "status_progress": 1.0, 
+                        "planned_end": "2025-03-25", 
+                        "actual_completion_date": "2025-04-05", // Done: Late
+                        "demand_due_date": "2025-03-25",        // <--- Restored
+                        "color": "#198754" 
+                    },
+                    { 
+                        "name": "Backend", 
+                        "status_progress": 0.2, 
+                        "planned_end": "2025-05-15", 
+                        "actual_completion_date": null,         // In Progress
+                        "demand_due_date": "2025-05-01",        // <--- Restored
+                        "color": "#6f42c1" 
+                    }
                 ]
             },
             {
@@ -28,8 +48,22 @@ $(document).ready(function () {
                 "project_name": "Cloud Infra Setup",
                 "start_date": "2025-01-20",
                 "milestones": [
-                    { "name": "AWS Setup", "status_progress": 0.8, "planned_end": "2025-02-15", "actual_completion_date": null, "color": "#fd7e14" },
-                    { "name": "K8s Config", "status_progress": 0.0, "planned_end": "2025-04-05", "actual_completion_date": null, "color": "#6f42c1" }
+                    { 
+                        "name": "AWS Setup", 
+                        "status_progress": 0.8, 
+                        "planned_end": "2025-02-15", 
+                        "actual_completion_date": null,         // Overdue (Today is Mar 15)
+                        "demand_due_date": "2025-02-15",        // <--- Restored
+                        "color": "#fd7e14" 
+                    },
+                    { 
+                        "name": "K8s Config", 
+                        "status_progress": 0.0, 
+                        "planned_end": "2025-04-05", 
+                        "actual_completion_date": null,
+                        "demand_due_date": "2025-03-30",        // <--- Restored
+                        "color": "#6f42c1" 
+                    }
                 ]
             },
             {
@@ -37,8 +71,22 @@ $(document).ready(function () {
                 "project_name": "Mobile App Launch",
                 "start_date": "2025-02-01",
                 "milestones": [
-                    { "name": "Requirement", "status_progress": 1.0, "planned_end": "2025-02-20", "actual_completion_date": "2025-02-20", "color": "#fd7e14" },
-                    { "name": "Alpha Ver.", "status_progress": 0.4, "planned_end": "2025-05-10", "actual_completion_date": null, "color": "#20c997" }
+                    { 
+                        "name": "Requirement", 
+                        "status_progress": 1.0, 
+                        "planned_end": "2025-02-20", 
+                        "actual_completion_date": "2025-02-20", 
+                        "demand_due_date": "2025-02-25",        // <--- Restored
+                        "color": "#fd7e14" 
+                    },
+                    { 
+                        "name": "Alpha Ver.", 
+                        "status_progress": 0.4, 
+                        "planned_end": "2025-05-10", 
+                        "actual_completion_date": null,
+                        "demand_due_date": "2025-05-10",        // <--- Restored
+                        "color": "#20c997" 
+                    }
                 ]
             }
         ]
@@ -60,8 +108,6 @@ $(document).ready(function () {
         $mainTitle.html(`${trackerData.tracker_title} <small class="text-muted fs-6">Target vs Actual</small>`);
         $container.empty();
         $headerTicks.empty(); 
-        
-        // Ensure container is relative for absolute positioning of the line
         $container.css('position', 'relative'); 
 
         // 2. Render Header
@@ -78,17 +124,16 @@ $(document).ready(function () {
         }
         $headerTicks.css('min-width', totalTimelineWidth + 'px');
 
-        // --- NEW: Render "Past Zone" (Gray Background) ---
+        // --- Render "Past Zone" (Gray Background) ---
         const todayOffsetDays = getDaysDiff(TRACKER_START_DATE, CURRENT_DATE);
         
         if (todayOffsetDays >= 0) {
             const todayLeft = todayOffsetDays * PIXELS_PER_DAY;
 
-            // 1. Get Sidebar width
+            // Get Sidebar width for body alignment
             const sidebarWidth = $('.header-corner-placeholder').outerWidth() || 220;
 
-            // A. Header Marker (Label Only)
-            // Stays in header container, relative to timeline start
+            // A. Header Marker
             $headerTicks.append(`
                 <div class="today-header-marker" style="left: ${todayLeft}px;">
                     <span class="today-label">Today</span>
@@ -96,8 +141,6 @@ $(document).ready(function () {
             `);
 
             // B. Past Zone (Gray Background)
-            // Instead of a line, we render a box spanning from 0 to Today
-            // z-index=5 ensures it sits BEHIND the bars (z=10+) but ABOVE the row background
             $container.append(`
                 <div class="past-time-zone" style="width: ${todayLeft + sidebarWidth}px;"></div>
             `);
@@ -123,10 +166,11 @@ $(document).ready(function () {
             let currentDemandAnchor = project.start_date;
 
             project.milestones.forEach(ms => {
-                // ... (Keep existing Milestone Logic: Demand & Plan & Tails) ...
                 
-                // --- A. Demand ---
+                // --- A. Demand Track (Target) ---
+                // If demand_due_date is missing, fallback to planned_end to avoid breaking the chain
                 const demandEndDate = ms.demand_due_date ? ms.demand_due_date : ms.planned_end;
+                
                 const demandDuration = getDaysDiff(currentDemandAnchor, demandEndDate);
                 const demandOffset = getDaysDiff(TRACKER_START_DATE, currentDemandAnchor);
                 const demandWidth = Math.max(demandDuration * PIXELS_PER_DAY, 2);
@@ -135,10 +179,10 @@ $(document).ready(function () {
                 $rowContext.append(`
                     <div class="gantt-bar demand-bar" 
                          style="left: ${demandLeft}px; width: ${demandWidth}px; background-color: ${ms.color};"
-                         title="Demand: ${ms.name}"></div>
+                         title="Demand: ${ms.name} (Due: ${demandEndDate})"></div>
                 `);
 
-                // --- B. Plan ---
+                // --- B. Plan Track (Actual / Plan) ---
                 const actualDate = ms.actual_completion_date;
                 const plannedDate = ms.planned_end;
                 let solidBarEnd = plannedDate; 
@@ -180,34 +224,23 @@ $(document).ready(function () {
                     </div>
                 `);
 
-                // 2. Render Tail (if exists)
                 if (tailType) {
                     const tStart = new Date(tailStart);
                     const tEnd = new Date(tailEnd);
-                    
                     const tailDuration = (tEnd - tStart) / (1000 * 60 * 60 * 24);
                     const tailOffset = getDaysDiff(TRACKER_START_DATE, tStart);
                     const tailWidth = Math.max(tailDuration * PIXELS_PER_DAY, 2);
                     const tailLeft = tailOffset * PIXELS_PER_DAY;
-                    
                     const tailClass = tailType === 'late' ? 'gantt-tail-delay' : 'gantt-tail-early';
                     
-                    // Dynamic tooltip based on status
                     let tailTitle = "";
                     if (!actualDate && tailType === 'late') {
-                        // "In Progress" Delay Case
-                        tailTitle = `Overdue: ${Math.floor(tailDuration)} days (In Progress)`;
+                         tailTitle = `Overdue: ${Math.floor(tailDuration)} days (In Progress)`;
                     } else {
-                        // Completed Case
-                        tailTitle = tailType === 'late' ? `Overrun: ${Math.floor(tailDuration)} days` : `Saved Time: ${Math.floor(tailDuration)} days`;
+                         tailTitle = tailType === 'late' ? `Overrun: ${tailEnd}` : `Saved Time: ${tailEnd}`;
                     }
 
-                    $rowContext.append(`
-                        <div class="gantt-bar ${tailClass}" 
-                             style="left: ${tailLeft}px; width: ${tailWidth}px;"
-                             title="${tailTitle}">
-                        </div>
-                    `);
+                    $rowContext.append(`<div class="gantt-bar ${tailClass}" title="${tailTitle}" style="left: ${tailLeft}px; width: ${tailWidth}px;"></div>`);
                 }
 
                 currentDemandAnchor = demandEndDate;
