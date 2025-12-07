@@ -382,3 +382,16 @@ body {
     /* 这里的样式会由 JS 动态控制，但预设一下是个好习惯 */
     transition: none; /* 拖动时不要有动画延迟 */
 }
+
+/* Shake animation for validation error */
+@keyframes shake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  50% { transform: translateX(5px); }
+  75% { transform: translateX(-5px); }
+  100% { transform: translateX(0); }
+}
+
+.shake-animation {
+  animation: shake 0.3s;
+}

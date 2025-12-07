@@ -334,6 +334,7 @@ $(document).ready(function () {
     function initEditHandlers() {
         const modalEl = document.getElementById('editMilestoneModal');
         const modal = new bootstrap.Modal(modalEl);
+        const $errorMsg = $('#edit-error-msg');
 
         // 1. Click on Bar to Open Modal
         // Use delegated event binding since bars are re-rendered
@@ -368,39 +369,118 @@ $(document).ready(function () {
             $('#edit-progress-val').text(Math.round($(this).val() * 100) + '%');
         });
 
-        // 3. Save Changes
-        $('#btn-save-changes').click(function () {
-            const pIdx = $('#edit-p-index').val();
-            const mIdx = $('#edit-m-index').val();
+        // 3. Save Changes (With Strict Validation)
+        $('#btn-save-changes').click(function() {
+            // Hide error first
+            $errorMsg.addClass('d-none');
 
-            // Update Source Data
+            const pIdx = parseInt($('#edit-p-index').val());
+            const mIdx = parseInt($('#edit-m-index').val());
+            
+            // Get Inputs
+            const inputName = $('#edit-name').val().trim();
+            const inputPlannedEnd = $('#edit-planned-end').val();
+            const inputDemandDate = $('#edit-demand-date').val();
+            const inputActualDate = $('#edit-actual-date').val(); // Empty string if null
+            const inputProgress = parseFloat($('#edit-progress').val());
+
+            // Get Context Data for Validation
+            const project = rawTrackerData.projects[pIdx];
+            const milestones = project.milestones;
+            const projectStart = project.start_date;
+
+            // --- VALIDATION START ---
+            let errorText = null;
+
+            // Rule 2 & 3: Non-Empty Checks
+            if (!inputName) errorText = "Task Name cannot be empty.";
+            else if (!inputPlannedEnd) errorText = "Original Planned End cannot be empty.";
+            else if (!inputDemandDate) errorText = "Demand / Target Date cannot be empty.";
+
+            // Rule 1: Actual Date vs Progress Consistency
+            else if (inputProgress < 1.0 && inputActualDate) {
+                errorText = "Cannot set Actual Completion Date if progress is less than 100%.";
+            } 
+            else if (inputProgress === 1.0 && !inputActualDate) {
+                errorText = "Must set Actual Completion Date if progress is 100%.";
+            }
+
+            // Rule 5: Project Boundaries (Basic Sanity)
+            else if (inputPlannedEnd < projectStart) {
+                errorText = `Planned End (${inputPlannedEnd}) cannot be earlier than Project Start (${projectStart}).`;
+            }
+            else if (inputActualDate && inputActualDate < projectStart) {
+                errorText = `Actual Date (${inputActualDate}) cannot be earlier than Project Start (${projectStart}).`;
+            }
+
+            // Rule 4: Milestone Chain Consistency (Strict Waterfall)
+            else {
+                // 4.1 & 4.3: Check against Previous Milestone
+                if (mIdx > 0) {
+                    const prevMs = milestones[mIdx - 1];
+                    
+                    // 4.1 Date Order
+                    if (inputPlannedEnd < prevMs.planned_end) {
+                        errorText = `Planned End cannot be earlier than previous task's Planned End (${prevMs.planned_end}).`;
+                    }
+                    else if (inputDemandDate < prevMs.demand_due_date) {
+                        errorText = `Demand Date cannot be earlier than previous task's Demand Date (${prevMs.demand_due_date}).`;
+                    }
+                    // 4.3 Progress Dependency (Prev not done, Current cannot be done)
+                    else if (prevMs.status_progress < 1.0 && inputProgress === 1.0) {
+                        errorText = `Cannot mark this task as 100% complete because the previous task ("${prevMs.name}") is not finished yet.`;
+                    }
+                }
+
+                // 4.2 & 4.4: Check against Next Milestone (only if no error found yet)
+                if (!errorText && mIdx < milestones.length - 1) {
+                    const nextMs = milestones[mIdx + 1];
+
+                    // 4.2 Date Order
+                    if (inputPlannedEnd > nextMs.planned_end) {
+                        errorText = `Planned End cannot be later than next task's Planned End (${nextMs.planned_end}).`;
+                    }
+                    else if (inputDemandDate > nextMs.demand_due_date) {
+                         errorText = `Demand Date cannot be later than next task's Demand Date (${nextMs.demand_due_date}).`;
+                    }
+                    // 4.4 Progress Dependency (Next is done, Current cannot be undone)
+                    else if (nextMs.status_progress === 1.0 && inputProgress < 1.0) {
+                        errorText = `Cannot reduce progress below 100% because the next task ("${nextMs.name}") is already finished.`;
+                    }
+                }
+            }
+
+            // Check Result
+            if (errorText) {
+                $errorMsg.text(errorText).removeClass('d-none');
+                // Shake effect for visual feedback (optional)
+                $('.modal-content').addClass('shake-animation');
+                setTimeout(() => $('.modal-content').removeClass('shake-animation'), 500);
+                return; // STOP SAVE
+            }
+            // --- VALIDATION END ---
+
+
+            // --- UPDATE DATA ---
             const msData = rawTrackerData.projects[pIdx].milestones[mIdx];
+            
+            msData.name = inputName;
+            msData.planned_end = inputPlannedEnd;
+            msData.demand_due_date = inputDemandDate;
+            msData.actual_completion_date = inputActualDate ? inputActualDate : null;
+            msData.status_progress = inputProgress;
 
-            msData.name = $('#edit-name').val();
-            msData.planned_end = $('#edit-planned-end').val(); // Important: Affects duration
-            msData.demand_due_date = $('#edit-demand-date').val();
-
-            const actualDateInput = $('#edit-actual-date').val();
-            msData.actual_completion_date = actualDateInput ? actualDateInput : null;
-
-            msData.status_progress = parseFloat($('#edit-progress').val());
-
-            // --- CRITICAL: Re-calculate and Re-render ---
+            // Re-calc and Render
             const newFinalData = reviseProjectData(rawTrackerData);
-            renderTracker(newFinalData);
-
-            // Update the data passed to zoom controls reference if needed
-            // But since we use closure scope 'rawTrackerData', 
-            // we just need to re-bind zoom controls or let them call a refresh
-            // Simply re-rendering is enough for the view, 
-            // but the Zoom buttons callback needs fresh data if it captures 'finalData'.
-            // Simple fix: Re-init Zoom or update a shared reference.
-            // For simplicity here, we assume zoom buttons work on a variable or we re-init.
-            // Better approach: Update the 'currentRevisedData' variable used by Zoom.
+            
+            // Update shared state for zoom
             currentRevisedData = newFinalData;
-
+            
+            renderTracker(newFinalData);
             modal.hide();
         });
+
+        
     }
 
     // --- Zoom Controls ---
