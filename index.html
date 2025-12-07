@@ -1,62 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProjectTracker Pro</title>
+    <title>ProjectTracker Pro - Stacked View</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
+        /* --- Layout & Container --- */
+        body {
+            background-color: #f4f6f9;
+        }
+
         #tracker-wrapper {
             position: relative;
             overflow-x: auto;
-            background-color: #f8f9fa;
+            background-color: #fff;
             border: 1px solid #dee2e6;
-            min-height: 500px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            min-height: 400px;
         }
 
-        /* Timeline Header Scale */
+        /* --- Timeline Header --- */
         #timeline-header {
             height: 40px;
             position: relative;
-            border-bottom: 2px solid #dee2e6;
-            background: #fff;
-            display: flex;
+            border-bottom: 2px solid #e9ecef;
+            background: #f8f9fa;
+            min-width: 100%; /* Ensure header stretches */
         }
 
         .time-mark {
             position: absolute;
-            border-left: 1px solid #e0e0e0;
-            padding-left: 5px;
+            bottom: 0;
+            border-left: 1px solid #ced4da;
+            padding-left: 6px;
             font-size: 11px;
+            font-weight: 600;
             color: #6c757d;
-            height: 100%;
+            height: 25px; /* Ticks height */
+            line-height: 25px;
         }
 
+        /* --- Project Row Structure --- */
         .project-row {
-            height: 60px;
-            /* Reduced from 100px */
+            height: 85px; /* Height to accommodate stacked bars */
             position: relative;
-            border-bottom: 1px solid #dee2e6;
+            border-bottom: 1px solid #e9ecef;
             background-color: #fff;
             display: flex;
             align-items: center;
         }
 
+        .project-row:hover {
+            background-color: #fafafa;
+        }
+
         .project-name-label {
             position: sticky;
             left: 0;
-            z-index: 10;
+            z-index: 100; /* High z-index to stay on top while scrolling */
             background: #fff;
-            width: 180px;
-            /* Slightly narrower */
-            padding: 5px 10px;
-            font-size: 14px;
-            font-weight: bold;
-            border-right: 2px solid #dee2e6;
+            width: 220px;
             height: 100%;
+            padding: 10px 15px;
+            border-right: 2px solid #e9ecef;
             display: flex;
-            align-items: center;
+            flex-direction: column;
+            justify-content: center;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.02);
         }
 
         .milestone-container {
@@ -65,146 +77,240 @@
             height: 100%;
         }
 
-        /* Milestone Bar Styling */
-        .milestone-bar {
+        /* --- Gantt Bars (Common) --- */
+        .gantt-bar {
             position: absolute;
-            height: 30px;
-            /* Reduced from 40px */
-            top: 15px;
-            /* Center calculation: (Row Height 60 - Bar Height 30) / 2 */
             border-radius: 3px;
-            color: #fff;
-            font-size: 11px;
-            font-weight: 500;
+            font-size: 10px;
             display: flex;
             align-items: center;
-            padding: 0 8px;
+            padding: 0 6px;
             overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s;
         }
 
-        /* Progress Overlay */
+        .gantt-bar:hover {
+            z-index: 50 !important; /* Bring to front on hover */
+            transform: scale(1.02);
+        }
+
+        /* Style 1: Demand Bar (Top, Dashed, Faded) */
+        .demand-bar {
+            height: 22px;
+            top: 18px; /* Positioned at the top of the row */
+            opacity: 0.6;
+            border: 1px dashed #444; /* Dashed border indicating "Target" */
+            color: #222;
+            z-index: 10;
+        }
+
+        /* Style 2: Plan Bar (Bottom, Solid, Vibrant) */
+        .plan-bar {
+            height: 22px;
+            top: 42px; /* Positioned directly below Demand bar */
+            color: #fff;
+            z-index: 20;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        }
+
+        /* Progress Fill Overlay */
         .progress-overlay {
             position: absolute;
             top: 0;
             left: 0;
             height: 100%;
-            background: rgba(0, 0, 0, 0.15);
+            background: rgba(0, 0, 0, 0.25);
             z-index: 0;
         }
 
-        .milestone-text {
+        .bar-label {
             position: relative;
             z-index: 2;
-            white-space: nowrap;
-            text-overflow: ellipsis;
-            overflow: hidden;
+            text-shadow: 0 0 2px rgba(255,255,255,0.5);
+        }
+        
+        .plan-bar .bar-label {
+            text-shadow: none;
         }
     </style>
 </head>
-
 <body>
 
-    <div class="container-fluid py-4">
-        <h3 class="mb-4">ProjectTracker Pro</h3>
-
-        <div id="tracker-wrapper">
-            <div id="timeline-header"></div>
-            <div id="projects-container"></div>
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="m-0">ProjectTracker Pro <small class="text-muted fs-6">Target vs Actual</small></h3>
+        <div>
+            <span class="badge bg-light text-dark border border-secondary border-dashed">Demand (Target)</span>
+            <span class="badge bg-primary">Plan (Actual)</span>
         </div>
     </div>
+    
+    <div id="tracker-wrapper">
+        <div id="timeline-header"></div>
+        <div id="projects-container"></div>
+    </div>
+</div>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
-        $(document).ready(function () {
-            // Config
-            const PIXELS_PER_DAY = 5;
-            const TRACKER_START_DATE = new Date("2025-01-01");
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-            // Sample Data
-            const projectData = [
-                {
-                    "project_id": "PRJ-001",
-                    "project_name": "E-Commerce platform",
-                    "start_date": "2025-01-05",
-                    "milestones": [
-                        { "name": "UI Design", "status_progress": 1.0, "planned_end": "2025-02-15", "color": "#0d6efd" },
-                        { "name": "Frontend", "status_progress": 0.6, "planned_end": "2025-03-20", "color": "#198754" },
-                        { "name": "Backend", "status_progress": 0.2, "planned_end": "2025-05-10", "color": "#6f42c1" }
-                    ]
+<script>
+$(document).ready(function() {
+    // --- Configuration ---
+    const PIXELS_PER_DAY = 6; // Adjusted for better visibility
+    const TRACKER_START_DATE = new Date("2025-01-01");
+
+    // --- Sample Data ---
+    const projectData = [
+        {
+            "project_id": "PRJ-001",
+            "project_name": "E-Commerce Platform",
+            "start_date": "2025-01-05",
+            "milestones": [
+                { 
+                    "name": "UI Design", 
+                    "status_progress": 1.0, 
+                    "planned_end": "2025-02-15", 
+                    "demand_due_date": "2025-02-15", // On Track
+                    "color": "#0d6efd" 
                 },
-                {
-                    "project_id": "PRJ-002",
-                    "project_name": "Mobile App Launch",
-                    "start_date": "2025-02-01",
-                    "milestones": [
-                        { "name": "Planning", "status_progress": 1.0, "planned_end": "2025-03-01", "color": "#fd7e14" },
-                        { "name": "Development", "status_progress": 0.3, "planned_end": "2025-06-15", "color": "#20c997" }
-                    ]
+                { 
+                    "name": "Frontend Dev", 
+                    "status_progress": 0.6, 
+                    "planned_end": "2025-03-25", 
+                    "demand_due_date": "2025-03-15", // DELAY: Plan > Demand
+                    "color": "#198754" 
+                },
+                { 
+                    "name": "Backend API", 
+                    "status_progress": 0.2, 
+                    "planned_end": "2025-05-15", 
+                    "demand_due_date": "2025-05-01", // Significant Delay
+                    "color": "#6f42c1" 
                 }
-            ];
-
-            function getDaysDiff(start, end) {
-                const s = new Date(start);
-                const e = new Date(end);
-                return Math.floor((e - s) / (1000 * 60 * 60 * 24));
-            }
-
-            function renderTracker() {
-                const $container = $('#projects-container');
-                const $header = $('#timeline-header');
-
-                // 1. Clear previous content if needed
-                $container.empty();
-                $header.empty();
-
-                // 2. Render Timeline Scale
-                for (let i = 0; i < 12; i++) {
-                    let leftPos = i * 30 * PIXELS_PER_DAY;
-                    $header.append(`<div class="time-mark" style="left: ${leftPos}px">Month ${i + 1}</div>`);
+            ]
+        },
+        {
+            "project_id": "PRJ-002",
+            "project_name": "Mobile App Launch",
+            "start_date": "2025-02-01",
+            "milestones": [
+                { 
+                    "name": "Requirement", 
+                    "status_progress": 1.0, 
+                    "planned_end": "2025-02-20", 
+                    "demand_due_date": "2025-02-25", // Ahead of Schedule
+                    "color": "#fd7e14" 
+                },
+                { 
+                    "name": "Alpha Ver.", 
+                    "status_progress": 0.3, 
+                    "planned_end": "2025-05-10", 
+                    "demand_due_date": "2025-05-10", 
+                    "color": "#20c997" 
                 }
+            ]
+        }
+    ];
 
-                // 3. Render Projects
-                projectData.forEach(project => {
-                    let projectHTML = `
-            <div class="project-row">
-                <div class="project-name-label">${project.project_name}</div>
-                <div class="milestone-container" id="milestones-${project.project_id}"></div>
-            </div>
-        `;
-                    $container.append(projectHTML);
+    // --- Helpers ---
+    function getDaysDiff(start, end) {
+        const s = new Date(start);
+        const e = new Date(end);
+        return (e - s) / (1000 * 60 * 60 * 24);
+    }
 
-                    let currentAnchorDate = project.start_date;
+    function renderTracker() {
+        const $container = $('#projects-container');
+        const $header = $('#timeline-header');
 
-                    project.milestones.forEach(ms => {
-                        const daysDuration = getDaysDiff(currentAnchorDate, ms.planned_end);
-                        const offsetDays = getDaysDiff(TRACKER_START_DATE, currentAnchorDate);
+        // 1. Clear previous content
+        $container.empty();
+        $header.empty();
 
-                        const width = daysDuration * PIXELS_PER_DAY;
-                        const left = offsetDays * PIXELS_PER_DAY;
-                        const progressWidth = Math.round(ms.status_progress * 100);
+        // 2. Render Header (Time Scale - 6 Months roughly)
+        // Dynamically calculate width based on arbitrary range for demo
+        for(let i=0; i<8; i++) {
+            let leftPos = i * 30 * PIXELS_PER_DAY; // Every 30 days
+            // Calculate a rough label date
+            let labelDate = new Date(TRACKER_START_DATE);
+            labelDate.setMonth(labelDate.getMonth() + i);
+            let monthName = labelDate.toLocaleString('default', { month: 'short' });
+            
+            $header.append(`<div class="time-mark" style="left: ${leftPos}px">${monthName}</div>`);
+        }
 
-                        const msHTML = `
-                <div class="milestone-bar" 
-                     style="left: ${left}px; width: ${width}px; background-color: ${ms.color};" 
-                     title="${project.project_name} - ${ms.name}">
-                    <div class="progress-overlay" style="width: ${progressWidth}%"></div>
-                    <span class="milestone-text">${ms.name} (${progressWidth}%)</span>
+        // 3. Render Projects
+        projectData.forEach(project => {
+            let projectHTML = `
+                <div class="project-row">
+                    <div class="project-name-label">
+                        <div class="fw-bold text-dark">${project.project_name}</div>
+                        <div style="font-size:10px; color:#6c757d; margin-top:4px;">
+                            ID: ${project.project_id}
+                        </div>
+                    </div>
+                    <div class="milestone-container" id="milestones-${project.project_id}"></div>
                 </div>
             `;
+            $container.append(projectHTML);
 
-                        $(`#milestones-${project.project_id}`).append(msHTML);
+            const $rowContext = $(`#milestones-${project.project_id}`);
 
-                        // Move anchor forward
-                        currentAnchorDate = ms.planned_end;
-                    });
-                });
-            }
+            // Initialize TWO anchors for the dual-track system
+            let currentPlanAnchor = project.start_date;
+            let currentDemandAnchor = project.start_date;
 
-            
-            renderTracker();
+            project.milestones.forEach(ms => {
+                // --- A. DEMAND TRACK (Top Bar) ---
+                // If no demand date specified, fallback to plan date to keep chain intact
+                const demandEndDate = ms.demand_due_date ? ms.demand_due_date : ms.planned_end;
+                
+                const demandDuration = getDaysDiff(currentDemandAnchor, demandEndDate);
+                const demandOffset = getDaysDiff(TRACKER_START_DATE, currentDemandAnchor);
+                
+                const demandWidth = Math.max(demandDuration * PIXELS_PER_DAY, 2); // Min width 2px
+                const demandLeft = demandOffset * PIXELS_PER_DAY;
+
+                const demandHTML = `
+                    <div class="gantt-bar demand-bar" 
+                         style="left: ${demandLeft}px; width: ${demandWidth}px; background-color: ${ms.color};"
+                         title="Demand: ${ms.name} (Due: ${demandEndDate})">
+                         <span class="bar-label">${ms.name}</span>
+                    </div>
+                `;
+                $rowContext.append(demandHTML);
+
+                // --- B. PLAN TRACK (Bottom Bar) ---
+                const planDuration = getDaysDiff(currentPlanAnchor, ms.planned_end);
+                const planOffset = getDaysDiff(TRACKER_START_DATE, currentPlanAnchor);
+                
+                const planWidth = Math.max(planDuration * PIXELS_PER_DAY, 2);
+                const planLeft = planOffset * PIXELS_PER_DAY;
+                const progressPct = Math.round(ms.status_progress * 100);
+
+                const planHTML = `
+                    <div class="gantt-bar plan-bar" 
+                         style="left: ${planLeft}px; width: ${planWidth}px; background-color: ${ms.color};"
+                         title="Plan: ${ms.name} (End: ${ms.planned_end})">
+                        <div class="progress-overlay" style="width: ${progressPct}%"></div>
+                        <span class="bar-label" style="margin-left:auto; margin-right:5px;">${progressPct}%</span>
+                    </div>
+                `;
+                $rowContext.append(planHTML);
+
+                // --- C. Update Anchors ---
+                currentDemandAnchor = demandEndDate;
+                currentPlanAnchor = ms.planned_end;
+            });
         });
-    </script>
-</body>
+    }
 
+    // Execute
+    renderTracker();
+});
+</script>
+
+</body>
 </html>
