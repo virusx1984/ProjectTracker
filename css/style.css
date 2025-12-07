@@ -1,0 +1,137 @@
+/* --- Layout & Container --- */
+body {
+    background-color: #f4f6f9;
+}
+
+#tracker-wrapper {
+    position: relative;
+    overflow-x: auto;
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    min-height: 400px;
+}
+
+/* --- Timeline Header --- */
+#timeline-header {
+    height: 40px;
+    position: relative;
+    border-bottom: 2px solid #e9ecef;
+    background: #f8f9fa;
+    min-width: 100%;
+}
+
+.time-mark {
+    position: absolute;
+    bottom: 0;
+    border-left: 1px solid #ced4da;
+    padding-left: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #6c757d;
+    height: 25px;
+    line-height: 25px;
+}
+
+/* --- Project Row Structure --- */
+.project-row {
+    height: 85px;
+    /* Height to accommodate stacked bars */
+    position: relative;
+    border-bottom: 1px solid #e9ecef;
+    background-color: #fff;
+    display: flex;
+    align-items: center;
+}
+
+.project-row:hover {
+    background-color: #fafafa;
+}
+
+.project-name-label {
+    position: sticky;
+    left: 0;
+    z-index: 100;
+    background: #fff;
+    width: 220px;
+    height: 100%;
+    padding: 10px 15px;
+    border-right: 2px solid #e9ecef;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.02);
+}
+
+.milestone-container {
+    position: relative;
+    flex-grow: 1;
+    height: 100%;
+}
+
+/* --- Gantt Bars (Common) --- */
+.gantt-bar {
+    position: absolute;
+    border-radius: 2px; /* Slightly sharper corners for stacking */
+    font-size: 11px;    /* Slightly larger text for the big bar */
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    overflow: hidden;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+/* Style 1: Demand Bar (Top, Thin, 20%) */
+/* Style 1: Demand Bar (Top, Thin, Faded Shadow) */
+.demand-bar {
+    height: 8px;            /* 高度約佔整體的 20% */
+    top: 20px;              /* 起始位置 */
+    
+    /* 關鍵修改：移除邊框，使用透明度來區分它是"影子/目標" */
+    opacity: 0.4;           /* 讓它比下方的主條淡一點，但色系一樣 */
+    border: none;           
+    border-radius: 2px 2px 0 0; /* 只有上方圓角 */
+    
+    z-index: 10;
+    
+    /* 隱藏內部文字 */
+    color: transparent;   
+    font-size: 0;         
+}
+
+/* Style 2: Plan Bar (Bottom, Thick, Solid) */
+.plan-bar {
+    height: 32px;           /* 高度約佔整體的 80% */
+    
+    /* 計算縫隙：Demand Top(20) + Demand Height(8) + Gap(2) = 30 */
+    top: 30px;              
+    
+    color: #fff;
+    z-index: 20;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    line-height: 32px;
+    border-radius: 0 0 2px 2px; /* 只有下方圓角 */
+}
+
+/* Progress Fill Overlay */
+.progress-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.25);
+    z-index: 0;
+}
+
+.bar-label {
+    position: relative;
+    z-index: 2;
+    text-shadow: 0 0 2px rgba(255, 255, 255, 0.5);
+}
+
+.plan-bar .bar-label {
+    text-shadow: none;
+}
