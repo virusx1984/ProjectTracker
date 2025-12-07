@@ -2,6 +2,7 @@ $(document).ready(function () {
     // --- Configuration ---
     const PIXELS_PER_DAY = 6;
     const TRACKER_START_DATE = new Date("2025-01-01");
+    const RENDER_MONTHS_COUNT = 12; // Render header for 12 months
 
     // --- Sample Data ---
     const projectData = [
@@ -65,20 +66,26 @@ $(document).ready(function () {
 
     function renderTracker() {
         const $container = $('#projects-container');
-        const $header = $('#timeline-header');
+        const $headerTicks = $('#header-ticks-container'); 
 
         // 1. Clear previous content
         $container.empty();
-        $header.empty();
+        $headerTicks.empty(); 
 
-        // 2. Render Header (Time Scale - 8 Months)
-        for (let i = 0; i < 8; i++) {
-            let leftPos = i * 30 * PIXELS_PER_DAY;
-            let labelDate = new Date(TRACKER_START_DATE);
-            labelDate.setMonth(labelDate.getMonth() + i);
-            let monthName = labelDate.toLocaleString('default', { month: 'short' });
-
-            $header.append(`<div class="time-mark" style="left: ${leftPos}px">${monthName}</div>`);
+        // 2. Render Timeline Header
+        // FIXED: Use real Date objects to calculate position instead of assuming 30 days per month
+        for(let i=0; i < RENDER_MONTHS_COUNT; i++) {
+            // Calculate exact date for the start of the month
+            let targetMonthDate = new Date(TRACKER_START_DATE);
+            targetMonthDate.setMonth(targetMonthDate.getMonth() + i);
+            
+            // Calculate exact pixels from start
+            let daysFromStart = getDaysDiff(TRACKER_START_DATE, targetMonthDate);
+            let leftPos = daysFromStart * PIXELS_PER_DAY;
+            
+            let monthName = targetMonthDate.toLocaleString('default', { month: 'short' });
+            
+            $headerTicks.append(`<div class="time-mark" style="left: ${leftPos}px">${monthName}</div>`);
         }
 
         // 3. Render Projects
@@ -98,17 +105,17 @@ $(document).ready(function () {
 
             const $rowContext = $(`#milestones-${project.project_id}`);
 
-            // Initialize TWO anchors
+            // Initialize Dual Track Anchors
             let currentPlanAnchor = project.start_date;
             let currentDemandAnchor = project.start_date;
 
             project.milestones.forEach(ms => {
                 // --- A. DEMAND TRACK (Top Bar) ---
                 const demandEndDate = ms.demand_due_date ? ms.demand_due_date : ms.planned_end;
-
+                
                 const demandDuration = getDaysDiff(currentDemandAnchor, demandEndDate);
                 const demandOffset = getDaysDiff(TRACKER_START_DATE, currentDemandAnchor);
-
+                
                 const demandWidth = Math.max(demandDuration * PIXELS_PER_DAY, 2);
                 const demandLeft = demandOffset * PIXELS_PER_DAY;
 
@@ -116,7 +123,6 @@ $(document).ready(function () {
                     <div class="gantt-bar demand-bar" 
                          style="left: ${demandLeft}px; width: ${demandWidth}px; background-color: ${ms.color};"
                          title="Demand: ${ms.name} (Due: ${demandEndDate})">
-                         <span class="bar-label">${ms.name}</span>
                     </div>
                 `;
                 $rowContext.append(demandHTML);
@@ -129,8 +135,7 @@ $(document).ready(function () {
                 const planLeft = planOffset * PIXELS_PER_DAY;
                 const progressPct = Math.round(ms.status_progress * 100);
 
-                // 核心邏輯：如果寬度大於 60px，才生成文字內容
-                // 否則 innerContent 為空，只依賴 title (hover) 顯示資訊
+                // Determine if text should be displayed (Threshold: 60px)
                 let innerContent = '';
                 if (planWidth > 60) {
                     innerContent = `
