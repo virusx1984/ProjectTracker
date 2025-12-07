@@ -117,8 +117,8 @@ body {
     left: 0;
     
     /* 线条大小和颜色 */
-    width: 2px;
-    height: 20px; /* 线的高度，您可以随遇调整 */
+    width: 1px;
+    height: 30px; /* 线的高度，您可以随遇调整 */
     background-color: #adb5bd;
 }
 
@@ -127,7 +127,7 @@ body {
     position: absolute;
     bottom: 0;
     height: 15px; /* Shorter than month ticks */
-    border-left: 1px solid #e9ecef; /* Very light line */
+    border-left: 1px solid #b9b9b9; /* Very light line */
     font-size: 12px;
     color: #999;
     padding-left: 2px;
