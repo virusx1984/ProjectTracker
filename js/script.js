@@ -155,26 +155,29 @@ $(document).ready(function () {
         let totalTimelineWidth = 0;
         const SHOW_DAYS_THRESHOLD = 4;
 
-        for (let i = 0; i < RENDER_MONTHS_COUNT; i++) {
+        for(let i=0; i < RENDER_MONTHS_COUNT; i++) {
             let targetMonthDate = new Date(TRACKER_START_DATE);
             targetMonthDate.setMonth(targetMonthDate.getMonth() + i);
             let daysFromStart = getDaysDiff(TRACKER_START_DATE, targetMonthDate);
             let leftPos = daysFromStart * pixelsPerDay;
             let monthName = targetMonthDate.toLocaleString('default', { month: 'short' });
-
+            
             $headerTicks.append(`<div class="time-mark" style="left: ${leftPos}px">${monthName}</div>`);
+            
+            // Get the total number of days in the current month (28, 30, or 31)
+            let daysInMonth = new Date(targetMonthDate.getFullYear(), targetMonthDate.getMonth() + 1, 0).getDate();
 
-            // Daily Ticks
+            // --- Daily Ticks Logic ---
             if (pixelsPerDay >= SHOW_DAYS_THRESHOLD) {
-                let daysInMonth = new Date(targetMonthDate.getFullYear(), targetMonthDate.getMonth() + 1, 0).getDate();
                 let step;
-                if (pixelsPerDay >= 18) { step = 1; }
-                else if (pixelsPerDay >= 10) { step = 5; }
+                if (pixelsPerDay >= 18) { step = 1; } 
+                else if (pixelsPerDay >= 10) { step = 5; } 
                 else { step = 15; }
 
                 for (let d = 1; d <= daysInMonth; d++) {
                     if (d % step === 0 && d !== 1) {
                         if (step > 1 && d >= 30) continue;
+
                         let dayDate = new Date(targetMonthDate);
                         dayDate.setDate(d);
                         let dayOffset = getDaysDiff(TRACKER_START_DATE, dayDate);
@@ -183,9 +186,16 @@ $(document).ready(function () {
                     }
                 }
             }
-            totalTimelineWidth = leftPos + 100;
+            
+            // --- FIX: Correctly calculate total width ---
+            // Logic: Month Start Position + (Days in Month * Pixels Per Day)
+            // This ensures the container fully wraps the last month regardless of the zoom level
+            let monthWidth = daysInMonth * pixelsPerDay;
+            totalTimelineWidth = leftPos + monthWidth; 
         }
-        $headerTicks.css('min-width', totalTimelineWidth + 'px');
+        
+        // Add a small buffer (e.g., 20px) to prevent text from hitting the browser edge
+        $headerTicks.css('min-width', (totalTimelineWidth + 0) + 'px');
 
         // Past Zone & Today Marker
         const todayOffsetDays = getDaysDiff(TRACKER_START_DATE, CURRENT_DATE);
