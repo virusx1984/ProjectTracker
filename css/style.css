@@ -397,34 +397,32 @@ body {
 }
 
 
-/* --- Active Progress Animation --- */
+/* --- Active Progress Animation (Shimmer Effect) --- */
 
-/* 1. Define the sliding animation */
-@keyframes progress-bar-stripes {
-    0% { background-position-x: 1rem; }
-    100% { background-position-x: 0; }
+/* 1. Define the shimmer moving - REVERSED direction */
+@keyframes shimmer-flow {
+    0% {
+        /* 原来是 -200% (左)，现在改成 200% (右) */
+        background-position: 200% 0;
+    }
+    100% {
+        /* 原来是 200% (右)，现在改成 -200% (左) */
+        background-position: -200% 0;
+    }
 }
 
 /* 2. The active style for In-Progress tasks */
 .progress-overlay.active-anim {
-    /* Base color (slightly lighter than static to allow stripes to show) */
-    background-color: rgba(0, 0, 0, 0.15); 
-    
-    /* Subtle dark stripes pattern */
-    background-image: linear-gradient(
-        45deg,
-        rgba(0, 0, 0, 0.15) 25%, 
-        transparent 25%, 
-        transparent 50%, 
-        rgba(0, 0, 0, 0.15) 50%, 
-        rgba(0, 0, 0, 0.15) 75%, 
-        transparent 75%, 
-        transparent
+    /* 核心原理不变 */
+    background: linear-gradient(
+        to right, 
+        rgba(0, 0, 0, 0.25) 0%,       
+        rgba(255, 255, 255, 0.1) 50%, 
+        rgba(0, 0, 0, 0.25) 100%      
     );
+
+    background-size: 200% auto;
     
-    /* Size of the stripes */
-    background-size: 1rem 1rem;
-    
-    /* Animation: slow and linear loop */
-    animation: progress-bar-stripes 2s linear infinite;
+    /* 保持 2.5s 匀速循环 */
+    animation: shimmer-flow 6s linear infinite;
 }
