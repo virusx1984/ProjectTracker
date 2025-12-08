@@ -343,7 +343,11 @@ $(document).ready(function () {
     // --- Edit & Interaction Logic (Updated with Fix) ---
     function initEditHandlers() {
         const modalEl = document.getElementById('editMilestoneModal');
-        const modal = new bootstrap.Modal(modalEl);
+        // UPDATE: Add options to prevent accidental closing
+        const modal = new bootstrap.Modal(modalEl, {
+            backdrop: 'static', // Clicking outside won't close it
+            keyboard: false     // Pressing ESC won't close it
+        });
         const $errorMsg = $('#edit-error-msg'); // 错误提示框
 
         // --- FIX: Ensure error is cleared whenever modal is closed ---
