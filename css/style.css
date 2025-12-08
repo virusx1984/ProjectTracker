@@ -395,3 +395,36 @@ body {
 .shake-animation {
   animation: shake 0.3s;
 }
+
+
+/* --- Active Progress Animation --- */
+
+/* 1. Define the sliding animation */
+@keyframes progress-bar-stripes {
+    0% { background-position-x: 1rem; }
+    100% { background-position-x: 0; }
+}
+
+/* 2. The active style for In-Progress tasks */
+.progress-overlay.active-anim {
+    /* Base color (slightly lighter than static to allow stripes to show) */
+    background-color: rgba(0, 0, 0, 0.15); 
+    
+    /* Subtle dark stripes pattern */
+    background-image: linear-gradient(
+        45deg,
+        rgba(0, 0, 0, 0.15) 25%, 
+        transparent 25%, 
+        transparent 50%, 
+        rgba(0, 0, 0, 0.15) 50%, 
+        rgba(0, 0, 0, 0.15) 75%, 
+        transparent 75%, 
+        transparent
+    );
+    
+    /* Size of the stripes */
+    background-size: 1rem 1rem;
+    
+    /* Animation: slow and linear loop */
+    animation: progress-bar-stripes 2s linear infinite;
+}

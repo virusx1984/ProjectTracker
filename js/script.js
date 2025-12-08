@@ -297,7 +297,14 @@ $(document).ready(function () {
                     innerContent = `<div class="plan-bar-content"><span class="plan-name">${ms.name}</span><span class="plan-pct">${progressPct}%</span></div>`;
                 }
 
-                // ADDED: data-p-idx and data-m-idx attributes
+                // --- NEW: Determine Animation Class ---
+                // Only animate if In Progress ( > 0% AND < 100% )
+                let animClass = '';
+                if (ms.status_progress > 0 && ms.status_progress < 1.0) {
+                    animClass = 'active-anim';
+                }
+
+                // ADDED: ${animClass} inside the class attribute of progress-overlay
                 $rowContext.append(`
                     <div class="gantt-bar plan-bar clickable" 
                          style="left: ${planLeft}px; width: ${planWidth}px; background-color: ${ms.color};"
@@ -307,7 +314,9 @@ $(document).ready(function () {
                          data-bs-html="true" 
                          data-bs-placement="top"
                          data-bs-content='${popContent}'>
-                        <div class="progress-overlay" style="width: ${progressPct}%"></div>
+                        
+                        <div class="progress-overlay ${animClass}" style="width: ${progressPct}%"></div>
+                        
                         ${innerContent}
                     </div>
                 `);
