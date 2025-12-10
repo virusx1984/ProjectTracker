@@ -146,7 +146,7 @@ $(document).ready(function () {
 
         // 2. Get Key Dates
         // 'revised_end_date' is dynamically calculated in reviseProjectData()
-        const revisedEnd = new Date(lastMs.revised_end_date); 
+        const revisedEnd = new Date(lastMs.revised_end_date);
         const originalPlan = new Date(lastMs.planned_end);
         // If demand date is missing, default to planned end (assumes no external buffer)
         const demandDate = new Date(lastMs.demand_due_date || lastMs.planned_end);
@@ -162,7 +162,7 @@ $(document).ready(function () {
         if (isExternalRisk) {
             if (isInternalDelayed) {
                 // Scenario: Slower than plan AND missed client deadline -> Critical
-                return { label: "Critical", class: "bg-critical" }; 
+                return { label: "Critical", class: "bg-critical" };
             } else {
                 // Scenario: On track/Ahead of plan BUT still missed client deadline 
                 // This implies the original plan was too loose or demand is too aggressive
@@ -200,23 +200,23 @@ $(document).ready(function () {
         let totalTimelineWidth = 0;
         const SHOW_DAYS_THRESHOLD = 4;
 
-        for(let i=0; i < RENDER_MONTHS_COUNT; i++) {
+        for (let i = 0; i < RENDER_MONTHS_COUNT; i++) {
             let targetMonthDate = new Date(TRACKER_START_DATE);
             targetMonthDate.setMonth(targetMonthDate.getMonth() + i);
             let daysFromStart = getDaysDiff(TRACKER_START_DATE, targetMonthDate);
             let leftPos = daysFromStart * pixelsPerDay;
             let monthName = targetMonthDate.toLocaleString('default', { month: 'short' });
-            
+
             $headerTicks.append(`<div class="time-mark" style="left: ${leftPos}px">${monthName}</div>`);
-            
+
             // Get the total number of days in the current month (28, 30, or 31)
             let daysInMonth = new Date(targetMonthDate.getFullYear(), targetMonthDate.getMonth() + 1, 0).getDate();
 
             // --- Daily Ticks Logic ---
             if (pixelsPerDay >= SHOW_DAYS_THRESHOLD) {
                 let step;
-                if (pixelsPerDay >= 18) { step = 1; } 
-                else if (pixelsPerDay >= 10) { step = 5; } 
+                if (pixelsPerDay >= 18) { step = 1; }
+                else if (pixelsPerDay >= 10) { step = 5; }
                 else { step = 15; }
 
                 for (let d = 1; d <= daysInMonth; d++) {
@@ -231,15 +231,16 @@ $(document).ready(function () {
                     }
                 }
             }
-            
+
             // --- FIX: Correctly calculate total width ---
             // Logic: Month Start Position + (Days in Month * Pixels Per Day)
             // This ensures the container fully wraps the last month regardless of the zoom level
             let monthWidth = daysInMonth * pixelsPerDay;
-            totalTimelineWidth = leftPos + monthWidth; 
+            totalTimelineWidth = leftPos + monthWidth;
         }
-        
-        // Add a small buffer (e.g., 20px) to prevent text from hitting the browser edge
+
+        // CORRECTION: Remove the "+ 20" buffer. 
+        // Use the EXACT same width as the project rows to ensure perfect alignment.
         $headerTicks.css('min-width', (totalTimelineWidth + 0) + 'px');
 
         // Past Zone & Today Marker
@@ -406,7 +407,7 @@ $(document).ready(function () {
         });
 
         // 4. Initialize Bootstrap Components
-        
+
         // A. Popovers (For Gantt Bars) - Keep existing
         const popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]');
         [...popoverTriggerList].map(popoverTriggerEl => new bootstrap.Popover(popoverTriggerEl));
@@ -425,10 +426,10 @@ $(document).ready(function () {
             backdrop: 'static', // Clicking outside won't close it
             keyboard: false     // Pressing ESC won't close it
         });
-        const $errorMsg = $('#edit-error-msg'); // 错误提示框
+        const $errorMsg = $('#edit-error-msg'); // Error message box
 
         // --- FIX: Ensure error is cleared whenever modal is closed ---
-        // 无论是点击关闭按钮、点击背景还是按 ESC 关闭，都会触发这个事件
+        // Whether closed by button, background click, or ESC, this event triggers
         $(modalEl).on('hidden.bs.modal', function () {
             $errorMsg.addClass('d-none').text('');
         });
@@ -609,16 +610,16 @@ $(document).ready(function () {
             startX = e.clientX;
             startY = e.clientY;
 
-            // 1. 关键修复：在改变定位之前，先获取当前的实际宽度
+            // 1. Critical Fix: Get current actual width before changing position
             const currentWidth = $dialog.outerWidth();
 
             const offset = $dialog.offset();
             startLeft = offset.left;
             startTop = offset.top;
 
-            // 2. 关键修复：在设置 absolute 的同时，锁死 width
+            // 2. Critical Fix: Lock the width while setting absolute position
             $dialog.css({
-                'width': currentWidth + 'px', // <--- 加上这一行，锁死宽度
+                'width': currentWidth + 'px', // <--- Lock width
                 'margin': '0',
                 'position': 'absolute',
                 'left': startLeft + 'px',
@@ -650,7 +651,7 @@ $(document).ready(function () {
                 'top': '',
                 'margin': '',
                 'position': '',
-                'width': '' // <--- 3. 关闭时清除固定宽度，恢复 Bootstrap 的响应式能力
+                'width': '' // <--- 3. Clear fixed width on close to restore Bootstrap responsiveness
             });
         });
     }
@@ -666,6 +667,6 @@ $(document).ready(function () {
     initZoomControls();
     initEditHandlers();
 
-    // 4. Init Draggable Modal (别忘了这句，不然弹窗不能拖动)
+    // 4. Init Draggable Modal (Don't forget this line, or the modal won't drag)
     makeModalDraggable('#editMilestoneModal');
 });

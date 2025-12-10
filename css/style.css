@@ -88,17 +88,17 @@ body {
 .time-mark {
     position: absolute;
     
-    /* 1. 让容器占满整个 Header 高度 */
+    /* 1. Let the container occupy the full height of the Header */
     top: 0;
     bottom: 0;
     
-    /* 2. 移除原本的 border-left，改用伪元素画线 */
+    /* 2. Remove original border-left, use pseudo-element for the line instead */
     border-left: none; 
     
-    /* 3. 利用 Flex 把文字对齐到顶部 */
+    /* 3. Use Flex to align text to the top */
     display: flex;
-    align-items: start; /* 文字靠上 */
-    padding-top: 2px;   /* 稍微留点顶距 */
+    align-items: start; /* Text aligns to top */
+    padding-top: 2px;   /* Slight top padding */
     
     padding-left: 6px;
     font-size: 13px;
@@ -107,18 +107,18 @@ body {
     z-index: 10;
 }
 
-/* 新增：专门用来画左边那条「底部短线」的伪元素 */
+/* NEW: Pseudo-element specifically for drawing the "bottom short line" on the left */
 .time-mark::after {
     content: '';
     position: absolute;
     
-    /* 关键：强制固定在底部 */
+    /* Key: Force it to stick to the bottom */
     bottom: 0; 
     left: 0;
     
-    /* 线条大小和颜色 */
+    /* Line size and color */
     width: 1px;
-    height: 30px; /* 线的高度，您可以随遇调整 */
+    height: 30px; /* Height of the line, adjustable */
     background-color: #adb5bd;
 }
 
@@ -373,14 +373,14 @@ body {
 
 /* --- Draggable Modal --- */
 #editMilestoneModal .modal-header {
-    cursor: move; /* 鼠标放上去显示十字箭头 */
-    user-select: none; /* 防止拖动时选中文字 */
+    cursor: move; /* Mouse becomes move icon on hover */
+    user-select: none; /* Prevent text selection during drag */
 }
 
-/* 确保 dialog 在拖动模式下可以绝对定位 */
+/* Ensure dialog can be absolute positioned during drag */
 #editMilestoneModal .modal-dialog {
-    /* 这里的样式会由 JS 动态控制，但预设一下是个好习惯 */
-    transition: none; /* 拖动时不要有动画延迟 */
+    /* Styles will be controlled by JS, but good to preset this */
+    transition: none; /* No animation lag during drag */
 }
 
 /* Shake animation for validation error */
@@ -402,18 +402,22 @@ body {
 /* 1. Define the shimmer moving - REVERSED direction */
 @keyframes shimmer-flow {
     0% {
-        /* 原来是 -200% (左)，现在改成 200% (右) */
+        /* Originally -200% (Left), now 200% (Right) */
         background-position: 200% 0;
     }
     100% {
-        /* 原来是 200% (右)，现在改成 -200% (左) */
+        /* Originally 200% (Right), now -200% (Left) */
         background-position: -200% 0;
     }
 }
 
 /* 2. The active style for In-Progress tasks */
 .progress-overlay.active-anim {
-    /* 核心原理不变 */
+    /* Core Principle:
+       1. Base color: dark transparent overlay (rgba(0,0,0,0.25))
+       2. Overlay a subtle white beam (rgba(255,255,255,0.1))
+       3. Use linear-gradient for Dark -> Light -> Dark
+    */
     background: linear-gradient(
         to right, 
         rgba(0, 0, 0, 0.25) 0%,       
@@ -423,7 +427,7 @@ body {
 
     background-size: 200% auto;
     
-    /* 保持 2.5s 匀速循环 */
+    /* 6s linear infinite loop (slower for subtle effect) */
     animation: shimmer-flow 6s linear infinite;
 }
 
@@ -467,14 +471,14 @@ body {
 }
 
 /* --- Fix Status Strip Colors --- */
-/* 强制给 status-strip 指定颜色，确保一定能显示 */
+/* Force specific colors for status-strip to ensure visibility */
 
-/* 1. 确保它在最上层，防止被白色背景遮挡 */
+/* 1. Ensure it sits on top of white background */
 .status-strip {
     z-index: 10; 
 }
 
-/* 2. 显式定义每种状态的颜色 (覆盖 Bootstrap 默认行为) */
+/* 2. Explicitly define colors (Override Bootstrap defaults) */
 .status-strip.bg-success {
     background-color: #198754 !important; /* Green */
 }
@@ -499,13 +503,13 @@ body {
 .legend-dot {
     width: 12px;
     height: 12px;
-    border-radius: 50%; /* 圆形 */
-    display: inline-block; /* 确保宽高生效 */
+    border-radius: 50%; /* Circle */
+    display: inline-block; /* Ensure dimensions work */
     margin-right: 6px;
-    flex-shrink: 0; /* 防止被挤压 */
+    flex-shrink: 0; /* Prevent shrinking */
 }
 
-/* 强制颜色定义 (复用之前的色值) */
+/* Force Color Definitions */
 .legend-dot.bg-success { background-color: #198754 !important; }
 .legend-dot.bg-warning { background-color: #ffc107 !important; }
 .legend-dot.bg-danger  { background-color: #dc3545 !important; }
