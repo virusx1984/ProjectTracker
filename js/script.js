@@ -134,6 +134,51 @@ $(document).ready(function () {
         `;
     }
 
+    // --- Project Status Calculation Logic ---
+    function getProjectStatus(project) {
+        // Return default if no milestones exist
+        if (!project.milestones || project.milestones.length === 0) {
+            return { label: "No Data", class: "bg-secondary" };
+        }
+
+        // 1. Identify the Last Milestone (Key indicator for project completion)
+        const lastMs = project.milestones[project.milestones.length - 1];
+
+        // 2. Get Key Dates
+        // 'revised_end_date' is dynamically calculated in reviseProjectData()
+        const revisedEnd = new Date(lastMs.revised_end_date); 
+        const originalPlan = new Date(lastMs.planned_end);
+        // If demand date is missing, default to planned end (assumes no external buffer)
+        const demandDate = new Date(lastMs.demand_due_date || lastMs.planned_end);
+
+        // 3. Evaluate Two Dimensions
+        // Dimension 1: Internal Execution (Forecast vs. Original Plan)
+        const isInternalDelayed = revisedEnd > originalPlan;
+
+        // Dimension 2: External Delivery (Forecast vs. Client Demand)
+        const isExternalRisk = revisedEnd > demandDate;
+
+        // 4. Determine Status Matrix
+        if (isExternalRisk) {
+            if (isInternalDelayed) {
+                // Scenario: Slower than plan AND missed client deadline -> Critical
+                return { label: "Critical", class: "bg-critical" }; 
+            } else {
+                // Scenario: On track/Ahead of plan BUT still missed client deadline 
+                // This implies the original plan was too loose or demand is too aggressive
+                return { label: "Plan Fail", class: "bg-danger" };
+            }
+        } else {
+            if (isInternalDelayed) {
+                // Scenario: Slower than plan BUT still met client deadline -> Buffer Consumed
+                return { label: "Buffer Used", class: "bg-warning text-dark" };
+            } else {
+                // Scenario: Everything is perfect
+                return { label: "Excellent", class: "bg-success" };
+            }
+        }
+    }
+
     function renderTracker(data) {
         const $container = $('#projects-container');
         const $headerTicks = $('#header-ticks-container');
@@ -216,10 +261,26 @@ $(document).ready(function () {
         // 3. Render Projects
         // Note the addition of index 'pIndex'
         data.projects.forEach((project, pIndex) => {
+            // --- NEW: Calculate Project Status ---
+            const status = getProjectStatus(project);
+            // --- CHANGE: Create Status Strip HTML instead of Badge ---
+            // We use data-bs-toggle="tooltip" (distinct from popover)
+            const statusStrip = `
+                <div class="status-strip ${status.class}" 
+                     data-bs-toggle="tooltip" 
+                     data-bs-placement="right" 
+                     title="Status: ${status.label}">
+                </div>
+            `;
+
             let projectHTML = `
                 <div class="project-row">
                     <div class="project-name-label">
-                        <div class="fw-bold text-dark">${project.project_name}</div>
+                        ${statusStrip}
+                        
+                        <div class="fw-bold text-dark">
+                            ${project.project_name}
+                        </div>
                         <div style="font-size:10px; color:#6c757d; margin-top:4px;">
                             ID: ${project.project_id}
                         </div>
@@ -344,9 +405,16 @@ $(document).ready(function () {
             });
         });
 
-        // Initialize Popovers
+        // 4. Initialize Bootstrap Components
+        
+        // A. Popovers (For Gantt Bars) - Keep existing
         const popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]');
         [...popoverTriggerList].map(popoverTriggerEl => new bootstrap.Popover(popoverTriggerEl));
+
+        // B. NEW: Tooltips (For Status Strip)
+        // We need to initialize them separately
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
     }
 
     // --- Edit & Interaction Logic (Updated with Fix) ---

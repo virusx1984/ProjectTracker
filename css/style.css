@@ -426,3 +426,87 @@ body {
     /* 保持 2.5s 匀速循环 */
     animation: shimmer-flow 6s linear infinite;
 }
+
+/* --- Updated Project Label Layout --- */
+.project-name-label {
+    /* Keep existing props */
+    position: sticky;
+    left: 0;
+    z-index: 900;
+    background: #fff;
+    width: 220px;
+    height: 100%;
+    border-right: none; 
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    
+    /* CHANGE: Increase padding-left to make room for the strip (Original was 15px) */
+    padding: 10px 15px 10px 20px; 
+    
+    /* Ensure the strip stays absolutely positioned relative to this box */
+    position: sticky; 
+    overflow: hidden; 
+}
+
+/* --- Status Strip (The colored bar on the left) --- */
+.status-strip {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px; /* Width of the colored bar */
+    cursor: help; /* Change cursor to indicate it has a tooltip */
+    transition: width 0.2s; /* Nice interaction effect */
+}
+
+/* Optional: Make it slightly wider on hover */
+.status-strip:hover {
+    width: 8px;
+}
+
+/* --- Fix Status Strip Colors --- */
+/* 强制给 status-strip 指定颜色，确保一定能显示 */
+
+/* 1. 确保它在最上层，防止被白色背景遮挡 */
+.status-strip {
+    z-index: 10; 
+}
+
+/* 2. 显式定义每种状态的颜色 (覆盖 Bootstrap 默认行为) */
+.status-strip.bg-success {
+    background-color: #198754 !important; /* Green */
+}
+
+.status-strip.bg-warning {
+    background-color: #ffc107 !important; /* Yellow */
+}
+
+.status-strip.bg-danger {
+    background-color: #dc3545 !important; /* Red */
+}
+
+.status-strip.bg-critical {
+    background-color: #6f42c1 !important; /* Purple */
+}
+
+.status-strip.bg-secondary {
+    background-color: #6c757d !important; /* Gray (No Data) */
+}
+
+/* --- Legend Dot Styling --- */
+.legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%; /* 圆形 */
+    display: inline-block; /* 确保宽高生效 */
+    margin-right: 6px;
+    flex-shrink: 0; /* 防止被挤压 */
+}
+
+/* 强制颜色定义 (复用之前的色值) */
+.legend-dot.bg-success { background-color: #198754 !important; }
+.legend-dot.bg-warning { background-color: #ffc107 !important; }
+.legend-dot.bg-danger  { background-color: #dc3545 !important; }
+.legend-dot.bg-critical{ background-color: #6f42c1 !important; }
