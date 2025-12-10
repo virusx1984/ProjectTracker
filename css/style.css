@@ -1,8 +1,68 @@
 /* --- Layout & Container --- */
 body {
-    background-color: #f4f6f9;
+    background-color: #f8f9fa; /* Lighter background for dashboard feel */
 }
 
+/* Dashboard Filter Cards */
+.stat-card {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 10px 15px;
+    min-width: 140px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    border-color: #adb5bd;
+}
+
+.stat-card.active {
+    border-color: #0d6efd;
+    background-color: #f0f7ff;
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+}
+
+.stat-card .color-bar {
+    width: 4px;
+    height: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+.stat-card .stat-count {
+    font-size: 20px;
+    font-weight: 700;
+    margin-right: 10px;
+    color: #212529;
+}
+
+.stat-card .stat-label {
+    font-size: 11px;
+    color: #6c757d;
+    text-transform: uppercase;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+/* Empty State */
+.empty-state {
+    padding: 60px 20px;
+    text-align: center;
+    color: #6c757d;
+    width: 100%;
+    background: #fff;
+}
+
+/* --- Tracker Wrapper --- */
 #tracker-wrapper {
     position: relative;
     background-color: #fff;
@@ -11,7 +71,7 @@ body {
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     
     /* Limit height and enable 2-axis scrolling */
-    max-height: 600px;
+    max-height: 650px; /* Slightly taller */
     overflow: auto;
 
     /* Firefox Scrollbar Support */
@@ -19,10 +79,10 @@ body {
     scrollbar-color: #adb5bd #f1f3f5;
 }
 
-/* --- Custom Scrollbar Styling (Webkit: Chrome, Safari, Edge) --- */
+/* --- Custom Scrollbar Styling --- */
 #tracker-wrapper::-webkit-scrollbar {
-    width: 8px;  /* Vertical scrollbar width */
-    height: 8px; /* Horizontal scrollbar height */
+    width: 8px;
+    height: 8px;
 }
 
 #tracker-wrapper::-webkit-scrollbar-track {
@@ -31,13 +91,13 @@ body {
 }
 
 #tracker-wrapper::-webkit-scrollbar-thumb {
-    background-color: #adb5bd; /* Scrollbar color */
+    background-color: #adb5bd;
     border-radius: 4px;
-    border: 2px solid #f1f3f5; /* Creates padding around thumb */
+    border: 2px solid #f1f3f5;
 }
 
 #tracker-wrapper::-webkit-scrollbar-thumb:hover {
-    background-color: #868e96; /* Darker on hover */
+    background-color: #868e96;
 }
 
 /* --- Timeline Header --- */
@@ -45,35 +105,27 @@ body {
     height: 40px;
     background: #f8f9fa;
     border-bottom: 2px solid #e9ecef;
-    
-    /* Sticky Top Behavior */
     position: sticky;
     top: 0;
     z-index: 1000;
-    
     display: flex;
     min-width: max-content; 
 }
 
-/* Corner Placeholder (Sticky Top-Left) - FLATTENED */
+/* Corner Placeholder (Sticky Top-Left) */
 .header-corner-placeholder {
     width: 220px;
     flex-shrink: 0;
     background: #f8f9fa;
-    
-    /* Removed borders for flat look */
     border-right: none;
     border-bottom: none; 
-    
-    /* Sticky Props */
     position: sticky;
     left: 0;
     top: 0;
     z-index: 1100;
-    
     display: flex;
     align-items: center;
-    padding-left: 15px;
+    padding-left: 20px; /* Match project row padding */
     font-weight: bold;
     color: #495057;
     font-size: 14px;
@@ -84,22 +136,15 @@ body {
     flex-grow: 1;
 }
 
-/* Existing Month Label */
+/* Month Label */
 .time-mark {
     position: absolute;
-    
-    /* 1. Let the container occupy the full height of the Header */
     top: 0;
     bottom: 0;
-    
-    /* 2. Remove original border-left, use pseudo-element for the line instead */
     border-left: none; 
-    
-    /* 3. Use Flex to align text to the top */
     display: flex;
-    align-items: start; /* Text aligns to top */
-    padding-top: 2px;   /* Slight top padding */
-    
+    align-items: start;
+    padding-top: 2px;
     padding-left: 6px;
     font-size: 13px;
     font-weight: 600;
@@ -107,27 +152,23 @@ body {
     z-index: 10;
 }
 
-/* NEW: Pseudo-element specifically for drawing the "bottom short line" on the left */
+/* Month Divider Line */
 .time-mark::after {
     content: '';
     position: absolute;
-    
-    /* Key: Force it to stick to the bottom */
     bottom: 0; 
     left: 0;
-    
-    /* Line size and color */
     width: 1px;
-    height: 30px; /* Height of the line, adjustable */
+    height: 30px;
     background-color: #adb5bd;
 }
 
-/* NEW: Day Ticks (Visible only on zoom) */
+/* Day Ticks */
 .day-tick {
     position: absolute;
     bottom: 0;
-    height: 15px; /* Shorter than month ticks */
-    border-left: 1px solid #b9b9b9; /* Very light line */
+    height: 15px;
+    border-left: 1px solid #b9b9b9;
     font-size: 12px;
     color: #999;
     padding-left: 2px;
@@ -145,6 +186,8 @@ body {
     display: flex;
     align-items: center;
     min-width: max-content; 
+    /* Perf optimization for scrolling */
+    contain: layout style;
 }
 
 .project-row:hover {
@@ -156,26 +199,24 @@ body {
     position: sticky;
     left: 0;
     z-index: 900;
-    
     background: #fff;
     width: 220px;
     height: 100%;
-    padding: 10px 15px;
-    
-    /* Removed border-right and box-shadow */
+    /* Padding-left increased for Status Strip */
+    padding: 10px 15px 10px 20px; 
     border-right: none; 
     box-shadow: none;
-    
     display: flex;
     flex-direction: column;
     justify-content: center;
+    overflow: hidden; 
 }
 
 .milestone-container {
     position: relative;
     flex-grow: 1;
     height: 100%;
-    min-width: 0; /* Important for width calculation */
+    min-width: 0;
 }
 
 /* --- Gantt Bars --- */
@@ -189,10 +230,10 @@ body {
     overflow: hidden;
     white-space: nowrap;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: width 0.2s, left 0.2s; /* Only animate transform props if needed */
 }
 
-/* Demand Bar (Top layer) */
+/* Demand Bar */
 .demand-bar {
     height: 8px;
     top: 10px;
@@ -204,7 +245,7 @@ body {
     font-size: 0;
 }
 
-/* Plan Bar (Bottom layer - Main) */
+/* Plan Bar */
 .plan-bar {
     height: 32px;
     top: 20px;
@@ -215,42 +256,27 @@ body {
     border-radius: 0 0 2px 2px;
 }
 
-/* --- Status Tails for Actual Completion --- */
-
-/* 1. Delay Tail (Red Stripes) - Used when Actual > Planned */
+/* --- Status Tails --- */
 .gantt-tail-delay {
     height: 32px;
     top: 20px;
-    
     background-color: #dc3545; 
     background-image: linear-gradient(45deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent);
     background-size: 10px 10px;
-    
-    /* FIX: Increase Z-Index to 30 to sit ABOVE the solid plan bar (which is 20) */
     z-index: 30; 
-    
-    /* FIX: Force pointer events to ensure hover works */
     pointer-events: auto !important;
-    
     border-radius: 0 2px 2px 0;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    cursor: help; /* Change cursor to question mark on hover */
+    cursor: help;
 }
 
-/* 2. Early/Saved Tail (Ghost/Dashed) - Used when Actual < Planned */
 .gantt-tail-early {
     height: 32px;
     top: 20px;
-    
     background-color: rgba(255, 255, 255, 0.5);
     border: 1px dashed #adb5bd;
-    
-    /* FIX: Increase Z-Index */
     z-index: 30;
-    
-    /* FIX: Force pointer events */
     pointer-events: auto !important;
-    
     border-radius: 0 2px 2px 0;
     cursor: help;
 }
@@ -291,13 +317,11 @@ body {
 }
 
 /* --- Today / Past Visualization --- */
-
-/* 1. Header Marker (Keep this to show "Today" label) */
 .today-header-marker {
     position: absolute;
     top: 0;
     bottom: 0;
-    width: 2px; /* Restore width for visibility since border is gone */
+    width: 2px;
     background-color: #0d6efd; 
     z-index: 2000;
 }
@@ -315,30 +339,22 @@ body {
     white-space: nowrap;
 }
 
-/* 2. Past Time Zone (Gray Background) */
 .past-time-zone {
     position: absolute;
     top: 0;
     bottom: 0;
     left: 0; 
-    
-    /* Darker gray tint (0.04 -> 0.08) for better visibility */
     background-color: rgba(0, 0, 0, 0.08); 
-    
-    /* Removed border-right per request */
     border-right: none; 
-    
-    /* Z-Index: Behind bars (10+) but above row bg (0) */
     z-index: 5; 
     pointer-events: none; 
 }
 
 /* --- Popover Styling --- */
-/* Customize the Bootstrap Popover to look nicer */
 .popover {
     border: none;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    max-width: 280px; /* Slightly wider */
+    max-width: 280px;
 }
 
 .popover-header {
@@ -352,7 +368,6 @@ body {
     color: #495057;
 }
 
-/* Custom Content inside Popover */
 .popover-body-content {
     font-size: 13px;
     line-height: 1.6;
@@ -373,17 +388,15 @@ body {
 
 /* --- Draggable Modal --- */
 #editMilestoneModal .modal-header {
-    cursor: move; /* Mouse becomes move icon on hover */
-    user-select: none; /* Prevent text selection during drag */
+    cursor: move;
+    user-select: none;
 }
 
-/* Ensure dialog can be absolute positioned during drag */
 #editMilestoneModal .modal-dialog {
-    /* Styles will be controlled by JS, but good to preset this */
-    transition: none; /* No animation lag during drag */
+    transition: none;
 }
 
-/* Shake animation for validation error */
+/* Shake Animation */
 @keyframes shake {
   0% { transform: translateX(0); }
   25% { transform: translateX(-5px); }
@@ -396,121 +409,42 @@ body {
   animation: shake 0.3s;
 }
 
-
-/* --- Active Progress Animation (Shimmer Effect) --- */
-
-/* 1. Define the shimmer moving - REVERSED direction */
+/* --- Active Progress Animation (Shimmer) --- */
 @keyframes shimmer-flow {
-    0% {
-        /* Originally -200% (Left), now 200% (Right) */
-        background-position: 200% 0;
-    }
-    100% {
-        /* Originally 200% (Right), now -200% (Left) */
-        background-position: -200% 0;
-    }
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
 }
 
-/* 2. The active style for In-Progress tasks */
 .progress-overlay.active-anim {
-    /* Core Principle:
-       1. Base color: dark transparent overlay (rgba(0,0,0,0.25))
-       2. Overlay a subtle white beam (rgba(255,255,255,0.1))
-       3. Use linear-gradient for Dark -> Light -> Dark
-    */
     background: linear-gradient(
         to right, 
         rgba(0, 0, 0, 0.25) 0%,       
         rgba(255, 255, 255, 0.1) 50%, 
         rgba(0, 0, 0, 0.25) 100%      
     );
-
     background-size: 200% auto;
-    
-    /* 6s linear infinite loop (slower for subtle effect) */
     animation: shimmer-flow 6s linear infinite;
 }
 
-/* --- Updated Project Label Layout --- */
-.project-name-label {
-    /* Keep existing props */
-    position: sticky;
-    left: 0;
-    z-index: 900;
-    background: #fff;
-    width: 220px;
-    height: 100%;
-    border-right: none; 
-    box-shadow: none;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    
-    /* CHANGE: Increase padding-left to make room for the strip (Original was 15px) */
-    padding: 10px 15px 10px 20px; 
-    
-    /* Ensure the strip stays absolutely positioned relative to this box */
-    position: sticky; 
-    overflow: hidden; 
-}
-
-/* --- Status Strip (The colored bar on the left) --- */
+/* --- Status Strip --- */
 .status-strip {
     position: absolute;
     left: 0;
     top: 0;
     bottom: 0;
-    width: 6px; /* Width of the colored bar */
-    cursor: help; /* Change cursor to indicate it has a tooltip */
-    transition: width 0.2s; /* Nice interaction effect */
+    width: 6px; 
+    cursor: help; 
+    transition: width 0.2s; 
+    z-index: 10; 
 }
 
-/* Optional: Make it slightly wider on hover */
 .status-strip:hover {
     width: 8px;
 }
 
-/* --- Fix Status Strip Colors --- */
-/* Force specific colors for status-strip to ensure visibility */
-
-/* 1. Ensure it sits on top of white background */
-.status-strip {
-    z-index: 10; 
-}
-
-/* 2. Explicitly define colors (Override Bootstrap defaults) */
-.status-strip.bg-success {
-    background-color: #198754 !important; /* Green */
-}
-
-.status-strip.bg-warning {
-    background-color: #ffc107 !important; /* Yellow */
-}
-
-.status-strip.bg-danger {
-    background-color: #dc3545 !important; /* Red */
-}
-
-.status-strip.bg-critical {
-    background-color: #6f42c1 !important; /* Purple */
-}
-
-.status-strip.bg-secondary {
-    background-color: #6c757d !important; /* Gray (No Data) */
-}
-
-/* --- Legend Dot Styling --- */
-.legend-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%; /* Circle */
-    display: inline-block; /* Ensure dimensions work */
-    margin-right: 6px;
-    flex-shrink: 0; /* Prevent shrinking */
-}
-
-/* Force Color Definitions */
-.legend-dot.bg-success { background-color: #198754 !important; }
-.legend-dot.bg-warning { background-color: #ffc107 !important; }
-.legend-dot.bg-danger  { background-color: #dc3545 !important; }
-.legend-dot.bg-critical{ background-color: #6f42c1 !important; }
+/* Force Colors */
+.status-strip.bg-success { background-color: #198754 !important; }
+.status-strip.bg-warning { background-color: #ffc107 !important; }
+.status-strip.bg-danger { background-color: #dc3545 !important; }
+.status-strip.bg-critical { background-color: #6f42c1 !important; }
+.status-strip.bg-secondary { background-color: #6c757d !important; }
