@@ -551,3 +551,88 @@ body {
     border-right: 1px solid #495057; /* Distinct edge */
     transition: width 0.3s;
 }
+
+/* --- Edit Milestone Modal 2.0 --- */
+
+/* Context Header */
+.modal-context-breadcrumb {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6c757d;
+    margin-bottom: 5px;
+}
+
+.modal-task-name-input {
+    font-size: 1.25rem;
+    font-weight: 700;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    padding: 10px 15px;
+    color: #212529;
+}
+
+.modal-task-name-input:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Schedule Card Grid */
+.schedule-card {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.schedule-col-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #495057;
+    margin-bottom: 10px;
+    display: block;
+    border-bottom: 2px solid transparent;
+}
+
+/* Specific Column Styles */
+.col-original {
+    opacity: 0.7;
+}
+
+.col-revised {
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    /* Make it pop out */
+    margin-top: -5px; 
+    margin-bottom: -5px;
+    z-index: 2;
+    position: relative;
+}
+
+.col-revised .schedule-col-title {
+    color: #0d6efd; /* Primary color */
+    border-bottom-color: #0d6efd;
+    margin-bottom: 12px;
+}
+
+.col-constraints .schedule-col-title {
+    color: #dc3545; /* Danger color */
+}
+
+/* Form Labels inside Grid */
+.mini-label {
+    font-size: 10px;
+    color: #6c757d;
+    margin-bottom: 2px;
+    display: block;
+}
+
+/* Execution Section */
+.execution-card {
+    border-top: 1px solid #e9ecef;
+    padding-top: 15px;
+}

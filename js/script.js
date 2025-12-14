@@ -738,38 +738,39 @@ $(document).ready(function () {
         });
     }
 
-    // --- Edit & Interaction Logic (Complete with Reverse Calculation) ---
+    // --- Edit & Interaction Logic (Updated UI Layout) ---
     function initEditHandlers() {
         const modalEl = document.getElementById('editMilestoneModal');
-        // Prevent accidental closing
         const modal = new bootstrap.Modal(modalEl, {
             backdrop: 'static', 
             keyboard: false     
         });
         const $errorMsg = $('#edit-error-msg'); 
 
-        // Clear error when modal is closed
         $(modalEl).on('hidden.bs.modal', function () {
             $errorMsg.addClass('d-none').text('');
         });
 
         // 1. Click on Bar to Open Modal
         $('#projects-container').on('click', '.clickable', function (e) {
-            e.stopPropagation(); 
+            e.stopPropagation();
             
             const popover = bootstrap.Popover.getInstance(this);
             if (popover) popover.hide();
-            
             $errorMsg.addClass('d-none').text('');
 
             const gIdx = $(this).data('g-idx');
             const pIdx = $(this).data('p-idx');
             const mIdx = $(this).data('m-idx');
             
-            // --- FIX: Read from 'currentRevisedData' to get the calculated dates ---
-            // rawTrackerData does not contain revised_start_date/revised_end_date
-            const project = currentRevisedData.groups[gIdx].projects[pIdx];
+            // Context Data
+            const group = currentRevisedData.groups[gIdx];
+            const project = group.projects[pIdx];
             const msData = project.milestones[mIdx];
+
+            // --- UI: Populate Breadcrumbs ---
+            $('#display-group-name').text(group.group_name);
+            $('#display-project-name').text(project.project_name);
 
             // --- CALCULATE ORIGINAL REFERENCE DATA ---
             let origStart = project.start_date;
@@ -780,17 +781,16 @@ $(document).ready(function () {
             const origDuration = Math.max(1, getDaysDiff(origStart, origEnd));
 
             $('#read-orig-start').val(origStart);
-            $('#read-orig-duration').val(origDuration);
+            $('#read-orig-duration').val(origDuration + ' Days'); // Added unit
 
-            // --- POPULATE EDITABLE FIELDS ---
+            // --- POPULATE FIELDS ---
             $('#edit-g-index').val(gIdx);
             $('#edit-p-index').val(pIdx);
             $('#edit-m-index').val(mIdx);
             
             $('#edit-name').val(msData.name);
-            $('#edit-planned-end').val(msData.planned_end);
+            $('#edit-planned-end').val(msData.planned_end); 
             
-            // Now these will have values because we are using currentRevisedData
             $('#edit-revised-start').val(msData.revised_start_date);
             $('#edit-revised-end').val(msData.revised_end_date);
 
@@ -807,130 +807,81 @@ $(document).ready(function () {
             $('#edit-progress-val').text(Math.round($(this).val() * 100) + '%');
         });
 
-        // 3. Save Changes (With Reverse Calculation & Validation)
+        // 3. Set Today Helper Button
+        $('#btn-set-today').click(function() {
+            const today = new Date().toISOString().split('T')[0];
+            $('#edit-actual-date').val(today);
+        });
+
+        // 4. Save Changes (Reverse Calculation & Validation)
         $('#btn-save-changes').click(function () {
-            // Hide error first
             $errorMsg.addClass('d-none');
 
             const gIdx = parseInt($('#edit-g-index').val());
             const pIdx = parseInt($('#edit-p-index').val());
             const mIdx = parseInt($('#edit-m-index').val());
 
-            // Get Inputs
             const inputName = $('#edit-name').val().trim();
-            // We do NOT read inputPlannedEnd directly from the box anymore.
-            // We calculate it from Revised End.
             const inputRevisedStart = $('#edit-revised-start').val();
             const inputRevisedEnd = $('#edit-revised-end').val();
-            
             const inputDemandDate = $('#edit-demand-date').val();
             const inputActualDate = $('#edit-actual-date').val();
             const inputProgress = parseFloat($('#edit-progress').val());
 
-            // --- REVERSE CALCULATION START ---
-            // 1. Calculate New Duration based on user's Revised End
-            // New Duration = Revised End - Revised Start
+            // --- REVERSE CALCULATION ---
             if (!inputRevisedEnd) {
                 $errorMsg.text("Revised End Date cannot be empty.").removeClass('d-none');
                 return;
             }
-
             const newDurationDays = Math.max(1, getDaysDiff(inputRevisedStart, inputRevisedEnd));
-
-            // 2. Derive New "Original Planned End"
-            // Original Planned End = Original Reference Start + New Duration
-            // We grab the Original Start from the hidden/read-only field we populated earlier
             const origStartRef = $('#read-orig-start').val();
             const newPlannedEndDateObj = addDays(origStartRef, newDurationDays);
             const inputPlannedEnd = newPlannedEndDateObj.toISOString().split('T')[0];
-            // --- REVERSE CALCULATION END ---
 
-            // Get Context Data for Validation
+            // Context for Validation
             const project = rawTrackerData.groups[gIdx].projects[pIdx];
             const milestones = project.milestones;
             const projectStart = project.start_date;
 
-            // --- VALIDATION START ---
             let errorText = null;
 
-            // Rule 2 & 3: Non-Empty Checks
+            // --- VALIDATION RULES ---
             if (!inputName) errorText = "Task Name cannot be empty.";
             else if (!inputDemandDate) errorText = "Demand / Target Date cannot be empty.";
-
-            // Rule 1: Actual Date vs Progress Consistency
-            else if (inputProgress < 1.0 && inputActualDate) {
-                errorText = "Cannot set Actual Completion Date if progress is less than 100%.";
-            }
-            else if (inputProgress === 1.0 && !inputActualDate) {
-                errorText = "Must set Actual Completion Date if progress is 100%.";
-            }
-
-            // Rule 5: Project Boundaries (Check using the Calculated Planned End)
-            else if (inputPlannedEnd < projectStart) {
-                errorText = `Calculated Planned End (${inputPlannedEnd}) cannot be earlier than Project Start (${projectStart}).`;
-            }
-            else if (inputActualDate && inputActualDate < projectStart) {
-                errorText = `Actual Date (${inputActualDate}) cannot be earlier than Project Start (${projectStart}).`;
-            }
-
-            // Rule 4: Milestone Chain Consistency (Strict Waterfall)
+            else if (inputProgress < 1.0 && inputActualDate) errorText = "Cannot set Actual Completion Date if progress is less than 100%.";
+            else if (inputProgress === 1.0 && !inputActualDate) errorText = "Must set Actual Completion Date if progress is 100%.";
+            else if (inputPlannedEnd < projectStart) errorText = `Calculated Planned End (${inputPlannedEnd}) cannot be earlier than Project Start (${projectStart}).`;
+            else if (inputActualDate && inputActualDate < projectStart) errorText = `Actual Date (${inputActualDate}) cannot be earlier than Project Start (${projectStart}).`;
             else {
-                // 4.1 & 4.3: Check against Previous Milestone
+                // Waterfall Validation
                 if (mIdx > 0) {
                     const prevMs = milestones[mIdx - 1];
-
-                    // Date Order Check (using Calculated Planned End)
-                    if (inputPlannedEnd < prevMs.planned_end) {
-                        errorText = `Calculated Planned End cannot be earlier than previous task's Planned End (${prevMs.planned_end}).`;
-                    }
-                    else if (inputDemandDate < prevMs.demand_due_date) {
-                        errorText = `Demand Date cannot be earlier than previous task's Demand Date (${prevMs.demand_due_date}).`;
-                    }
-                    // VALIDATION: Prev not done, Current cannot start (> 0%)
-                    else if (prevMs.status_progress < 1.0 && inputProgress > 0.0) {
-                        errorText = `Cannot start this task (Progress > 0%) because the previous task ("${prevMs.name}") is not finished yet.`;
-                    }
+                    if (inputPlannedEnd < prevMs.planned_end) errorText = `Calculated Planned End cannot be earlier than previous task's Planned End (${prevMs.planned_end}).`;
+                    else if (inputDemandDate < prevMs.demand_due_date) errorText = `Demand Date cannot be earlier than previous task's Demand Date (${prevMs.demand_due_date}).`;
+                    else if (prevMs.status_progress < 1.0 && inputProgress > 0.0) errorText = `Cannot start this task (Progress > 0%) because the previous task ("${prevMs.name}") is not finished yet.`;
                 }
-
-                // 4.2 & 4.4: Check against Next Milestone
                 if (!errorText && mIdx < milestones.length - 1) {
                     const nextMs = milestones[mIdx + 1];
-
-                    // Date Order Check (using Calculated Planned End)
-                    if (inputPlannedEnd > nextMs.planned_end) {
-                        errorText = `Calculated Planned End cannot be later than next task's Planned End (${nextMs.planned_end}).`;
-                    }
-                    else if (inputDemandDate > nextMs.demand_due_date) {
-                        errorText = `Demand Date cannot be later than next task's Demand Date (${nextMs.demand_due_date}).`;
-                    }
-                    // VALIDATION: Next started (> 0%), Current must be 100%
-                    else if (nextMs.status_progress > 0.0 && inputProgress < 1.0) {
-                        errorText = `Cannot set progress below 100% because the next task ("${nextMs.name}") has already started.`;
-                    }
+                    if (inputPlannedEnd > nextMs.planned_end) errorText = `Calculated Planned End cannot be later than next task's Planned End (${nextMs.planned_end}).`;
+                    else if (inputDemandDate > nextMs.demand_due_date) errorText = `Demand Date cannot be later than next task's Demand Date (${nextMs.demand_due_date}).`;
+                    else if (nextMs.status_progress > 0.0 && inputProgress < 1.0) errorText = `Cannot set progress below 100% because the next task ("${nextMs.name}") has already started.`;
                 }
             }
 
-            // Check Result
             if (errorText) {
                 $errorMsg.text(errorText).removeClass('d-none');
-                $('.modal-content').addClass('shake-animation');
-                setTimeout(() => $('.modal-content').removeClass('shake-animation'), 500);
-                return; // STOP SAVE
+                return; 
             }
-            // --- VALIDATION END ---
 
-            // --- UPDATE DATA ---
+            // Update Data Source
             const msData = rawTrackerData.groups[gIdx].projects[pIdx].milestones[mIdx];
-
             msData.name = inputName;
-            msData.planned_end = inputPlannedEnd; // Saved the derived value
+            msData.planned_end = inputPlannedEnd;
             msData.demand_due_date = inputDemandDate;
             msData.actual_completion_date = inputActualDate ? inputActualDate : null;
             msData.status_progress = inputProgress;
 
-            // Re-calc and Render
             runPipeline();
-            
             modal.hide();
         });
     }
