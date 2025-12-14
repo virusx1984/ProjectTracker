@@ -738,33 +738,63 @@ $(document).ready(function () {
         });
     }
 
-    // --- Edit Logic ---
+    // --- Edit & Interaction Logic (Complete) ---
     function initEditHandlers() {
         const modalEl = document.getElementById('editMilestoneModal');
-        const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
-        const $errorMsg = $('#edit-error-msg');
+        // Prevent accidental closing
+        const modal = new bootstrap.Modal(modalEl, {
+            backdrop: 'static', 
+            keyboard: false     
+        });
+        const $errorMsg = $('#edit-error-msg'); 
 
+        // Clear error when modal is closed
         $(modalEl).on('hidden.bs.modal', function () {
             $errorMsg.addClass('d-none').text('');
         });
 
+        // 1. Click on Bar to Open Modal
         $('#projects-container').on('click', '.clickable', function (e) {
-            e.stopPropagation();
-
+            e.stopPropagation(); // Prevent clicking bar from toggling group
+            
+            // Hide active popovers
             const popover = bootstrap.Popover.getInstance(this);
             if (popover) popover.hide();
+            
+            // Clear previous errors
             $errorMsg.addClass('d-none').text('');
 
+            // Get Indices
             const gIdx = $(this).data('g-idx');
             const pIdx = $(this).data('p-idx');
             const mIdx = $(this).data('m-idx');
+            
+            // Get Data Context
+            const project = rawTrackerData.groups[gIdx].projects[pIdx];
+            const msData = project.milestones[mIdx];
 
-            const msData = rawTrackerData.groups[gIdx].projects[pIdx].milestones[mIdx];
+            // --- CALCULATE ORIGINAL REFERENCE DATA ---
+            // 1. Determine Original Start Date
+            // If first milestone, use Project Start. Otherwise, use previous milestone's Planned End.
+            let origStart = project.start_date;
+            if (mIdx > 0) {
+                origStart = project.milestones[mIdx - 1].planned_end;
+            }
 
+            // 2. Calculate Original Duration
+            // Note: We use the global helper getDaysDiff here
+            const origEnd = msData.planned_end;
+            const origDuration = Math.max(1, getDaysDiff(origStart, origEnd));
+
+            // 3. Populate Read-Only Fields
+            $('#read-orig-start').val(origStart);
+            $('#read-orig-duration').val(origDuration);
+
+            // --- POPULATE EDITABLE FIELDS ---
             $('#edit-g-index').val(gIdx);
             $('#edit-p-index').val(pIdx);
             $('#edit-m-index').val(mIdx);
-
+            
             $('#edit-name').val(msData.name);
             $('#edit-planned-end').val(msData.planned_end);
             $('#edit-actual-date').val(msData.actual_completion_date || '');
@@ -775,35 +805,40 @@ $(document).ready(function () {
             modal.show();
         });
 
+        // 2. Slider Update
         $('#edit-progress').on('input', function () {
             $('#edit-progress-val').text(Math.round($(this).val() * 100) + '%');
         });
 
         // 3. Save Changes (With Strict Validation)
         $('#btn-save-changes').click(function () {
+            // Hide error first
             $errorMsg.addClass('d-none');
 
             const gIdx = parseInt($('#edit-g-index').val());
             const pIdx = parseInt($('#edit-p-index').val());
             const mIdx = parseInt($('#edit-m-index').val());
 
+            // Get Inputs
             const inputName = $('#edit-name').val().trim();
             const inputPlannedEnd = $('#edit-planned-end').val();
             const inputDemandDate = $('#edit-demand-date').val();
             const inputActualDate = $('#edit-actual-date').val();
             const inputProgress = parseFloat($('#edit-progress').val());
 
+            // Get Context Data for Validation
             const project = rawTrackerData.groups[gIdx].projects[pIdx];
             const milestones = project.milestones;
             const projectStart = project.start_date;
 
+            // --- VALIDATION START ---
             let errorText = null;
 
             // Rule 2 & 3: Non-Empty Checks
             if (!inputName) errorText = "Task Name cannot be empty.";
             else if (!inputPlannedEnd) errorText = "Original Planned End cannot be empty.";
             else if (!inputDemandDate) errorText = "Demand / Target Date cannot be empty.";
-            
+
             // Rule 1: Actual Date vs Progress Consistency
             else if (inputProgress < 1.0 && inputActualDate) {
                 errorText = "Cannot set Actual Completion Date if progress is less than 100%.";
@@ -833,7 +868,7 @@ $(document).ready(function () {
                     else if (inputDemandDate < prevMs.demand_due_date) {
                         errorText = `Demand Date cannot be earlier than previous task's Demand Date (${prevMs.demand_due_date}).`;
                     }
-                    // REPLACED VALIDATION: Prev not done, Current cannot start (> 0%)
+                    // VALIDATION: Prev not done, Current cannot start (> 0%)
                     else if (prevMs.status_progress < 1.0 && inputProgress > 0.0) {
                         errorText = `Cannot start this task (Progress > 0%) because the previous task ("${prevMs.name}") is not finished yet.`;
                     }
@@ -850,29 +885,34 @@ $(document).ready(function () {
                     else if (inputDemandDate > nextMs.demand_due_date) {
                         errorText = `Demand Date cannot be later than next task's Demand Date (${nextMs.demand_due_date}).`;
                     }
-                    // REPLACED VALIDATION: Next started (> 0%), Current must be 100%
+                    // VALIDATION: Next started (> 0%), Current must be 100%
                     else if (nextMs.status_progress > 0.0 && inputProgress < 1.0) {
                         errorText = `Cannot set progress below 100% because the next task ("${nextMs.name}") has already started.`;
                     }
                 }
             }
 
+            // Check Result
             if (errorText) {
                 $errorMsg.text(errorText).removeClass('d-none');
                 $('.modal-content').addClass('shake-animation');
                 setTimeout(() => $('.modal-content').removeClass('shake-animation'), 500);
-                return; 
+                return; // STOP SAVE
             }
+            // --- VALIDATION END ---
 
-            // Update Data Source
+            // --- UPDATE DATA ---
             const msData = rawTrackerData.groups[gIdx].projects[pIdx].milestones[mIdx];
+
             msData.name = inputName;
             msData.planned_end = inputPlannedEnd;
             msData.demand_due_date = inputDemandDate;
             msData.actual_completion_date = inputActualDate ? inputActualDate : null;
             msData.status_progress = inputProgress;
 
+            // Re-calc and Render
             runPipeline();
+            
             modal.hide();
         });
     }
