@@ -5,6 +5,17 @@ $(document).ready(function () {
     const TRACKER_START_DATE = new Date("2025-01-01");
     const RENDER_MONTHS_COUNT = 15;
 
+    // NEW: Predefined Colors
+    const PREDEFINED_COLORS = [
+        { name: "Blue", code: "#0d6efd" },
+        { name: "Green", code: "#198754" },
+        { name: "Purple", code: "#6f42c1" },
+        { name: "Orange", code: "#fd7e14" },
+        { name: "Teal", code: "#20c997" },
+        { name: "Red", code: "#dc3545" },
+        { name: "Gray", code: "#6c757d" }
+    ];
+
     // DEMO DATE
     const CURRENT_DATE = new Date("2025-03-15");
 
@@ -891,6 +902,8 @@ $(document).ready(function () {
                 let currEnd = new Date(ms.planned_end);
                 ms._temp_duration = Math.max(1, getDaysDiff(prevDate, currEnd));
                 ms._is_locked = (ms.status_progress === 1.0);
+                // Ensure color defaults to Blue if missing
+                if (!ms.color) ms.color = "#0d6efd";
             });
 
             renderMilestoneList();
@@ -909,11 +922,25 @@ $(document).ready(function () {
                 const deleteBtn = isLocked 
                     ? `<button type="button" class="btn btn-sm text-muted" disabled><i class="bi bi-lock"></i></button>`
                     : `<button type="button" class="btn btn-sm text-danger btn-delete-ms" data-idx="${index}"><i class="bi bi-trash"></i></button>`;
-
+                
+                // Generate Color Options
+                const colorOptions = PREDEFINED_COLORS.map(c => 
+                    `<option value="${c.code}" style="background-color:${c.code}; color:#fff;" ${c.code === ms.color ? 'selected' : ''}>${c.name}</option>`
+                ).join('');
+                
                 const html = `
                     <div class="list-group-item milestone-item p-0 ${lockClass}" data-idx="${index}">
                         <div class="row g-2 align-items-center m-0 py-2">
                             <div class="col-1 text-center drag-handle">${lockIcon}</div>
+                            
+                            <div class="col-1">
+                                <select class="form-select form-select-sm ms-color-input p-1 text-center text-white" 
+                                        style="background-color: ${ms.color}; border:none; cursor:pointer;"
+                                        data-idx="${index}">
+                                    ${colorOptions}
+                                </select>
+                            </div>
+
                             <div class="col-4">
                                 <input type="text" class="form-control form-control-sm ms-name-input" value="${ms.name}" data-idx="${index}">
                             </div>
@@ -926,7 +953,6 @@ $(document).ready(function () {
                             <div class="col-3">
                                 <input type="text" class="form-control form-control-sm bg-light border-0 ms-calc-date" readonly tabindex="-1">
                             </div>
-                            <div class="col-1 text-center">${getCompletionBadge(ms.status_progress)}</div>
                             <div class="col-1 text-center">${deleteBtn}</div>
                         </div>
                     </div>
@@ -975,6 +1001,15 @@ $(document).ready(function () {
             $('.ms-name-input').on('change input', function() {
                 const idx = $(this).data('idx');
                 tempMilestones[idx].name = $(this).val();
+            });
+
+            // Color Change Listener
+            $('.ms-color-input').on('change', function() {
+                const idx = $(this).data('idx');
+                const newColor = $(this).val();
+                tempMilestones[idx].color = newColor;
+                // Update dropdown background for visual feedback
+                $(this).css('background-color', newColor);
             });
 
             $('.btn-delete-ms').on('click', function() {
