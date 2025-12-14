@@ -937,8 +937,28 @@ $(document).ready(function () {
         renderTracker(currentRevisedData);
     }
 
+    // --- Group Expansion Controls ---
+    function initGroupControls() {
+        $('#btn-expand-all').click(function () {
+            // If filter is active, groups are already forced expanded
+            if (currentFilter !== 'ALL') return;
+
+            currentRevisedData.groups.forEach(g => g.is_expanded = true);
+            renderTracker(currentRevisedData);
+        });
+
+        $('#btn-collapse-all').click(function () {
+            // If filter is active, we cannot collapse (visual rule)
+            if (currentFilter !== 'ALL') return;
+
+            currentRevisedData.groups.forEach(g => g.is_expanded = false);
+            renderTracker(currentRevisedData);
+        });
+    }
+
     // --- Init ---
     initZoomControls();
+    initGroupControls();
     initEditHandlers();
     makeModalDraggable('#editMilestoneModal');
     runPipeline();

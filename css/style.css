@@ -181,7 +181,7 @@ body {
     position: relative;
     contain: layout style;
     
-    /* FIX: Same fix as project-row */
+    /* Auto width to fix gap issue */
     width: fit-content;
     min-width: 100%;
 }
@@ -220,9 +220,9 @@ body {
     display: flex;
     align-items: center;
     
-    /* FIX: Change from min-width: max-content to fit-content to handle width better */
+    /* Auto width to fix gap issue */
     width: fit-content; 
-    min-width: 100%; /* Ensure it at least fills the screen */
+    min-width: 100%;
     
     contain: layout style;
 }
@@ -432,25 +432,11 @@ body {
 
 /* Shake Animation */
 @keyframes shake {
-    0% {
-        transform: translateX(0);
-    }
-
-    25% {
-        transform: translateX(-5px);
-    }
-
-    50% {
-        transform: translateX(5px);
-    }
-
-    75% {
-        transform: translateX(-5px);
-    }
-
-    100% {
-        transform: translateX(0);
-    }
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    50% { transform: translateX(5px); }
+    75% { transform: translateX(-5px); }
+    100% { transform: translateX(0); }
 }
 
 .shake-animation {
@@ -459,13 +445,8 @@ body {
 
 /* --- Active Progress Animation (Shimmer) --- */
 @keyframes shimmer-flow {
-    0% {
-        background-position: 200% 0;
-    }
-
-    100% {
-        background-position: -200% 0;
-    }
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
 }
 
 .progress-overlay.active-anim {
@@ -494,25 +475,11 @@ body {
 }
 
 /* Force Colors */
-.status-strip.bg-success {
-    background-color: #198754 !important;
-}
-
-.status-strip.bg-warning {
-    background-color: #ffc107 !important;
-}
-
-.status-strip.bg-danger {
-    background-color: #dc3545 !important;
-}
-
-.status-strip.bg-critical {
-    background-color: #6f42c1 !important;
-}
-
-.status-strip.bg-secondary {
-    background-color: #6c757d !important;
-}
+.status-strip.bg-success { background-color: #198754 !important; }
+.status-strip.bg-warning { background-color: #ffc107 !important; }
+.status-strip.bg-danger { background-color: #dc3545 !important; }
+.status-strip.bg-critical { background-color: #6f42c1 !important; }
+.status-strip.bg-secondary { background-color: #6c757d !important; }
 
 /* --- Group Health Distribution Bar (Left Side) --- */
 .group-health-bar {
@@ -540,13 +507,12 @@ body {
     border-radius: 4px;
     z-index: 1; 
     pointer-events: none; 
-    overflow: hidden; /* Ensure fill doesn't overflow rounded corners */
+    overflow: hidden; 
 }
 
 /* --- Group Demand Strip (Top Constraint Line) --- */
 .group-demand-strip {
     position: absolute;
-    /* Positioned slightly above the Ghost Bar (which is at top: 10px) */
     top: 6px; 
     height: 3px;
     background-color: rgba(253, 126, 20, 0.7); /* Orange/Warning color */
@@ -555,12 +521,12 @@ body {
     pointer-events: none;
 }
 
-/* --- NEW: Solid Fill representing the "Min Progress Date" --- */
+/* --- Solid Fill representing the "Min Progress Date" --- */
 .ghost-progress-fill {
     height: 100%;
-    background-color: #6c757d; /* Dark gray to match theme */
-    opacity: 0.5; /* Semi-transparent */
-    border-right: 1px solid #495057; /* Distinct edge */
+    background-color: #6c757d; 
+    opacity: 0.5; 
+    border-right: 1px solid #495057; 
     transition: width 0.3s;
 }
 
@@ -618,7 +584,6 @@ body {
     border-radius: 6px;
     padding: 10px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    /* Make it pop out */
     margin-top: -5px; 
     margin-bottom: -5px;
     z-index: 2;
@@ -626,13 +591,13 @@ body {
 }
 
 .col-revised .schedule-col-title {
-    color: #0d6efd; /* Primary color */
+    color: #0d6efd; 
     border-bottom-color: #0d6efd;
     margin-bottom: 12px;
 }
 
 .col-constraints .schedule-col-title {
-    color: #dc3545; /* Danger color */
+    color: #dc3545; 
 }
 
 /* Form Labels inside Grid */
@@ -647,4 +612,26 @@ body {
 .execution-card {
     border-top: 1px solid #e9ecef;
     padding-top: 15px;
+}
+
+/* --- Critical Color Definition (Purple) - Enforced --- */
+/* This block ensures purple is always visible correctly everywhere */
+
+/* 1. Generic Utility & Legend Dot & Card Color Bar */
+.bg-critical,
+.legend-dot.bg-critical,
+.color-bar.bg-critical {
+    background-color: #6f42c1 !important;
+    color: #fff !important;
+}
+
+/* 2. Status Strip (Left Bar) - Specific Selector */
+div.status-strip.bg-critical {
+    background-color: #6f42c1 !important;
+    z-index: 100;
+}
+
+/* 3. Group Health Segment */
+.health-segment.bg-critical {
+    background-color: #6f42c1 !important;
 }
