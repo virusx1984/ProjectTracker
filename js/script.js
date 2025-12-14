@@ -734,6 +734,7 @@ $(document).ready(function () {
             $('#edit-progress-val').text(Math.round($(this).val() * 100) + '%');
         });
 
+        // 3. Save Changes (With Strict Validation)
         $('#btn-save-changes').click(function () {
             $errorMsg.addClass('d-none');
 
@@ -753,25 +754,61 @@ $(document).ready(function () {
 
             let errorText = null;
 
+            // Rule 2 & 3: Non-Empty Checks
             if (!inputName) errorText = "Task Name cannot be empty.";
             else if (!inputPlannedEnd) errorText = "Original Planned End cannot be empty.";
             else if (!inputDemandDate) errorText = "Demand / Target Date cannot be empty.";
-            else if (inputProgress < 1.0 && inputActualDate) errorText = "Cannot set Actual Completion Date if progress is less than 100%.";
-            else if (inputProgress === 1.0 && !inputActualDate) errorText = "Must set Actual Completion Date if progress is 100%.";
-            else if (inputPlannedEnd < projectStart) errorText = `Planned End (${inputPlannedEnd}) cannot be earlier than Project Start (${projectStart}).`;
-            else if (inputActualDate && inputActualDate < projectStart) errorText = `Actual Date (${inputActualDate}) cannot be earlier than Project Start (${projectStart}).`;
+            
+            // Rule 1: Actual Date vs Progress Consistency
+            else if (inputProgress < 1.0 && inputActualDate) {
+                errorText = "Cannot set Actual Completion Date if progress is less than 100%.";
+            }
+            else if (inputProgress === 1.0 && !inputActualDate) {
+                errorText = "Must set Actual Completion Date if progress is 100%.";
+            }
+
+            // Rule 5: Project Boundaries
+            else if (inputPlannedEnd < projectStart) {
+                errorText = `Planned End (${inputPlannedEnd}) cannot be earlier than Project Start (${projectStart}).`;
+            }
+            else if (inputActualDate && inputActualDate < projectStart) {
+                errorText = `Actual Date (${inputActualDate}) cannot be earlier than Project Start (${projectStart}).`;
+            }
+
+            // Rule 4: Milestone Chain Consistency (Strict Waterfall)
             else {
+                // 4.1 & 4.3: Check against Previous Milestone
                 if (mIdx > 0) {
                     const prevMs = milestones[mIdx - 1];
-                    if (inputPlannedEnd < prevMs.planned_end) errorText = `Planned End cannot be earlier than previous task's Planned End (${prevMs.planned_end}).`;
-                    else if (inputDemandDate < prevMs.demand_due_date) errorText = `Demand Date cannot be earlier than previous task's Demand Date (${prevMs.demand_due_date}).`;
-                    else if (prevMs.status_progress < 1.0 && inputProgress === 1.0) errorText = `Cannot mark this task as 100% complete because the previous task ("${prevMs.name}") is not finished yet.`;
+
+                    // Date Order Check
+                    if (inputPlannedEnd < prevMs.planned_end) {
+                        errorText = `Planned End cannot be earlier than previous task's Planned End (${prevMs.planned_end}).`;
+                    }
+                    else if (inputDemandDate < prevMs.demand_due_date) {
+                        errorText = `Demand Date cannot be earlier than previous task's Demand Date (${prevMs.demand_due_date}).`;
+                    }
+                    // REPLACED VALIDATION: Prev not done, Current cannot start (> 0%)
+                    else if (prevMs.status_progress < 1.0 && inputProgress > 0.0) {
+                        errorText = `Cannot start this task (Progress > 0%) because the previous task ("${prevMs.name}") is not finished yet.`;
+                    }
                 }
+
+                // 4.2 & 4.4: Check against Next Milestone
                 if (!errorText && mIdx < milestones.length - 1) {
                     const nextMs = milestones[mIdx + 1];
-                    if (inputPlannedEnd > nextMs.planned_end) errorText = `Planned End cannot be later than next task's Planned End (${nextMs.planned_end}).`;
-                    else if (inputDemandDate > nextMs.demand_due_date) errorText = `Demand Date cannot be later than next task's Demand Date (${nextMs.demand_due_date}).`;
-                    else if (nextMs.status_progress === 1.0 && inputProgress < 1.0) errorText = `Cannot reduce progress below 100% because the next task ("${nextMs.name}") is already finished.`;
+
+                    // Date Order Check
+                    if (inputPlannedEnd > nextMs.planned_end) {
+                        errorText = `Planned End cannot be later than next task's Planned End (${nextMs.planned_end}).`;
+                    }
+                    else if (inputDemandDate > nextMs.demand_due_date) {
+                        errorText = `Demand Date cannot be later than next task's Demand Date (${nextMs.demand_due_date}).`;
+                    }
+                    // REPLACED VALIDATION: Next started (> 0%), Current must be 100%
+                    else if (nextMs.status_progress > 0.0 && inputProgress < 1.0) {
+                        errorText = `Cannot set progress below 100% because the next task ("${nextMs.name}") has already started.`;
+                    }
                 }
             }
 
@@ -779,9 +816,10 @@ $(document).ready(function () {
                 $errorMsg.text(errorText).removeClass('d-none');
                 $('.modal-content').addClass('shake-animation');
                 setTimeout(() => $('.modal-content').removeClass('shake-animation'), 500);
-                return;
+                return; 
             }
 
+            // Update Data Source
             const msData = rawTrackerData.groups[gIdx].projects[pIdx].milestones[mIdx];
             msData.name = inputName;
             msData.planned_end = inputPlannedEnd;
