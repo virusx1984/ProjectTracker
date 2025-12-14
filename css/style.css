@@ -168,18 +168,22 @@ body {
     z-index: 5;
 }
 
-/* --- Group Row Styling (NEW) --- */
+/* --- Group Row Styling --- */
 .group-row {
-    height: 40px;
-    background-color: #e9ecef;
+    height: 40px; 
+    background-color: #e9ecef; 
     border-bottom: 1px solid #dee2e6;
     display: flex;
     align-items: center;
     font-weight: bold;
     color: #495057;
-    cursor: pointer;
+    cursor: pointer; 
     position: relative;
     contain: layout style;
+    
+    /* FIX: Same fix as project-row */
+    width: fit-content;
+    min-width: 100%;
 }
 
 .group-row:hover {
@@ -215,7 +219,11 @@ body {
     background-color: #fff;
     display: flex;
     align-items: center;
-    min-width: max-content;
+    
+    /* FIX: Change from min-width: max-content to fit-content to handle width better */
+    width: fit-content; 
+    min-width: 100%; /* Ensure it at least fills the screen */
+    
     contain: layout style;
 }
 
@@ -504,4 +512,36 @@ body {
 
 .status-strip.bg-secondary {
     background-color: #6c757d !important;
+}
+
+/* --- Group Health Distribution Bar (Left Side) --- */
+.group-health-bar {
+    display: flex;
+    width: 100%;
+    height: 4px;
+    margin-top: 6px;
+    border-radius: 2px;
+    overflow: hidden;
+    background-color: #e9ecef;
+}
+
+.health-segment {
+    height: 100%;
+    transition: width 0.3s;
+}
+
+/* --- Group Ghost Summary Bar (Right Side) --- */
+.group-ghost-bar {
+    position: absolute;
+    top: 10px; /* Center vertically in the 40px group row */
+    height: 20px;
+    background-color: rgba(108, 117, 125, 0.1); /* Very subtle gray */
+    border: 1px solid rgba(108, 117, 125, 0.3);
+    border-radius: 4px;
+    z-index: 1; /* Below other elements if needed */
+    pointer-events: none; /* Let clicks pass through to the row */
+    
+    /* Optional: Add a striped pattern to distinguish it */
+    background-image: linear-gradient(45deg,rgba(0,0,0,.02) 25%,transparent 25%,transparent 50%,rgba(0,0,0,.02) 50%,rgba(0,0,0,.02) 75%,transparent 75%,transparent);
+    background-size: 10px 10px;
 }

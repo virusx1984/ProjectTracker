@@ -322,43 +322,130 @@ $(document).ready(function () {
         }
 
         // 2. Render Groups and Projects
-        let htmlBuffer = "";
+        // 2. Render Groups and Projects
+        let htmlBuffer = ""; 
         let visibleCount = 0;
 
+        // Iterate Groups
         data.groups.forEach((group, gIndex) => {
-
-            // Check if group matches filter
+            
+            // --- Step A: Filter Logic ---
             const matchingProjects = group.projects.filter(p => {
                 return currentFilter === 'ALL' || p._computedStatus.code === currentFilter;
             });
 
+            // If no projects match filter, skip whole group
             if (matchingProjects.length === 0) return;
 
-            const grpStatus = group._computedStatus;
+            // --- Step B: Prepare Data for Visuals ---
+            
+            // 1. Calculate Date Range for Ghost Bar
+            // FIX: Initialize with Project Start Date (because Demand Bar starts here)
+            // This ensures Ghost Bar aligns with the leftmost visible element (Demand Bar)
+            let minStart = null;
+            let maxEnd = null;
+            
+            // 2. Calculate Status Counts for Health Bar
+            const groupStats = { 'CRITICAL': 0, 'PLAN_FAIL': 0, 'BUFFER_USED': 0, 'EXCELLENT': 0 };
+            let totalProjects = 0;
 
-            // Expansion Logic: Filter active = force expand
+            group.projects.forEach(p => {
+                // Initialize range with Project Start (Demand Anchor)
+                const pStart = new Date(p.start_date);
+                
+                if (!minStart || pStart < minStart) minStart = pStart;
+                if (!maxEnd || pStart > maxEnd) maxEnd = pStart;
+
+                // Check Milestones for wider range (Plan/Revised)
+                if (p.milestones.length > 0) {
+                    p.milestones.forEach(ms => {
+                        const msStart = new Date(ms.revised_start_date);
+                        const msEnd = new Date(ms.revised_end_date);
+                        
+                        // Expand range if Revised Plan is earlier or later
+                        if (msStart < minStart) minStart = msStart;
+                        if (msEnd > maxEnd) maxEnd = msEnd;
+                    });
+                }
+
+                // Health Bar Math
+                const code = p._computedStatus.code;
+                if (groupStats.hasOwnProperty(code)) {
+                    groupStats[code]++;
+                }
+                totalProjects++;
+            });
+
+            // --- Step C: Generate HTML for Visuals ---
+
+            // 1. Ghost Bar HTML
+            let ghostBarHtml = '';
+            if (minStart && maxEnd) {
+                const gStartOffset = getDaysDiff(TRACKER_START_DATE, minStart);
+                const gDuration = getDaysDiff(minStart, maxEnd);
+                const gLeft = gStartOffset * pixelsPerDay;
+                const gWidth = gDuration * pixelsPerDay;
+                
+                ghostBarHtml = `<div class="group-ghost-bar" style="left: ${gLeft}px; width: ${gWidth}px;"></div>`;
+            }
+
+            // 2. Health Distribution Bar HTML
+            let healthBarSegments = '';
+            if (totalProjects > 0) {
+                // Order: Critical -> Plan Fail -> Buffer -> Excellent
+                const order = ['CRITICAL', 'PLAN_FAIL', 'BUFFER_USED', 'EXCELLENT'];
+                const colorMap = {
+                    'CRITICAL': 'bg-critical',
+                    'PLAN_FAIL': 'bg-danger',
+                    'BUFFER_USED': 'bg-warning',
+                    'EXCELLENT': 'bg-success'
+                };
+                
+                order.forEach(code => {
+                    const count = groupStats[code];
+                    if (count > 0) {
+                        const pct = (count / totalProjects) * 100;
+                        healthBarSegments += `<div class="health-segment ${colorMap[code]}" style="width: ${pct}%" title="${code}: ${count}"></div>`;
+                    }
+                });
+            }
+
+            // --- Step D: Render Group Row ---
+            
+            const grpStatus = group._computedStatus;
             const isFilterActive = currentFilter !== 'ALL';
             const isExpanded = isFilterActive ? true : group.is_expanded;
             const toggleIcon = isExpanded ? '<i class="bi bi-chevron-down"></i>' : '<i class="bi bi-chevron-right"></i>';
 
-            // Render Group Row
             htmlBuffer += `
                 <div class="group-row" data-g-idx="${gIndex}">
                     <div class="group-name-label">
                         <div class="status-strip ${grpStatus.class}"></div>
                         <span class="group-toggle-icon">${toggleIcon}</span>
-                        <span>${group.group_name}</span>
-                        <span class="badge bg-secondary ms-2" style="font-size:9px">${matchingProjects.length}</span>
+                        
+                        <div class="d-flex flex-column w-100 pe-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>${group.group_name}</span>
+                                <span class="badge bg-secondary" style="font-size:9px">${matchingProjects.length}</span>
+                            </div>
+                            <div class="group-health-bar">
+                                ${healthBarSegments}
+                            </div>
+                        </div>
+
                     </div>
-                    <div class="milestone-container" style="min-width: ${totalTimelineWidth}px"></div>
+                    <div class="milestone-container" style="min-width: ${totalTimelineWidth}px">
+                        ${ghostBarHtml}
+                    </div>
                 </div>
             `;
 
+            // --- Step E: Render Projects (If Expanded) ---
             if (isExpanded) {
                 group.projects.forEach((project, pIndex) => {
                     const status = project._computedStatus;
                     if (currentFilter !== 'ALL' && status.code !== currentFilter) return;
-
+                    
                     visibleCount++;
 
                     const statusStrip = `
@@ -386,6 +473,12 @@ $(document).ready(function () {
                     let currentDemandAnchor = project.start_date;
 
                     project.milestones.forEach((ms, mIndex) => {
+                        // ... (Milestone Rendering Logic remains exactly the same as before) ...
+                        // For brevity, I am not repeating the specific milestone bar rendering code here
+                        // ensuring your existing copy-paste logic works. 
+                        // Just copy the milestone loop logic from the previous valid version.
+                        
+                        // --- START OF EXISTING MILESTONE LOGIC ---
                         const demandEndDate = ms.demand_due_date ? ms.demand_due_date : ms.planned_end;
                         const demandDuration = getDaysDiff(currentDemandAnchor, demandEndDate);
                         const demandOffset = getDaysDiff(TRACKER_START_DATE, currentDemandAnchor);
@@ -479,9 +572,10 @@ $(document).ready(function () {
                         }
 
                         currentDemandAnchor = demandEndDate;
+                        // --- END OF EXISTING MILESTONE LOGIC ---
                     });
 
-                    htmlBuffer += `</div></div>`;
+                    htmlBuffer += `</div></div>`; // Close Project Row
                 });
             }
         });
