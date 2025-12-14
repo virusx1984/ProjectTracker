@@ -5,18 +5,17 @@ $(document).ready(function () {
     const TRACKER_START_DATE = new Date("2025-01-01");
     const RENDER_MONTHS_COUNT = 15;
 
-    // DEMO DATE
+    // DEMO DATE: Fixed for demonstration
     const CURRENT_DATE = new Date("2025-03-15");
 
     // --- Global State ---
-    let currentFilter = 'ALL';
+    let currentFilter = 'ALL'; // 'ALL', 'EXCELLENT', 'BUFFER_USED', 'PLAN_FAIL', 'CRITICAL'
+    
+    // Shared variables to hold currently processed data
+    let currentRevisedData = null; 
+    let currentProcessedStats = null; 
 
-    // Shared variable to hold currently processed data
-    let currentRevisedData = null;
-    let currentProcessedStats = null;
-
-    // --- Data Source (Global State) ---
-    // This is the source of truth. We update THIS object when editing.
+    // --- Data Source (Source of Truth) ---
     const rawTrackerData = {
         "tracker_title": "Enterprise IT Roadmap 2025 (Dashboard)",
         "groups": [
@@ -28,19 +27,25 @@ $(document).ready(function () {
                     {
                         "project_id": "PRJ-001",
                         "project_name": "E-Commerce Platform",
+                        // Project Level Fields
+                        "status": "Active",
+                        "priority": "High",
+                        "hard_deadline": "2025-06-30",
+                        "description": "Key initiative for Q1 revenue growth.",
                         "start_date": "2025-01-05",
                         "milestones": [
-                            // Done task
                             { "name": "UI Design", "status_progress": 1.0, "planned_end": "2025-02-15", "actual_completion_date": "2025-02-10", "demand_due_date": "2025-02-15", "color": "#0d6efd" },
-                            // FIXED: Changed to In Progress (0.6) and removed actual date
                             { "name": "Frontend", "status_progress": 0.6, "planned_end": "2025-03-25", "actual_completion_date": null, "demand_due_date": "2025-03-25", "color": "#198754" },
-                            // Future task
                             { "name": "Backend", "status_progress": 0.0, "planned_end": "2025-05-15", "actual_completion_date": null, "demand_due_date": "2025-05-01", "color": "#6f42c1" }
                         ]
                     },
                     {
                         "project_id": "PRJ-002",
                         "project_name": "Mobile App Launch",
+                        "status": "Active",
+                        "priority": "Medium",
+                        "hard_deadline": "",
+                        "description": "iOS and Android MVP launch.",
                         "start_date": "2025-02-01",
                         "milestones": [
                             { "name": "Requirement", "status_progress": 1.0, "planned_end": "2025-02-20", "actual_completion_date": "2025-02-20", "demand_due_date": "2025-02-25", "color": "#fd7e14" },
@@ -57,9 +62,12 @@ $(document).ready(function () {
                     {
                         "project_id": "PRJ-007",
                         "project_name": "Cloud Infra Setup",
+                        "status": "On Hold",
+                        "priority": "Low",
+                        "hard_deadline": "2025-04-01",
+                        "description": "Migration to AWS.",
                         "start_date": "2025-01-20",
                         "milestones": [
-                            // Late task example
                             { "name": "AWS Setup", "status_progress": 0.8, "planned_end": "2025-02-15", "actual_completion_date": null, "demand_due_date": "2025-02-15", "color": "#fd7e14" },
                             { "name": "K8s Config", "status_progress": 0.0, "planned_end": "2025-04-05", "actual_completion_date": null, "demand_due_date": "2025-03-30", "color": "#6f42c1" }
                         ]
@@ -73,7 +81,10 @@ $(document).ready(function () {
     function getDaysDiff(start, end) {
         const s = new Date(start);
         const e = new Date(end);
-        return (e - s) / (1000 * 60 * 60 * 24);
+        // Reset times to avoid DST issues
+        s.setHours(12, 0, 0, 0);
+        e.setHours(12, 0, 0, 0);
+        return Math.round((e - s) / (1000 * 60 * 60 * 24));
     }
 
     function addDays(date, days) {
@@ -82,10 +93,10 @@ $(document).ready(function () {
         return result;
     }
 
-    // --- CORE LOGIC: Dynamic Schedule Revision (Nested) ---
+    // --- CORE LOGIC: Dynamic Schedule Revision ---
     function reviseProjectData(originalData) {
         const revisedData = JSON.parse(JSON.stringify(originalData));
-
+        
         revisedData.groups.forEach(group => {
             group.projects.forEach(project => {
                 let chainCursor = new Date(project.start_date);
@@ -125,7 +136,7 @@ $(document).ready(function () {
         }
 
         const lastMs = project.milestones[project.milestones.length - 1];
-        const revisedEnd = new Date(lastMs.revised_end_date);
+        const revisedEnd = new Date(lastMs.revised_end_date); 
         const originalPlan = new Date(lastMs.planned_end);
         const demandDate = new Date(lastMs.demand_due_date || lastMs.planned_end);
 
@@ -134,7 +145,7 @@ $(document).ready(function () {
 
         if (isExternalRisk) {
             if (isInternalDelayed) {
-                return { code: 'CRITICAL', label: "Critical", class: "bg-critical", priority: 4 };
+                return { code: 'CRITICAL', label: "Critical", class: "bg-critical", priority: 4 }; 
             } else {
                 return { code: 'PLAN_FAIL', label: "Plan Fail", class: "bg-danger", priority: 3 };
             }
@@ -148,10 +159,9 @@ $(document).ready(function () {
     }
 
     // --- Group Status Aggregation ---
-    // Rule: Show the worst status of child projects
     function calculateGroupStatus(group) {
         let maxPriority = 0;
-        let worstStatus = { class: 'bg-secondary' };
+        let worstStatus = { class: 'bg-secondary' }; 
 
         group.projects.forEach(p => {
             const s = p._computedStatus;
@@ -163,7 +173,7 @@ $(document).ready(function () {
         return worstStatus;
     }
 
-    // --- Preprocessing & Counting (Nested) ---
+    // --- Preprocessing & Counting ---
     function preprocessData(data) {
         const counts = {
             ALL: 0,
@@ -176,8 +186,8 @@ $(document).ready(function () {
         data.groups.forEach(group => {
             group.projects.forEach(project => {
                 const status = calculateSingleProjectStatus(project);
-                project._computedStatus = status;
-
+                project._computedStatus = status; 
+                
                 counts.ALL++;
                 if (counts.hasOwnProperty(status.code)) {
                     counts[status.code]++;
@@ -239,7 +249,7 @@ $(document).ready(function () {
         $container.empty();
 
         const cardsConfig = [
-            { code: 'ALL', label: 'All Projects', colorClass: 'bg-primary' },
+            { code: 'ALL', label: 'All Projects', colorClass: 'bg-primary' }, 
             { code: 'EXCELLENT', label: 'Excellent', colorClass: 'bg-success' },
             { code: 'BUFFER_USED', label: 'Buffer Used', colorClass: 'bg-warning' },
             { code: 'PLAN_FAIL', label: 'Plan Fail', colorClass: 'bg-danger' },
@@ -249,7 +259,7 @@ $(document).ready(function () {
         cardsConfig.forEach(cfg => {
             const count = counts[cfg.code] || 0;
             const isActive = currentFilter === cfg.code ? 'active' : '';
-
+            
             const html = `
                 <div class="stat-card ${isActive}" data-filter="${cfg.code}">
                     <div class="color-bar ${cfg.colorClass}"></div>
@@ -260,7 +270,7 @@ $(document).ready(function () {
             $container.append(html);
         });
 
-        $('.stat-card').click(function () {
+        $('.stat-card').click(function() {
             const newFilter = $(this).data('filter');
             if (newFilter !== currentFilter) {
                 currentFilter = newFilter;
@@ -271,7 +281,7 @@ $(document).ready(function () {
         });
     }
 
-    // --- Render: Main Timeline (Nested Groups) ---
+    // --- Render: Main Timeline ---
     function renderTracker(data) {
         const $container = $('#projects-container');
         const $headerTicks = $('#header-ticks-container');
@@ -284,21 +294,21 @@ $(document).ready(function () {
         let totalTimelineWidth = 0;
         const SHOW_DAYS_THRESHOLD = 4;
 
-        for (let i = 0; i < RENDER_MONTHS_COUNT; i++) {
+        for(let i=0; i < RENDER_MONTHS_COUNT; i++) {
             let targetMonthDate = new Date(TRACKER_START_DATE);
             targetMonthDate.setMonth(targetMonthDate.getMonth() + i);
             let daysFromStart = getDaysDiff(TRACKER_START_DATE, targetMonthDate);
             let leftPos = daysFromStart * pixelsPerDay;
             let monthName = targetMonthDate.toLocaleString('default', { month: 'short' });
-
+            
             $headerTicks.append(`<div class="time-mark" style="left: ${leftPos}px">${monthName}</div>`);
-
+            
             let daysInMonth = new Date(targetMonthDate.getFullYear(), targetMonthDate.getMonth() + 1, 0).getDate();
 
             if (pixelsPerDay >= SHOW_DAYS_THRESHOLD) {
                 let step;
-                if (pixelsPerDay >= 18) { step = 1; }
-                else if (pixelsPerDay >= 10) { step = 5; }
+                if (pixelsPerDay >= 18) { step = 1; } 
+                else if (pixelsPerDay >= 10) { step = 5; } 
                 else { step = 15; }
 
                 for (let d = 1; d <= daysInMonth; d++) {
@@ -313,7 +323,7 @@ $(document).ready(function () {
                 }
             }
             let monthWidth = daysInMonth * pixelsPerDay;
-            totalTimelineWidth = leftPos + monthWidth;
+            totalTimelineWidth = leftPos + monthWidth; 
         }
         $headerTicks.css('min-width', (totalTimelineWidth + 0) + 'px');
 
@@ -327,11 +337,9 @@ $(document).ready(function () {
         }
 
         // 2. Render Groups and Projects
-        // 2. Render Groups and Projects
         let htmlBuffer = ""; 
         let visibleCount = 0;
 
-        // Iterate Groups
         data.groups.forEach((group, gIndex) => {
             
             // --- Step A: Filter Logic ---
@@ -344,9 +352,9 @@ $(document).ready(function () {
             // --- Step B: Prepare Data for Visuals ---
             
             let minStart = null;
-            let maxEnd = null; // For Ghost Bar (Reality)
-            let maxDemandEnd = null; // For Demand Strip (Expectation)
-            let minProgressDate = null; // For Solid Progress
+            let maxEnd = null; // Ghost Bar (Reality)
+            let maxDemandEnd = null; // Demand Strip (Target)
+            let minProgressDate = null; // Solid Progress Date
             
             const groupStats = { 'CRITICAL': 0, 'PLAN_FAIL': 0, 'BUFFER_USED': 0, 'EXCELLENT': 0 };
             let totalProjects = 0;
@@ -356,19 +364,12 @@ $(document).ready(function () {
                 
                 // 1. Calculate Ranges
                 if (!minStart || pStart < minStart) minStart = pStart;
-                
-                // Track Ghost Bar End (Reality)
                 if (!maxEnd || pStart > maxEnd) maxEnd = pStart;
-
-                // Track Demand Strip End (Expectation) - Init with start just in case
                 if (!maxDemandEnd || pStart > maxDemandEnd) maxDemandEnd = pStart;
-
-                // Track effective end for Ghost Bar
-                let pEffectiveEnd = pStart; 
 
                 if (p.milestones.length > 0) {
                     p.milestones.forEach(ms => {
-                        // A. Ghost Bar Data (Revised/Actual)
+                        // A. Ghost Bar Range
                         const msStart = new Date(ms.revised_start_date);
                         let msEnd = new Date(ms.revised_end_date);
                         
@@ -378,15 +379,14 @@ $(document).ready(function () {
 
                         if (msStart < minStart) minStart = msStart;
                         if (msEnd > maxEnd) maxEnd = msEnd;
-                        if (msEnd > pEffectiveEnd) pEffectiveEnd = msEnd;
 
-                        // B. Demand Strip Data (Target)
+                        // B. Demand Strip Range
                         const msDemand = new Date(ms.demand_due_date || ms.planned_end);
                         if (msDemand > maxDemandEnd) maxDemandEnd = msDemand;
                     });
                 }
 
-                // 2. Calculate Weighted Progress Date (Visual Cutoff)
+                // 2. Calculate "Visual Progress Date" (Solid Fill Tip)
                 // Logic: "Visual Cutoff" method
                 let pVisualDate = new Date(pStart);
 
@@ -477,7 +477,7 @@ $(document).ready(function () {
                 `;
             }
 
-            // 3. Health Bar (Left Side)
+            // 3. Health Bar
             let healthBarSegments = '';
             if (totalProjects > 0) {
                 const order = ['CRITICAL', 'PLAN_FAIL', 'BUFFER_USED', 'EXCELLENT'];
@@ -518,8 +518,7 @@ $(document).ready(function () {
                     </div>
                 </div>
             `;
-            
-            // --- Step E: Render Projects (If Expanded) ---
+
             if (isExpanded) {
                 group.projects.forEach((project, pIndex) => {
                     const status = project._computedStatus;
@@ -539,7 +538,10 @@ $(document).ready(function () {
                         <div class="project-row">
                             <div class="project-name-label">
                                 ${statusStrip}
-                                <div class="fw-bold text-dark text-truncate">
+                                <div class="fw-bold text-dark text-truncate project-name-clickable" 
+                                     data-g-idx="${gIndex}" 
+                                     data-p-idx="${pIndex}"
+                                     title="Click to Edit Project Settings">
                                     ${project.project_name}
                                 </div>
                                 <div style="font-size:10px; color:#6c757d; margin-top:4px;">
@@ -574,27 +576,18 @@ $(document).ready(function () {
                         let tailType = null;
                         let tailStart = null;
                         let tailEnd = null;
-                        let statusInfo = { isOverdue: false, extraInfo: '' };
-
+                        
                         if (actualDate) {
                             if (new Date(actualDate) > new Date(revisedEnd)) {
                                 solidBarEnd = revisedEnd; tailType = 'late'; tailStart = revisedEnd; tailEnd = actualDate;
-                                const diff = Math.floor(getDaysDiff(revisedEnd, actualDate));
-                                statusInfo.extraInfo = `⚠️ Late by ${diff} days`;
                             } else if (new Date(actualDate) < new Date(revisedEnd)) {
                                 solidBarEnd = actualDate; tailType = 'early'; tailStart = actualDate; tailEnd = revisedEnd;
-                                const diff = Math.floor(getDaysDiff(actualDate, revisedEnd));
-                                statusInfo.extraInfo = `✅ Early by ${diff} days`;
                             } else {
                                 solidBarEnd = actualDate;
-                                statusInfo.extraInfo = `✅ On Time`;
                             }
                         } else {
                             if (CURRENT_DATE > new Date(revisedEnd)) {
                                 solidBarEnd = revisedEnd; tailType = 'late'; tailStart = revisedEnd; tailEnd = CURRENT_DATE.toISOString().split('T')[0];
-                                statusInfo.isOverdue = true;
-                                const diff = Math.floor(getDaysDiff(revisedEnd, CURRENT_DATE));
-                                statusInfo.extraInfo = `🔥 Overdue: ${diff} days so far`;
                             }
                         }
 
@@ -603,6 +596,7 @@ $(document).ready(function () {
                         const planWidth = Math.max(planDuration * pixelsPerDay, 2);
                         const planLeft = planOffset * pixelsPerDay;
                         const progressPct = Math.round(ms.status_progress * 100);
+                        const statusInfo = { isOverdue: false }; 
                         const popContent = createPopoverContent(ms, revisedStart, solidBarEnd, statusInfo).replace(/"/g, '&quot;');
 
                         let innerContent = '';
@@ -679,7 +673,7 @@ $(document).ready(function () {
                         currentDemandAnchor = demandEndDate;
                     });
 
-                    htmlBuffer += `</div></div>`; // Close Project Row
+                    htmlBuffer += `</div></div>`; 
                 });
             }
         });
@@ -694,15 +688,14 @@ $(document).ready(function () {
                 </div>
             `);
         } else if (data.groups.length === 0) {
-            $container.html(`<div class="empty-state">No Data Loaded</div>`);
+             $container.html(`<div class="empty-state">No Data Loaded</div>`);
         } else {
             $container.html(htmlBuffer);
         }
 
-        // 4. Bind Events (Group Toggle)
-        $('.group-row').click(function () {
-            if (currentFilter !== 'ALL') return;
-
+        // 4. Bind Events
+        $('.group-row').click(function() {
+            if (currentFilter !== 'ALL') return; 
             const gIdx = $(this).data('g-idx');
             currentRevisedData.groups[gIdx].is_expanded = !currentRevisedData.groups[gIdx].is_expanded;
             renderTracker(currentRevisedData);
@@ -710,7 +703,7 @@ $(document).ready(function () {
 
         // 5. Lazy Initialization
         $container.off('mouseenter', '[data-bs-toggle="popover"]');
-        $container.on('mouseenter', '[data-bs-toggle="popover"]', function () {
+        $container.on('mouseenter', '[data-bs-toggle="popover"]', function() {
             const el = this;
             let popover = bootstrap.Popover.getInstance(el);
             if (!popover) {
@@ -720,7 +713,7 @@ $(document).ready(function () {
         });
 
         $container.off('mouseenter', '[data-bs-toggle="tooltip"]');
-        $container.on('mouseenter', '[data-bs-toggle="tooltip"]', function () {
+        $container.on('mouseenter', '[data-bs-toggle="tooltip"]', function() {
             const el = this;
             let tooltip = bootstrap.Tooltip.getInstance(el);
             if (!tooltip) {
@@ -730,7 +723,7 @@ $(document).ready(function () {
         });
     }
 
-    // --- Edit & Interaction Logic (Updated UI Layout) ---
+    // --- Edit & Interaction Logic (Milestone) ---
     function initEditHandlers() {
         const modalEl = document.getElementById('editMilestoneModal');
         const modal = new bootstrap.Modal(modalEl, {
@@ -745,26 +738,27 @@ $(document).ready(function () {
 
         // 1. Click on Bar to Open Modal
         $('#projects-container').on('click', '.clickable', function (e) {
-            e.stopPropagation();
+            e.stopPropagation(); 
             
             const popover = bootstrap.Popover.getInstance(this);
             if (popover) popover.hide();
+            
             $errorMsg.addClass('d-none').text('');
 
             const gIdx = $(this).data('g-idx');
             const pIdx = $(this).data('p-idx');
             const mIdx = $(this).data('m-idx');
             
-            // Context Data
+            // --- READ FROM currentRevisedData TO GET CALCULATED DATES ---
             const group = currentRevisedData.groups[gIdx];
             const project = group.projects[pIdx];
             const msData = project.milestones[mIdx];
 
-            // --- UI: Populate Breadcrumbs ---
+            // Populate Breadcrumbs
             $('#display-group-name').text(group.group_name);
             $('#display-project-name').text(project.project_name);
 
-            // --- CALCULATE ORIGINAL REFERENCE DATA ---
+            // Calculate Ref Data
             let origStart = project.start_date;
             if (mIdx > 0) {
                 origStart = project.milestones[mIdx - 1].planned_end;
@@ -773,16 +767,17 @@ $(document).ready(function () {
             const origDuration = Math.max(1, getDaysDiff(origStart, origEnd));
 
             $('#read-orig-start').val(origStart);
-            $('#read-orig-duration').val(origDuration + ' Days'); // Added unit
+            $('#read-orig-duration').val(origDuration + ' Days');
 
-            // --- POPULATE FIELDS ---
+            // Populate Fields
             $('#edit-g-index').val(gIdx);
             $('#edit-p-index').val(pIdx);
             $('#edit-m-index').val(mIdx);
             
             $('#edit-name').val(msData.name);
-            $('#edit-planned-end').val(msData.planned_end); 
+            $('#edit-planned-end').val(msData.planned_end);
             
+            // Revised Dates (from currentRevisedData)
             $('#edit-revised-start').val(msData.revised_start_date);
             $('#edit-revised-end').val(msData.revised_end_date);
 
@@ -794,18 +789,15 @@ $(document).ready(function () {
             modal.show();
         });
 
-        // 2. Slider Update
         $('#edit-progress').on('input', function () {
             $('#edit-progress-val').text(Math.round($(this).val() * 100) + '%');
         });
 
-        // 3. Set Today Helper Button
         $('#btn-set-today').click(function() {
             const today = new Date().toISOString().split('T')[0];
             $('#edit-actual-date').val(today);
         });
 
-        // 4. Save Changes (Reverse Calculation & Validation)
         $('#btn-save-changes').click(function () {
             $errorMsg.addClass('d-none');
 
@@ -830,14 +822,13 @@ $(document).ready(function () {
             const newPlannedEndDateObj = addDays(origStartRef, newDurationDays);
             const inputPlannedEnd = newPlannedEndDateObj.toISOString().split('T')[0];
 
-            // Context for Validation
+            // Validation
             const project = rawTrackerData.groups[gIdx].projects[pIdx];
             const milestones = project.milestones;
             const projectStart = project.start_date;
 
             let errorText = null;
 
-            // --- VALIDATION RULES ---
             if (!inputName) errorText = "Task Name cannot be empty.";
             else if (!inputDemandDate) errorText = "Demand / Target Date cannot be empty.";
             else if (inputProgress < 1.0 && inputActualDate) errorText = "Cannot set Actual Completion Date if progress is less than 100%.";
@@ -845,7 +836,6 @@ $(document).ready(function () {
             else if (inputPlannedEnd < projectStart) errorText = `Calculated Planned End (${inputPlannedEnd}) cannot be earlier than Project Start (${projectStart}).`;
             else if (inputActualDate && inputActualDate < projectStart) errorText = `Actual Date (${inputActualDate}) cannot be earlier than Project Start (${projectStart}).`;
             else {
-                // Waterfall Validation
                 if (mIdx > 0) {
                     const prevMs = milestones[mIdx - 1];
                     if (inputPlannedEnd < prevMs.planned_end) errorText = `Calculated Planned End cannot be earlier than previous task's Planned End (${prevMs.planned_end}).`;
@@ -865,7 +855,7 @@ $(document).ready(function () {
                 return; 
             }
 
-            // Update Data Source
+            // Update
             const msData = rawTrackerData.groups[gIdx].projects[pIdx].milestones[mIdx];
             msData.name = inputName;
             msData.planned_end = inputPlannedEnd;
@@ -875,6 +865,111 @@ $(document).ready(function () {
 
             runPipeline();
             modal.hide();
+        });
+    }
+
+    // --- Project Level Edit Logic ---
+    function initProjectEditHandlers() {
+        const modalEl = document.getElementById('editProjectModal');
+        const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+        
+        // 1. Open Modal
+        $('#projects-container').on('click', '.project-name-clickable', function (e) {
+            e.stopPropagation();
+            
+            const gIdx = $(this).data('g-idx');
+            const pIdx = $(this).data('p-idx');
+            
+            const group = rawTrackerData.groups[gIdx];
+            const project = group.projects[pIdx];
+            const computedProject = currentRevisedData.groups[gIdx].projects[pIdx];
+
+            $('#edit-proj-g-idx').val(gIdx);
+            $('#edit-proj-p-idx').val(pIdx);
+            $('#proj-group-name').text(group.group_name);
+            $('#proj-id-display').text(project.project_id);
+            $('#edit-proj-name').val(project.project_name);
+
+            $('#edit-proj-status').val(project.status || 'Active');
+            $('#edit-proj-priority').val(project.priority || 'Medium');
+
+            $('#edit-proj-start').val(project.start_date);
+            $('#edit-proj-deadline').val(project.hard_deadline || '');
+            $('#edit-proj-desc').val(project.description || '');
+
+            let earliestStart = null;
+            let latestEnd = null;
+
+            if (computedProject.milestones && computedProject.milestones.length > 0) {
+                earliestStart = computedProject.milestones[0].revised_start_date;
+                computedProject.milestones.forEach(ms => {
+                    if (!latestEnd || ms.revised_end_date > latestEnd) {
+                        latestEnd = ms.revised_end_date;
+                    }
+                });
+            }
+
+            $('#ref-first-milestone').text(earliestStart ? `Ref: Earliest Task: ${earliestStart}` : 'Ref: No tasks');
+            $('#ref-last-milestone').text(latestEnd ? `Ref: Latest Task: ${latestEnd}` : 'Ref: No tasks');
+
+            checkDeadlineWarning(project.hard_deadline, latestEnd);
+
+            $('#edit-proj-deadline').off('input').on('input', function() {
+                checkDeadlineWarning($(this).val(), latestEnd);
+            });
+
+            modal.show();
+        });
+
+        function checkDeadlineWarning(deadline, actualEnd) {
+            const $warn = $('#proj-deadline-warning');
+            if (deadline && actualEnd && deadline < actualEnd) {
+                $warn.removeClass('d-none');
+            } else {
+                $warn.addClass('d-none');
+            }
+        }
+
+        // 2. Save Changes
+        $('#btn-save-project').click(function() {
+            const gIdx = parseInt($('#edit-proj-g-idx').val());
+            const pIdx = parseInt($('#edit-proj-p-idx').val());
+
+            const newName = $('#edit-proj-name').val().trim();
+            const newStart = $('#edit-proj-start').val();
+
+            if (!newName) {
+                alert("Project Name cannot be empty");
+                return;
+            }
+            if (!newStart) {
+                alert("Project Start Date cannot be empty");
+                return;
+            }
+
+            const project = rawTrackerData.groups[gIdx].projects[pIdx];
+            project.project_name = newName;
+            project.status = $('#edit-proj-status').val();
+            project.priority = $('#edit-proj-priority').val();
+            project.start_date = newStart;
+            project.hard_deadline = $('#edit-proj-deadline').val();
+            project.description = $('#edit-proj-desc').val();
+
+            runPipeline();
+            modal.hide();
+        });
+
+        // 3. Delete Project
+        $('#btn-delete-project').click(function() {
+            if(confirm("Are you sure you want to delete this project? This cannot be undone.")) {
+                const gIdx = parseInt($('#edit-proj-g-idx').val());
+                const pIdx = parseInt($('#edit-proj-p-idx').val());
+                
+                rawTrackerData.groups[gIdx].projects.splice(pIdx, 1);
+                
+                runPipeline();
+                modal.hide();
+            }
         });
     }
 
@@ -894,6 +989,21 @@ $(document).ready(function () {
 
         $('#btn-zoom-reset').click(function () {
             pixelsPerDay = DEFAULT_PIXELS_PER_DAY;
+            renderTracker(currentRevisedData);
+        });
+    }
+
+    // --- Group Expansion Controls ---
+    function initGroupControls() {
+        $('#btn-expand-all').click(function () {
+            if (currentFilter !== 'ALL') return;
+            currentRevisedData.groups.forEach(g => g.is_expanded = true);
+            renderTracker(currentRevisedData);
+        });
+
+        $('#btn-collapse-all').click(function () {
+            if (currentFilter !== 'ALL') return;
+            currentRevisedData.groups.forEach(g => g.is_expanded = false);
             renderTracker(currentRevisedData);
         });
     }
@@ -937,29 +1047,12 @@ $(document).ready(function () {
         renderTracker(currentRevisedData);
     }
 
-    // --- Group Expansion Controls ---
-    function initGroupControls() {
-        $('#btn-expand-all').click(function () {
-            // If filter is active, groups are already forced expanded
-            if (currentFilter !== 'ALL') return;
-
-            currentRevisedData.groups.forEach(g => g.is_expanded = true);
-            renderTracker(currentRevisedData);
-        });
-
-        $('#btn-collapse-all').click(function () {
-            // If filter is active, we cannot collapse (visual rule)
-            if (currentFilter !== 'ALL') return;
-
-            currentRevisedData.groups.forEach(g => g.is_expanded = false);
-            renderTracker(currentRevisedData);
-        });
-    }
-
     // --- Init ---
     initZoomControls();
     initGroupControls();
     initEditHandlers();
+    initProjectEditHandlers();
     makeModalDraggable('#editMilestoneModal');
+    makeModalDraggable('#editProjectModal');
     runPipeline();
 });

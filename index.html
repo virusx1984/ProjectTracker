@@ -168,6 +168,90 @@
         </div>
     </div>
 
+    <div class="modal fade" id="editProjectModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                
+                <div class="modal-body p-4 pt-0">
+                    <div id="proj-error-msg" class="alert alert-danger d-none p-2 mb-3" style="font-size: 13px;"></div>
+                    
+                    <form id="editProjectForm">
+                        <input type="hidden" id="edit-proj-g-idx">
+                        <input type="hidden" id="edit-proj-p-idx">
+
+                        <div class="mb-4">
+                            <div class="project-context-breadcrumb">
+                                <span id="proj-group-name">Group Name</span>
+                                <i class="bi bi-chevron-right" style="font-size: 9px;"></i>
+                                <span id="proj-id-display" class="badge bg-light text-secondary border">PRJ-XXX</span>
+                            </div>
+                            <input type="text" class="modal-project-name-input" id="edit-proj-name" placeholder="Project Name">
+                        </div>
+
+                        <div class="status-ribbon">
+                            <div class="flex-grow-1">
+                                <label class="form-label small fw-bold text-muted">Lifecycle Status</label>
+                                <select class="form-select" id="edit-proj-status">
+                                    <option value="Planning">Planning</option>
+                                    <option value="Active">Active</option>
+                                    <option value="On Hold">On Hold</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                            <div class="flex-grow-1">
+                                <label class="form-label small fw-bold text-muted">Priority</label>
+                                <select class="form-select" id="edit-proj-priority">
+                                    <option value="High">🔴 High</option>
+                                    <option value="Medium">🟡 Medium</option>
+                                    <option value="Low">⚪ Low</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="time-capsule">
+                            <span class="time-capsule-title">Time Boundaries</span>
+                            
+                            <div class="row">
+                                <div class="col-md-6 border-end">
+                                    <label class="boundary-label text-success">Project Start</label>
+                                    <input type="date" class="form-control" id="edit-proj-start">
+                                    <div class="ref-text" id="ref-first-milestone">Ref: First task starts ...</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="boundary-label text-danger">Hard Deadline</label>
+                                    <input type="date" class="form-control" id="edit-proj-deadline">
+                                    <div class="ref-text" id="ref-last-milestone">Ref: Last task ends ...</div>
+                                    <div id="proj-deadline-warning" class="text-danger small mt-1 fw-bold d-none">
+                                        <i class="bi bi-exclamation-triangle-fill"></i> Warning: Milestones exceed deadline!
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Description</label>
+                            <textarea class="form-control" id="edit-proj-desc" rows="3" placeholder="Project background and objectives..."></textarea>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="modal-footer justify-content-between">
+                    <button type="button" class="btn btn-danger-light btn-sm" id="btn-delete-project">
+                        <i class="bi bi-trash"></i> Delete Project
+                    </button>
+                    <div>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="btn-save-project">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="js/script.js"></script>
 
