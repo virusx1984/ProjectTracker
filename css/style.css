@@ -543,6 +543,18 @@ body {
     overflow: hidden; /* Ensure fill doesn't overflow rounded corners */
 }
 
+/* --- Group Demand Strip (Top Constraint Line) --- */
+.group-demand-strip {
+    position: absolute;
+    /* Positioned slightly above the Ghost Bar (which is at top: 10px) */
+    top: 6px; 
+    height: 3px;
+    background-color: rgba(253, 126, 20, 0.7); /* Orange/Warning color */
+    border-radius: 2px;
+    z-index: 5; /* Sit on top of Ghost Bar */
+    pointer-events: none;
+}
+
 /* --- NEW: Solid Fill representing the "Min Progress Date" --- */
 .ghost-progress-fill {
     height: 100%;

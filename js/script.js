@@ -339,16 +339,14 @@ $(document).ready(function () {
                 return currentFilter === 'ALL' || p._computedStatus.code === currentFilter;
             });
 
-            // If no projects match filter, skip whole group
             if (matchingProjects.length === 0) return;
 
             // --- Step B: Prepare Data for Visuals ---
             
             let minStart = null;
-            let maxEnd = null;
-            
-            // This will track the "Slowest Visual Progress" date
-            let minProgressDate = null; 
+            let maxEnd = null; // For Ghost Bar (Reality)
+            let maxDemandEnd = null; // For Demand Strip (Expectation)
+            let minProgressDate = null; // For Solid Progress
             
             const groupStats = { 'CRITICAL': 0, 'PLAN_FAIL': 0, 'BUFFER_USED': 0, 'EXCELLENT': 0 };
             let totalProjects = 0;
@@ -356,27 +354,40 @@ $(document).ready(function () {
             group.projects.forEach(p => {
                 const pStart = new Date(p.start_date);
                 
-                // 1. Calculate Group Range (Gray Background)
+                // 1. Calculate Ranges
                 if (!minStart || pStart < minStart) minStart = pStart;
+                
+                // Track Ghost Bar End (Reality)
                 if (!maxEnd || pStart > maxEnd) maxEnd = pStart;
+
+                // Track Demand Strip End (Expectation) - Init with start just in case
+                if (!maxDemandEnd || pStart > maxDemandEnd) maxDemandEnd = pStart;
+
+                // Track effective end for Ghost Bar
+                let pEffectiveEnd = pStart; 
 
                 if (p.milestones.length > 0) {
                     p.milestones.forEach(ms => {
+                        // A. Ghost Bar Data (Revised/Actual)
                         const msStart = new Date(ms.revised_start_date);
                         let msEnd = new Date(ms.revised_end_date);
                         
-                        // Extend range if delayed
                         if (!ms.actual_completion_date && CURRENT_DATE > msEnd) {
                             msEnd = new Date(CURRENT_DATE);
                         }
 
                         if (msStart < minStart) minStart = msStart;
                         if (msEnd > maxEnd) maxEnd = msEnd;
+                        if (msEnd > pEffectiveEnd) pEffectiveEnd = msEnd;
+
+                        // B. Demand Strip Data (Target)
+                        const msDemand = new Date(ms.demand_due_date || ms.planned_end);
+                        if (msDemand > maxDemandEnd) maxDemandEnd = msDemand;
                     });
                 }
 
-                // 2. Calculate "Visual Progress Date" (Solid Fill Tip)
-                // Logic: Find the exact point where the visual bar stops.
+                // 2. Calculate Weighted Progress Date (Visual Cutoff)
+                // Logic: "Visual Cutoff" method
                 let pVisualDate = new Date(pStart);
 
                 if (p.milestones.length > 0) {
@@ -385,40 +396,26 @@ $(document).ready(function () {
                         const msStart = new Date(ms.revised_start_date);
                         let msEnd = new Date(ms.revised_end_date);
                         
-                        // Handle Delay Logic for "End Date" of this bar
                         if (!ms.actual_completion_date && CURRENT_DATE > msEnd) {
                             msEnd = new Date(CURRENT_DATE);
                         }
 
                         if (ms.status_progress === 1.0) {
-                            // Milestone Done: Progress extends to the end of this bar
-                            // We update pVisualDate and continue to check the next milestone
-                            if (msEnd > pVisualDate) {
-                                pVisualDate = msEnd;
-                            }
+                            if (msEnd > pVisualDate) pVisualDate = msEnd;
                         } else if (ms.status_progress > 0) {
-                            // In Progress: Progress extends to X% of this bar
                             const duration = Math.max(1, getDaysDiff(msStart, msEnd));
                             const doneDays = Math.round(duration * ms.status_progress);
-                            
                             const partialDate = new Date(msStart);
                             partialDate.setDate(partialDate.getDate() + doneDays);
                             
-                            // This is the cutting point. Update and STOP.
-                            // Even if next milestones exist, we haven't reached them.
-                            if (partialDate > pVisualDate) {
-                                pVisualDate = partialDate;
-                            }
+                            if (partialDate > pVisualDate) pVisualDate = partialDate;
                             break; 
                         } else {
-                            // Not Started (0%): Progress stops at previous milestone's end.
-                            // We do not update pVisualDate further. STOP.
                             break;
                         }
                     }
                 }
 
-                // 3. Find the Group Minimum (The bottleneck)
                 if (!minProgressDate || pVisualDate < minProgressDate) {
                     minProgressDate = pVisualDate;
                 }
@@ -429,9 +426,9 @@ $(document).ready(function () {
                 totalProjects++;
             });
 
-            // --- Step C: Generate HTML for Visuals ---
+            // --- Step C: Generate HTML ---
 
-            // 1. Ghost Bar & Progress Fill HTML
+            // 1. Ghost Bar (Reality)
             let ghostBarHtml = '';
             if (minStart && maxEnd) {
                 const gStartOffset = getDaysDiff(TRACKER_START_DATE, minStart);
@@ -440,34 +437,51 @@ $(document).ready(function () {
                 const gLeft = gStartOffset * pixelsPerDay;
                 const gWidth = gDuration * pixelsPerDay;
                 
-                // Calculate Fill Width
-                // Fill goes from minStart -> minProgressDate
                 let fillWidth = 0;
+                let dateLabel = "N/A";
+                
                 if (minProgressDate && minProgressDate > minStart) {
                     const progressDuration = getDaysDiff(minStart, minProgressDate);
                     fillWidth = Math.max(0, progressDuration * pixelsPerDay);
-                    // Cap it at max width (just in case)
                     if (fillWidth > gWidth) fillWidth = gWidth;
+                    dateLabel = minProgressDate.toLocaleString('default', { month: 'short', day: 'numeric' });
                 }
 
-                // Render Container + Inner Fill
                 ghostBarHtml = `
                     <div class="group-ghost-bar" style="left: ${gLeft}px; width: ${gWidth}px;">
-                        <div class="ghost-progress-fill" style="width: ${fillWidth}px;"></div>
+                        <div class="ghost-progress-fill" 
+                             style="width: ${fillWidth}px;" 
+                             title="Overall Progress to: ${dateLabel}"
+                             data-bs-toggle="tooltip"></div>
                     </div>
                 `;
             }
 
-            // 2. Health Distribution Bar HTML (Left Side) - No Changes
+            // 2. Demand Strip (Expectation)
+            let demandStripHtml = '';
+            if (minStart && maxDemandEnd) {
+                const dStartOffset = getDaysDiff(TRACKER_START_DATE, minStart);
+                const dDuration = getDaysDiff(minStart, maxDemandEnd);
+                
+                const dLeft = dStartOffset * pixelsPerDay;
+                const dWidth = dDuration * pixelsPerDay;
+                
+                const dDateLabel = maxDemandEnd.toISOString().split('T')[0];
+
+                demandStripHtml = `
+                    <div class="group-demand-strip" 
+                         style="left: ${dLeft}px; width: ${dWidth}px;"
+                         title="Demand/Target Limit: ${dDateLabel}"
+                         data-bs-toggle="tooltip">
+                    </div>
+                `;
+            }
+
+            // 3. Health Bar (Left Side)
             let healthBarSegments = '';
             if (totalProjects > 0) {
                 const order = ['CRITICAL', 'PLAN_FAIL', 'BUFFER_USED', 'EXCELLENT'];
-                const colorMap = {
-                    'CRITICAL': 'bg-critical',
-                    'PLAN_FAIL': 'bg-danger',
-                    'BUFFER_USED': 'bg-warning',
-                    'EXCELLENT': 'bg-success'
-                };
+                const colorMap = { 'CRITICAL': 'bg-critical', 'PLAN_FAIL': 'bg-danger', 'BUFFER_USED': 'bg-warning', 'EXCELLENT': 'bg-success' };
                 order.forEach(code => {
                     const count = groupStats[code];
                     if (count > 0) {
@@ -478,7 +492,6 @@ $(document).ready(function () {
             }
 
             // --- Step D: Render Group Row ---
-            
             const grpStatus = group._computedStatus;
             const isFilterActive = currentFilter !== 'ALL';
             const isExpanded = isFilterActive ? true : group.is_expanded;
@@ -489,7 +502,6 @@ $(document).ready(function () {
                     <div class="group-name-label">
                         <div class="status-strip ${grpStatus.class}"></div>
                         <span class="group-toggle-icon">${toggleIcon}</span>
-                        
                         <div class="d-flex flex-column w-100 pe-2">
                             <div class="d-flex justify-content-between align-items-center">
                                 <span>${group.group_name}</span>
@@ -499,14 +511,14 @@ $(document).ready(function () {
                                 ${healthBarSegments}
                             </div>
                         </div>
-
                     </div>
                     <div class="milestone-container" style="min-width: ${totalTimelineWidth}px">
+                        ${demandStripHtml}
                         ${ghostBarHtml}
                     </div>
                 </div>
             `;
-
+            
             // --- Step E: Render Projects (If Expanded) ---
             if (isExpanded) {
                 group.projects.forEach((project, pIndex) => {
@@ -540,12 +552,6 @@ $(document).ready(function () {
                     let currentDemandAnchor = project.start_date;
 
                     project.milestones.forEach((ms, mIndex) => {
-                        // ... (Milestone Rendering Logic remains exactly the same as before) ...
-                        // For brevity, I am not repeating the specific milestone bar rendering code here
-                        // ensuring your existing copy-paste logic works. 
-                        // Just copy the milestone loop logic from the previous valid version.
-                        
-                        // --- START OF EXISTING MILESTONE LOGIC ---
                         const demandEndDate = ms.demand_due_date ? ms.demand_due_date : ms.planned_end;
                         const demandDuration = getDaysDiff(currentDemandAnchor, demandEndDate);
                         const demandOffset = getDaysDiff(TRACKER_START_DATE, currentDemandAnchor);
@@ -620,9 +626,6 @@ $(document).ready(function () {
                             </div>
                         `;
 
-                        // --- Logic inside renderTracker loop (Step E) ---
-
-                        // --- TAIL RENDERING LOGIC (Fixed Quotes) ---
                         if (tailType) {
                             const tStart = new Date(tailStart);
                             const tEnd = new Date(tailEnd);
@@ -632,19 +635,11 @@ $(document).ready(function () {
                             const tailLeft = tailOffset * pixelsPerDay;
                             
                             const tailClass = tailType === 'late' ? 'gantt-tail-delay' : 'gantt-tail-early';
-                            
-                            // 1. Handle actual completion status
                             const isFinished = !!actualDate;
                             const calculationEnd = isFinished ? actualDate : tailEnd;
-                            
-                            // 2. Calculate diff
                             const diffDays = Math.abs(Math.round(getDaysDiff(revisedEnd, calculationEnd)));
-                            
-                            // 3. Format "Actual End" string
-                            // FIX: Use DOUBLE QUOTES for class attribute to avoid conflict later
                             const displayActual = isFinished ? actualDate : `<span class="text-danger">In Progress (Today)</span>`;
 
-                            // 4. Build Popover HTML
                             let tailPopover = '';
                             if (tailType === 'late') {
                                 tailPopover = `
@@ -672,8 +667,6 @@ $(document).ready(function () {
                                 `;
                             }
 
-                            // FIX: Escape double quotes in the content before putting it into data-bs-content
-                            // And use double quotes for the data-bs-content attribute itself
                             const safePopoverContent = tailPopover.replace(/"/g, '&quot;');
 
                             htmlBuffer += `<div class="gantt-bar ${tailClass} clickable" 
@@ -683,7 +676,6 @@ $(document).ready(function () {
                                 data-bs-content="${safePopoverContent}"></div>`;
                         }
 
-                        // Update anchor for next loop
                         currentDemandAnchor = demandEndDate;
                     });
 
