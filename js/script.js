@@ -5,17 +5,17 @@ $(document).ready(function () {
     const TRACKER_START_DATE = new Date("2025-01-01");
     const RENDER_MONTHS_COUNT = 15;
 
-    // DEMO DATE: Fixed for demonstration
+    // DEMO DATE
     const CURRENT_DATE = new Date("2025-03-15");
 
     // --- Global State ---
-    let currentFilter = 'ALL'; // 'ALL', 'EXCELLENT', 'BUFFER_USED', 'PLAN_FAIL', 'CRITICAL'
+    let currentFilter = 'ALL'; 
     
-    // Shared variables to hold currently processed data
+    // Shared variables
     let currentRevisedData = null; 
     let currentProcessedStats = null; 
 
-    // --- Data Source (Source of Truth) ---
+    // --- Data Source ---
     const rawTrackerData = {
         "tracker_title": "Enterprise IT Roadmap 2025 (Dashboard)",
         "groups": [
@@ -27,7 +27,6 @@ $(document).ready(function () {
                     {
                         "project_id": "PRJ-001",
                         "project_name": "E-Commerce Platform",
-                        // Project Level Fields
                         "status": "Active",
                         "priority": "High",
                         "hard_deadline": "2025-06-30",
@@ -45,7 +44,7 @@ $(document).ready(function () {
                         "status": "Active",
                         "priority": "Medium",
                         "hard_deadline": "",
-                        "description": "iOS and Android MVP launch.",
+                        "description": "",
                         "start_date": "2025-02-01",
                         "milestones": [
                             { "name": "Requirement", "status_progress": 1.0, "planned_end": "2025-02-20", "actual_completion_date": "2025-02-20", "demand_due_date": "2025-02-25", "color": "#fd7e14" },
@@ -65,7 +64,7 @@ $(document).ready(function () {
                         "status": "On Hold",
                         "priority": "Low",
                         "hard_deadline": "2025-04-01",
-                        "description": "Migration to AWS.",
+                        "description": "",
                         "start_date": "2025-01-20",
                         "milestones": [
                             { "name": "AWS Setup", "status_progress": 0.8, "planned_end": "2025-02-15", "actual_completion_date": null, "demand_due_date": "2025-02-15", "color": "#fd7e14" },
@@ -81,7 +80,6 @@ $(document).ready(function () {
     function getDaysDiff(start, end) {
         const s = new Date(start);
         const e = new Date(end);
-        // Reset times to avoid DST issues
         s.setHours(12, 0, 0, 0);
         e.setHours(12, 0, 0, 0);
         return Math.round((e - s) / (1000 * 60 * 60 * 24));
@@ -352,8 +350,8 @@ $(document).ready(function () {
             // --- Step B: Prepare Data for Visuals ---
             
             let minStart = null;
-            let maxEnd = null; // Ghost Bar (Reality)
-            let maxDemandEnd = null; // Demand Strip (Target)
+            let maxEnd = null; // Ghost Bar
+            let maxDemandEnd = null; // Demand Strip
             let minProgressDate = null; // Solid Progress Date
             
             const groupStats = { 'CRITICAL': 0, 'PLAN_FAIL': 0, 'BUFFER_USED': 0, 'EXCELLENT': 0 };
@@ -369,7 +367,7 @@ $(document).ready(function () {
 
                 if (p.milestones.length > 0) {
                     p.milestones.forEach(ms => {
-                        // A. Ghost Bar Range
+                        // A. Ghost Bar
                         const msStart = new Date(ms.revised_start_date);
                         let msEnd = new Date(ms.revised_end_date);
                         
@@ -380,14 +378,13 @@ $(document).ready(function () {
                         if (msStart < minStart) minStart = msStart;
                         if (msEnd > maxEnd) maxEnd = msEnd;
 
-                        // B. Demand Strip Range
+                        // B. Demand Strip
                         const msDemand = new Date(ms.demand_due_date || ms.planned_end);
                         if (msDemand > maxDemandEnd) maxDemandEnd = msDemand;
                     });
                 }
 
-                // 2. Calculate "Visual Progress Date" (Solid Fill Tip)
-                // Logic: "Visual Cutoff" method
+                // 2. Calculate Visual Progress Date
                 let pVisualDate = new Date(pStart);
 
                 if (p.milestones.length > 0) {
@@ -428,7 +425,7 @@ $(document).ready(function () {
 
             // --- Step C: Generate HTML ---
 
-            // 1. Ghost Bar (Reality)
+            // 1. Ghost Bar
             let ghostBarHtml = '';
             if (minStart && maxEnd) {
                 const gStartOffset = getDaysDiff(TRACKER_START_DATE, minStart);
@@ -457,7 +454,7 @@ $(document).ready(function () {
                 `;
             }
 
-            // 2. Demand Strip (Expectation)
+            // 2. Demand Strip
             let demandStripHtml = '';
             if (minStart && maxDemandEnd) {
                 const dStartOffset = getDaysDiff(TRACKER_START_DATE, minStart);
@@ -465,7 +462,6 @@ $(document).ready(function () {
                 
                 const dLeft = dStartOffset * pixelsPerDay;
                 const dWidth = dDuration * pixelsPerDay;
-                
                 const dDateLabel = maxDemandEnd.toISOString().split('T')[0];
 
                 demandStripHtml = `
@@ -518,7 +514,8 @@ $(document).ready(function () {
                     </div>
                 </div>
             `;
-
+            
+            // --- Step E: Render Projects ---
             if (isExpanded) {
                 group.projects.forEach((project, pIndex) => {
                     const status = project._computedStatus;
@@ -596,7 +593,7 @@ $(document).ready(function () {
                         const planWidth = Math.max(planDuration * pixelsPerDay, 2);
                         const planLeft = planOffset * pixelsPerDay;
                         const progressPct = Math.round(ms.status_progress * 100);
-                        const statusInfo = { isOverdue: false }; 
+                        const statusInfo = { isOverdue: false };
                         const popContent = createPopoverContent(ms, revisedStart, solidBarEnd, statusInfo).replace(/"/g, '&quot;');
 
                         let innerContent = '';
@@ -749,16 +746,14 @@ $(document).ready(function () {
             const pIdx = $(this).data('p-idx');
             const mIdx = $(this).data('m-idx');
             
-            // --- READ FROM currentRevisedData TO GET CALCULATED DATES ---
+            // Read from currentRevisedData for calculated dates
             const group = currentRevisedData.groups[gIdx];
             const project = group.projects[pIdx];
             const msData = project.milestones[mIdx];
 
-            // Populate Breadcrumbs
             $('#display-group-name').text(group.group_name);
             $('#display-project-name').text(project.project_name);
 
-            // Calculate Ref Data
             let origStart = project.start_date;
             if (mIdx > 0) {
                 origStart = project.milestones[mIdx - 1].planned_end;
@@ -769,7 +764,6 @@ $(document).ready(function () {
             $('#read-orig-start').val(origStart);
             $('#read-orig-duration').val(origDuration + ' Days');
 
-            // Populate Fields
             $('#edit-g-index').val(gIdx);
             $('#edit-p-index').val(pIdx);
             $('#edit-m-index').val(mIdx);
@@ -777,7 +771,6 @@ $(document).ready(function () {
             $('#edit-name').val(msData.name);
             $('#edit-planned-end').val(msData.planned_end);
             
-            // Revised Dates (from currentRevisedData)
             $('#edit-revised-start').val(msData.revised_start_date);
             $('#edit-revised-end').val(msData.revised_end_date);
 
@@ -812,7 +805,6 @@ $(document).ready(function () {
             const inputActualDate = $('#edit-actual-date').val();
             const inputProgress = parseFloat($('#edit-progress').val());
 
-            // --- REVERSE CALCULATION ---
             if (!inputRevisedEnd) {
                 $errorMsg.text("Revised End Date cannot be empty.").removeClass('d-none');
                 return;
@@ -822,7 +814,6 @@ $(document).ready(function () {
             const newPlannedEndDateObj = addDays(origStartRef, newDurationDays);
             const inputPlannedEnd = newPlannedEndDateObj.toISOString().split('T')[0];
 
-            // Validation
             const project = rawTrackerData.groups[gIdx].projects[pIdx];
             const milestones = project.milestones;
             const projectStart = project.start_date;
@@ -855,7 +846,6 @@ $(document).ready(function () {
                 return; 
             }
 
-            // Update
             const msData = rawTrackerData.groups[gIdx].projects[pIdx].milestones[mIdx];
             msData.name = inputName;
             msData.planned_end = inputPlannedEnd;
@@ -868,11 +858,15 @@ $(document).ready(function () {
         });
     }
 
-    // --- Project Level Edit Logic ---
-    function initProjectEditHandlers() {
-        const modalEl = document.getElementById('editProjectModal');
+    // --- Project Structure Sequencer (Advanced) ---
+    function initProjectStructureHandlers() {
+        const modalEl = document.getElementById('editProjectStructureModal');
         const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+        const listContainer = document.getElementById('milestone-list-container');
         
+        let tempMilestones = []; 
+        let sortableInstance = null;
+
         // 1. Open Modal
         $('#projects-container').on('click', '.project-name-clickable', function (e) {
             e.stopPropagation();
@@ -882,94 +876,180 @@ $(document).ready(function () {
             
             const group = rawTrackerData.groups[gIdx];
             const project = group.projects[pIdx];
-            const computedProject = currentRevisedData.groups[gIdx].projects[pIdx];
 
-            $('#edit-proj-g-idx').val(gIdx);
-            $('#edit-proj-p-idx').val(pIdx);
-            $('#proj-group-name').text(group.group_name);
-            $('#proj-id-display').text(project.project_id);
-            $('#edit-proj-name').val(project.project_name);
+            $('#struct-g-idx').val(gIdx);
+            $('#struct-p-idx').val(pIdx);
+            $('#struct-proj-name').val(project.project_name);
+            $('#struct-proj-start').val(project.start_date);
 
-            $('#edit-proj-status').val(project.status || 'Active');
-            $('#edit-proj-priority').val(project.priority || 'Medium');
+            // CLONE data and Init Durations
+            tempMilestones = JSON.parse(JSON.stringify(project.milestones));
 
-            $('#edit-proj-start').val(project.start_date);
-            $('#edit-proj-deadline').val(project.hard_deadline || '');
-            $('#edit-proj-desc').val(project.description || '');
-
-            let earliestStart = null;
-            let latestEnd = null;
-
-            if (computedProject.milestones && computedProject.milestones.length > 0) {
-                earliestStart = computedProject.milestones[0].revised_start_date;
-                computedProject.milestones.forEach(ms => {
-                    if (!latestEnd || ms.revised_end_date > latestEnd) {
-                        latestEnd = ms.revised_end_date;
-                    }
-                });
-            }
-
-            $('#ref-first-milestone').text(earliestStart ? `Ref: Earliest Task: ${earliestStart}` : 'Ref: No tasks');
-            $('#ref-last-milestone').text(latestEnd ? `Ref: Latest Task: ${latestEnd}` : 'Ref: No tasks');
-
-            checkDeadlineWarning(project.hard_deadline, latestEnd);
-
-            $('#edit-proj-deadline').off('input').on('input', function() {
-                checkDeadlineWarning($(this).val(), latestEnd);
+            let cursorDate = new Date(project.start_date);
+            tempMilestones.forEach((ms, index) => {
+                let prevDate = index === 0 ? cursorDate : new Date(tempMilestones[index-1].planned_end);
+                let currEnd = new Date(ms.planned_end);
+                ms._temp_duration = Math.max(1, getDaysDiff(prevDate, currEnd));
+                ms._is_locked = (ms.status_progress === 1.0);
             });
 
+            renderMilestoneList();
+            recalculateSchedule(); 
             modal.show();
         });
 
-        function checkDeadlineWarning(deadline, actualEnd) {
-            const $warn = $('#proj-deadline-warning');
-            if (deadline && actualEnd && deadline < actualEnd) {
-                $warn.removeClass('d-none');
-            } else {
-                $warn.addClass('d-none');
-            }
+        // 2. Render List
+        function renderMilestoneList() {
+            listContainer.innerHTML = '';
+
+            tempMilestones.forEach((ms, index) => {
+                const isLocked = ms._is_locked;
+                const lockClass = isLocked ? 'locked' : '';
+                const lockIcon = isLocked ? '<i class="bi bi-lock-fill text-success"></i>' : '<i class="bi bi-grip-vertical"></i>';
+                const deleteBtn = isLocked 
+                    ? `<button type="button" class="btn btn-sm text-muted" disabled><i class="bi bi-lock"></i></button>`
+                    : `<button type="button" class="btn btn-sm text-danger btn-delete-ms" data-idx="${index}"><i class="bi bi-trash"></i></button>`;
+
+                const html = `
+                    <div class="list-group-item milestone-item p-0 ${lockClass}" data-idx="${index}">
+                        <div class="row g-2 align-items-center m-0 py-2">
+                            <div class="col-1 text-center drag-handle">${lockIcon}</div>
+                            <div class="col-4">
+                                <input type="text" class="form-control form-control-sm ms-name-input" value="${ms.name}" data-idx="${index}">
+                            </div>
+                            <div class="col-2">
+                                <div class="input-group input-group-sm">
+                                    <input type="number" class="form-control ms-duration-input" value="${ms._temp_duration}" min="1" data-idx="${index}">
+                                    <span class="input-group-text">d</span>
+                                </div>
+                            </div>
+                            <div class="col-3">
+                                <input type="text" class="form-control form-control-sm bg-light border-0 ms-calc-date" readonly tabindex="-1">
+                            </div>
+                            <div class="col-1 text-center">${getCompletionBadge(ms.status_progress)}</div>
+                            <div class="col-1 text-center">${deleteBtn}</div>
+                        </div>
+                    </div>
+                `;
+                listContainer.insertAdjacentHTML('beforeend', html);
+            });
+
+            if (sortableInstance) sortableInstance.destroy();
+            sortableInstance = new Sortable(listContainer, {
+                handle: '.drag-handle',
+                animation: 150,
+                filter: '.locked',
+                onMove: function (evt) {
+                    return !evt.related.classList.contains('locked');
+                },
+                onEnd: function (evt) {
+                    const newOrder = [];
+                    $(listContainer).find('.milestone-item').each(function() {
+                        const oldIdx = $(this).data('idx');
+                        newOrder.push(tempMilestones[oldIdx]);
+                    });
+                    tempMilestones = newOrder;
+                    renderMilestoneList(); 
+                    recalculateSchedule();
+                }
+            });
+
+            bindInputs();
         }
 
-        // 2. Save Changes
-        $('#btn-save-project').click(function() {
-            const gIdx = parseInt($('#edit-proj-g-idx').val());
-            const pIdx = parseInt($('#edit-proj-p-idx').val());
+        function getCompletionBadge(progress) {
+            if (progress === 1.0) return '<span class="badge bg-success">100%</span>';
+            if (progress === 0.0) return '<span class="badge bg-secondary">0%</span>';
+            return `<span class="badge bg-primary">${Math.round(progress*100)}%</span>`;
+        }
 
-            const newName = $('#edit-proj-name').val().trim();
-            const newStart = $('#edit-proj-start').val();
+        function bindInputs() {
+            $('.ms-duration-input').on('change input', function() {
+                const idx = $(this).data('idx');
+                let val = parseInt($(this).val());
+                if(isNaN(val) || val < 1) val = 1;
+                tempMilestones[idx]._temp_duration = val;
+                recalculateSchedule();
+            });
 
-            if (!newName) {
-                alert("Project Name cannot be empty");
-                return;
-            }
-            if (!newStart) {
-                alert("Project Start Date cannot be empty");
+            $('.ms-name-input').on('change input', function() {
+                const idx = $(this).data('idx');
+                tempMilestones[idx].name = $(this).val();
+            });
+
+            $('.btn-delete-ms').on('click', function() {
+                const idx = $(this).data('idx');
+                tempMilestones.splice(idx, 1);
+                renderMilestoneList();
+                recalculateSchedule();
+            });
+        }
+
+        function recalculateSchedule() {
+            const startVal = $('#struct-proj-start').val();
+            if(!startVal) return;
+
+            let cursor = new Date(startVal);
+            let totalDays = 0;
+            const dateInputs = $('.ms-calc-date');
+
+            tempMilestones.forEach((ms, i) => {
+                const dur = ms._temp_duration || 1;
+                const endDate = addDays(cursor, dur);
+                const dateStr = endDate.toISOString().split('T')[0];
+                $(dateInputs[i]).val(`${dateStr} (End)`);
+                cursor = endDate; 
+                totalDays += dur;
+                ms._calc_planned_end = dateStr;
+            });
+
+            $('#struct-total-days').text(totalDays);
+            $('#struct-final-date').text(cursor.toISOString().split('T')[0]);
+        }
+
+        $('#btn-add-milestone').click(function() {
+            tempMilestones.push({
+                name: "New Milestone",
+                status_progress: 0.0,
+                _temp_duration: 10,
+                _is_locked: false,
+                color: "#6c757d",
+                demand_due_date: ""
+            });
+            renderMilestoneList();
+            recalculateSchedule();
+        });
+
+        $('#struct-proj-start').on('change', function() {
+            recalculateSchedule();
+        });
+
+        $('#btn-save-structure').click(function() {
+            const gIdx = parseInt($('#struct-g-idx').val());
+            const pIdx = parseInt($('#struct-p-idx').val());
+            
+            if (tempMilestones.length === 0) {
+                alert("Project must have at least one milestone.");
                 return;
             }
 
             const project = rawTrackerData.groups[gIdx].projects[pIdx];
-            project.project_name = newName;
-            project.status = $('#edit-proj-status').val();
-            project.priority = $('#edit-proj-priority').val();
-            project.start_date = newStart;
-            project.hard_deadline = $('#edit-proj-deadline').val();
-            project.description = $('#edit-proj-desc').val();
+            project.project_name = $('#struct-proj-name').val();
+            project.start_date = $('#struct-proj-start').val();
+            
+            project.milestones = tempMilestones.map(ms => {
+                return {
+                    name: ms.name,
+                    status_progress: ms.status_progress,
+                    planned_end: ms._calc_planned_end,
+                    actual_completion_date: ms.actual_completion_date || null,
+                    demand_due_date: ms.demand_due_date || ms._calc_planned_end,
+                    color: ms.color || "#0d6efd"
+                };
+            });
 
             runPipeline();
             modal.hide();
-        });
-
-        // 3. Delete Project
-        $('#btn-delete-project').click(function() {
-            if(confirm("Are you sure you want to delete this project? This cannot be undone.")) {
-                const gIdx = parseInt($('#edit-proj-g-idx').val());
-                const pIdx = parseInt($('#edit-proj-p-idx').val());
-                
-                rawTrackerData.groups[gIdx].projects.splice(pIdx, 1);
-                
-                runPipeline();
-                modal.hide();
-            }
         });
     }
 
@@ -1051,8 +1131,8 @@ $(document).ready(function () {
     initZoomControls();
     initGroupControls();
     initEditHandlers();
-    initProjectEditHandlers();
+    initProjectStructureHandlers(); 
     makeModalDraggable('#editMilestoneModal');
-    makeModalDraggable('#editProjectModal');
+    // makeModalDraggable('#editProjectStructureModal'); // Table modal usually better fixed
     runPipeline();
 });

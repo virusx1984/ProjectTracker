@@ -170,18 +170,16 @@ body {
 
 /* --- Group Row Styling --- */
 .group-row {
-    height: 40px; 
-    background-color: #e9ecef; 
+    height: 40px;
+    background-color: #e9ecef;
     border-bottom: 1px solid #dee2e6;
     display: flex;
     align-items: center;
     font-weight: bold;
     color: #495057;
-    cursor: pointer; 
+    cursor: pointer;
     position: relative;
     contain: layout style;
-    
-    /* Auto width to fix gap issue */
     width: fit-content;
     min-width: 100%;
 }
@@ -219,11 +217,8 @@ body {
     background-color: #fff;
     display: flex;
     align-items: center;
-    
-    /* Auto width to fix gap issue */
-    width: fit-content; 
+    width: fit-content;
     min-width: 100%;
-    
     contain: layout style;
 }
 
@@ -238,7 +233,6 @@ body {
     background: #fff;
     width: 220px;
     height: 100%;
-    /* INDENTATION: Increased padding for hierarchy */
     padding: 10px 15px 10px 35px;
     border-right: none;
     box-shadow: none;
@@ -246,6 +240,17 @@ body {
     flex-direction: column;
     justify-content: center;
     overflow: hidden;
+}
+
+/* Make Project Name Clickable */
+.project-name-clickable {
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.project-name-clickable:hover {
+    color: #0d6efd !important;
+    text-decoration: underline;
 }
 
 .milestone-container {
@@ -421,22 +426,36 @@ body {
 }
 
 /* --- Draggable Modal --- */
-#editMilestoneModal .modal-header {
+.modal-header {
     cursor: move;
     user-select: none;
 }
 
-#editMilestoneModal .modal-dialog {
+.modal-dialog {
     transition: none;
 }
 
 /* Shake Animation */
 @keyframes shake {
-    0% { transform: translateX(0); }
-    25% { transform: translateX(-5px); }
-    50% { transform: translateX(5px); }
-    75% { transform: translateX(-5px); }
-    100% { transform: translateX(0); }
+    0% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-5px);
+    }
+
+    50% {
+        transform: translateX(5px);
+    }
+
+    75% {
+        transform: translateX(-5px);
+    }
+
+    100% {
+        transform: translateX(0);
+    }
 }
 
 .shake-animation {
@@ -445,8 +464,13 @@ body {
 
 /* --- Active Progress Animation (Shimmer) --- */
 @keyframes shimmer-flow {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
 }
 
 .progress-overlay.active-anim {
@@ -474,14 +498,24 @@ body {
     width: 8px;
 }
 
-/* Force Colors */
-.status-strip.bg-success { background-color: #198754 !important; }
-.status-strip.bg-warning { background-color: #ffc107 !important; }
-.status-strip.bg-danger { background-color: #dc3545 !important; }
-.status-strip.bg-critical { background-color: #6f42c1 !important; }
-.status-strip.bg-secondary { background-color: #6c757d !important; }
+/* Force Colors - Standard */
+.status-strip.bg-success {
+    background-color: #198754 !important;
+}
 
-/* --- Group Health Distribution Bar (Left Side) --- */
+.status-strip.bg-warning {
+    background-color: #ffc107 !important;
+}
+
+.status-strip.bg-danger {
+    background-color: #dc3545 !important;
+}
+
+.status-strip.bg-secondary {
+    background-color: #6c757d !important;
+}
+
+/* --- Group Health Distribution Bar --- */
 .group-health-bar {
     display: flex;
     width: 100%;
@@ -497,42 +531,42 @@ body {
     transition: width 0.3s;
 }
 
-/* --- Group Ghost Summary Bar (Container) --- */
+/* --- Group Ghost Summary Bar --- */
 .group-ghost-bar {
     position: absolute;
-    top: 10px; 
+    top: 10px;
     height: 20px;
-    background-color: rgba(108, 117, 125, 0.1); 
+    background-color: rgba(108, 117, 125, 0.1);
     border: 1px solid rgba(108, 117, 125, 0.3);
     border-radius: 4px;
-    z-index: 1; 
-    pointer-events: none; 
-    overflow: hidden; 
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
 }
 
 /* --- Group Demand Strip (Top Constraint Line) --- */
 .group-demand-strip {
     position: absolute;
-    top: 6px; 
+    top: 6px;
     height: 3px;
-    background-color: rgba(253, 126, 20, 0.7); /* Orange/Warning color */
+    background-color: rgba(253, 126, 20, 0.7);
+    /* Orange/Warning color */
     border-radius: 2px;
-    z-index: 5; /* Sit on top of Ghost Bar */
+    z-index: 5;
+    /* Sit on top of Ghost Bar */
     pointer-events: none;
 }
 
 /* --- Solid Fill representing the "Min Progress Date" --- */
 .ghost-progress-fill {
     height: 100%;
-    background-color: #6c757d; 
-    opacity: 0.5; 
-    border-right: 1px solid #495057; 
+    background-color: #6c757d;
+    opacity: 0.5;
+    border-right: 1px solid #495057;
     transition: width 0.3s;
 }
 
 /* --- Edit Milestone Modal 2.0 --- */
-
-/* Context Header */
 .modal-context-breadcrumb {
     font-size: 11px;
     text-transform: uppercase;
@@ -555,7 +589,6 @@ body {
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }
 
-/* Schedule Card Grid */
 .schedule-card {
     background-color: #f8f9fa;
     border: 1px solid #dee2e6;
@@ -573,7 +606,6 @@ body {
     border-bottom: 2px solid transparent;
 }
 
-/* Specific Column Styles */
 .col-original {
     opacity: 0.7;
 }
@@ -583,24 +615,23 @@ body {
     border: 1px solid #dee2e6;
     border-radius: 6px;
     padding: 10px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    margin-top: -5px; 
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    margin-top: -5px;
     margin-bottom: -5px;
     z-index: 2;
     position: relative;
 }
 
 .col-revised .schedule-col-title {
-    color: #0d6efd; 
+    color: #0d6efd;
     border-bottom-color: #0d6efd;
     margin-bottom: 12px;
 }
 
 .col-constraints .schedule-col-title {
-    color: #dc3545; 
+    color: #dc3545;
 }
 
-/* Form Labels inside Grid */
 .mini-label {
     font-size: 10px;
     color: #6c757d;
@@ -608,15 +639,71 @@ body {
     display: block;
 }
 
-/* Execution Section */
 .execution-card {
     border-top: 1px solid #e9ecef;
     padding-top: 15px;
 }
 
-/* --- Critical Color Definition (Purple) - Enforced --- */
-/* This block ensures purple is always visible correctly everywhere */
+/* --- Milestone Sequencer Styles --- */
+.milestone-item {
+    border: 1px solid #e9ecef;
+    margin-bottom: 5px;
+    background: #fff;
+    transition: background 0.2s, transform 0.2s;
+}
 
+.milestone-item:hover {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+}
+
+.drag-handle {
+    cursor: grab;
+    color: #adb5bd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.drag-handle:hover {
+    color: #495057;
+}
+
+.milestone-item.sortable-ghost {
+    background-color: #e9ecef;
+    opacity: 0.5;
+}
+
+.milestone-item.locked {
+    background-color: #f8f9fa;
+    border-left: 3px solid #198754;
+}
+
+.milestone-item.locked .drag-handle {
+    cursor: not-allowed;
+    opacity: 0.3;
+}
+
+.milestone-item.locked input {
+    background-color: transparent;
+    border: none;
+    color: #495057;
+    pointer-events: none;
+}
+
+.btn-dashed {
+    border-style: dashed;
+    border-width: 2px;
+    opacity: 0.7;
+}
+
+.btn-dashed:hover {
+    opacity: 1;
+    background-color: #f0f7ff;
+}
+
+/* --- Critical Color Definition (Purple) - Enforced --- */
 /* 1. Generic Utility & Legend Dot & Card Color Bar */
 .bg-critical,
 .legend-dot.bg-critical,
@@ -634,105 +721,4 @@ div.status-strip.bg-critical {
 /* 3. Group Health Segment */
 .health-segment.bg-critical {
     background-color: #6f42c1 !important;
-}
-
-/* --- Project Edit Modal (Mission Control) --- */
-
-/* 1. Header Area */
-.project-context-breadcrumb {
-    font-size: 11px;
-    color: #6c757d;
-    margin-bottom: 5px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.modal-project-name-input {
-    font-size: 1.5rem; /* Larger than milestone */
-    font-weight: 800;
-    border: none;
-    border-bottom: 2px solid #dee2e6;
-    border-radius: 0;
-    padding: 5px 0;
-    background: transparent;
-    width: 100%;
-    color: #212529;
-}
-
-.modal-project-name-input:focus {
-    box-shadow: none;
-    border-bottom-color: #0d6efd;
-}
-
-/* 2. Status Ribbon */
-.status-ribbon {
-    background-color: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 20px;
-    display: flex;
-    gap: 20px;
-    align-items: flex-end;
-}
-
-/* 3. Time Capsule (Boundaries) */
-.time-capsule {
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    padding: 20px;
-    position: relative;
-    background: #fff;
-    margin-bottom: 20px;
-}
-
-.time-capsule-title {
-    position: absolute;
-    top: -10px;
-    left: 15px;
-    background: #fff;
-    padding: 0 10px;
-    font-size: 12px;
-    font-weight: 700;
-    color: #0d6efd;
-    text-transform: uppercase;
-}
-
-.boundary-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: #6c757d;
-    text-transform: uppercase;
-    display: block;
-    margin-bottom: 5px;
-}
-
-.ref-text {
-    font-size: 11px;
-    color: #adb5bd;
-    margin-top: 4px;
-    font-style: italic;
-}
-
-/* 4. Danger Zone */
-.btn-danger-light {
-    color: #dc3545;
-    background-color: #fff;
-    border: 1px solid #dc3545;
-}
-
-.btn-danger-light:hover {
-    background-color: #dc3545;
-    color: #fff;
-}
-
-/* Make Project Name Clickable in Left Sidebar */
-.project-name-clickable {
-    cursor: pointer;
-    transition: color 0.2s;
-}
-.project-name-clickable:hover {
-    color: #0d6efd !important;
-    text-decoration: underline;
 }
