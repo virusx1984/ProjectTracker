@@ -620,6 +620,9 @@ $(document).ready(function () {
                             </div>
                         `;
 
+                        // --- Logic inside renderTracker loop (Step E) ---
+
+                        // --- TAIL RENDERING LOGIC (Fixed Quotes) ---
                         if (tailType) {
                             const tStart = new Date(tailStart);
                             const tEnd = new Date(tailEnd);
@@ -627,19 +630,61 @@ $(document).ready(function () {
                             const tailOffset = getDaysDiff(TRACKER_START_DATE, tStart);
                             const tailWidth = Math.max(tailDuration * pixelsPerDay, 2);
                             const tailLeft = tailOffset * pixelsPerDay;
+                            
                             const tailClass = tailType === 'late' ? 'gantt-tail-delay' : 'gantt-tail-early';
-                            const tailPopover = tailType === 'late'
-                                ? `Delay Segment<br>From: ${tailStart}<br>To: ${tailEnd}`
-                                : `Saved Segment<br>Orig End: ${tailEnd}`;
+                            
+                            // 1. Handle actual completion status
+                            const isFinished = !!actualDate;
+                            const calculationEnd = isFinished ? actualDate : tailEnd;
+                            
+                            // 2. Calculate diff
+                            const diffDays = Math.abs(Math.round(getDaysDiff(revisedEnd, calculationEnd)));
+                            
+                            // 3. Format "Actual End" string
+                            // FIX: Use DOUBLE QUOTES for class attribute to avoid conflict later
+                            const displayActual = isFinished ? actualDate : `<span class="text-danger">In Progress (Today)</span>`;
+
+                            // 4. Build Popover HTML
+                            let tailPopover = '';
+                            if (tailType === 'late') {
+                                tailPopover = `
+                                    <div class="popover-body-content">
+                                        <div class="mb-1"><strong>⚠️ Delay: ${ms.name}</strong></div>
+                                        <div class="text-danger mb-2">
+                                            ${isFinished ? 'Finished' : 'Overdue by'} ${diffDays} days late
+                                        </div>
+                                        <div style="border-top:1px solid #eee; padding-top:4px; font-size:11px;">
+                                            <div>Target End: <b>${revisedEnd}</b></div>
+                                            <div>Actual End: <b>${displayActual}</b></div>
+                                        </div>
+                                    </div>
+                                `;
+                            } else {
+                                tailPopover = `
+                                    <div class="popover-body-content">
+                                        <div class="mb-1"><strong>✅ Saved: ${ms.name}</strong></div>
+                                        <div class="text-success mb-2">Finished ${diffDays} days early</div>
+                                        <div style="border-top:1px solid #eee; padding-top:4px; font-size:11px;">
+                                            <div>Target End: <b>${revisedEnd}</b></div>
+                                            <div>Actual End: <b>${displayActual}</b></div>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+
+                            // FIX: Escape double quotes in the content before putting it into data-bs-content
+                            // And use double quotes for the data-bs-content attribute itself
+                            const safePopoverContent = tailPopover.replace(/"/g, '&quot;');
 
                             htmlBuffer += `<div class="gantt-bar ${tailClass} clickable" 
                                 style="left: ${tailLeft}px; width: ${tailWidth}px;"
                                 data-g-idx="${gIndex}" data-p-idx="${pIndex}" data-m-idx="${mIndex}"
-                                data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-content="${tailPopover}"></div>`;
+                                data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" 
+                                data-bs-content="${safePopoverContent}"></div>`;
                         }
 
+                        // Update anchor for next loop
                         currentDemandAnchor = demandEndDate;
-                        // --- END OF EXISTING MILESTONE LOGIC ---
                     });
 
                     htmlBuffer += `</div></div>`; // Close Project Row
