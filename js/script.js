@@ -15,22 +15,26 @@ $(document).ready(function () {
     let currentRevisedData = null;
     let currentProcessedStats = null;
 
-    // --- Data Source (Nested Structure) ---
+    // --- Data Source (Global State) ---
+    // This is the source of truth. We update THIS object when editing.
     const rawTrackerData = {
-        "tracker_title": "Enterprise IT Roadmap 2025 (Group View)",
+        "tracker_title": "Enterprise IT Roadmap 2025 (Dashboard)",
         "groups": [
             {
                 "group_id": "GRP-01",
                 "group_name": "Digital Transformation",
-                "is_expanded": true,
+                "is_expanded": true, 
                 "projects": [
                     {
                         "project_id": "PRJ-001",
                         "project_name": "E-Commerce Platform",
                         "start_date": "2025-01-05",
                         "milestones": [
+                            // Done task
                             { "name": "UI Design", "status_progress": 1.0, "planned_end": "2025-02-15", "actual_completion_date": "2025-02-10", "demand_due_date": "2025-02-15", "color": "#0d6efd" },
-                            { "name": "Frontend", "status_progress": 1.0, "planned_end": "2025-03-25", "actual_completion_date": "2025-04-05", "demand_due_date": "2025-03-25", "color": "#198754" },
+                            // FIXED: Changed to In Progress (0.6) and removed actual date
+                            { "name": "Frontend", "status_progress": 0.6, "planned_end": "2025-03-25", "actual_completion_date": null, "demand_due_date": "2025-03-25", "color": "#198754" },
+                            // Future task
                             { "name": "Backend", "status_progress": 0.0, "planned_end": "2025-05-15", "actual_completion_date": null, "demand_due_date": "2025-05-01", "color": "#6f42c1" }
                         ]
                     },
@@ -55,6 +59,7 @@ $(document).ready(function () {
                         "project_name": "Cloud Infra Setup",
                         "start_date": "2025-01-20",
                         "milestones": [
+                            // Late task example
                             { "name": "AWS Setup", "status_progress": 0.8, "planned_end": "2025-02-15", "actual_completion_date": null, "demand_due_date": "2025-02-15", "color": "#fd7e14" },
                             { "name": "K8s Config", "status_progress": 0.0, "planned_end": "2025-04-05", "actual_completion_date": null, "demand_due_date": "2025-03-30", "color": "#6f42c1" }
                         ]
@@ -341,72 +346,81 @@ $(document).ready(function () {
             
             let minStart = null;
             let maxEnd = null;
-            let minProgressDate = null;
+            
+            // This will track the "Slowest Visual Progress" date
+            let minProgressDate = null; 
             
             const groupStats = { 'CRITICAL': 0, 'PLAN_FAIL': 0, 'BUFFER_USED': 0, 'EXCELLENT': 0 };
             let totalProjects = 0;
 
             group.projects.forEach(p => {
                 const pStart = new Date(p.start_date);
+                
+                // 1. Calculate Group Range (Gray Background)
                 if (!minStart || pStart < minStart) minStart = pStart;
                 if (!maxEnd || pStart > maxEnd) maxEnd = pStart;
 
-                // Track the effective end of this project (including delays)
-                let pEffectiveEnd = pStart; 
-
-                // 1. Calculate Project Range (Considering Delays for Ghost Bar Span)
                 if (p.milestones.length > 0) {
                     p.milestones.forEach(ms => {
                         const msStart = new Date(ms.revised_start_date);
                         let msEnd = new Date(ms.revised_end_date);
                         
-                        // FIX: If task is overdue, its effective end is CURRENT_DATE
-                        // This ensures the Ghost Bar covers the red delay tail
+                        // Extend range if delayed
                         if (!ms.actual_completion_date && CURRENT_DATE > msEnd) {
                             msEnd = new Date(CURRENT_DATE);
                         }
 
                         if (msStart < minStart) minStart = msStart;
                         if (msEnd > maxEnd) maxEnd = msEnd;
-                        if (msEnd > pEffectiveEnd) pEffectiveEnd = msEnd;
                     });
                 }
 
-                // 2. Calculate Weighted Progress (Dynamic Weight based on Delay)
-                let totalEffectiveDuration = 0;
-                let completedEffectiveDuration = 0;
-                
+                // 2. Calculate "Visual Progress Date" (Solid Fill Tip)
+                // Logic: Find the exact point where the visual bar stops.
+                let pVisualDate = new Date(pStart);
+
                 if (p.milestones.length > 0) {
-                    p.milestones.forEach(ms => {
-                        const rStart = new Date(ms.revised_start_date);
-                        let rEnd = new Date(ms.revised_end_date);
+                    for (let i = 0; i < p.milestones.length; i++) {
+                        const ms = p.milestones[i];
+                        const msStart = new Date(ms.revised_start_date);
+                        let msEnd = new Date(ms.revised_end_date);
                         
-                        // FIX: Important! Use the extended date for weight calculation too.
-                        // If a task is dragged out to today, 80% of it is a much larger amount of work.
-                        if (!ms.actual_completion_date && CURRENT_DATE > rEnd) {
-                            rEnd = new Date(CURRENT_DATE);
+                        // Handle Delay Logic for "End Date" of this bar
+                        if (!ms.actual_completion_date && CURRENT_DATE > msEnd) {
+                            msEnd = new Date(CURRENT_DATE);
                         }
-                        
-                        const dur = Math.max(1, getDaysDiff(rStart, rEnd));
-                        
-                        totalEffectiveDuration += dur;
-                        completedEffectiveDuration += (dur * ms.status_progress);
-                    });
-                }
-                
-                const pPercent = totalEffectiveDuration === 0 ? 0 : (completedEffectiveDuration / totalEffectiveDuration);
-                
-                // 3. Map % to Date
-                // Use the Effective Span (Start -> Effective End)
-                const totalSpanDays = getDaysDiff(pStart, pEffectiveEnd);
-                const progressDays = Math.round(totalSpanDays * pPercent);
-                
-                // Construct the exact date
-                const pProgressDate = new Date(pStart);
-                pProgressDate.setDate(pProgressDate.getDate() + progressDays);
 
-                if (!minProgressDate || pProgressDate < minProgressDate) {
-                    minProgressDate = pProgressDate;
+                        if (ms.status_progress === 1.0) {
+                            // Milestone Done: Progress extends to the end of this bar
+                            // We update pVisualDate and continue to check the next milestone
+                            if (msEnd > pVisualDate) {
+                                pVisualDate = msEnd;
+                            }
+                        } else if (ms.status_progress > 0) {
+                            // In Progress: Progress extends to X% of this bar
+                            const duration = Math.max(1, getDaysDiff(msStart, msEnd));
+                            const doneDays = Math.round(duration * ms.status_progress);
+                            
+                            const partialDate = new Date(msStart);
+                            partialDate.setDate(partialDate.getDate() + doneDays);
+                            
+                            // This is the cutting point. Update and STOP.
+                            // Even if next milestones exist, we haven't reached them.
+                            if (partialDate > pVisualDate) {
+                                pVisualDate = partialDate;
+                            }
+                            break; 
+                        } else {
+                            // Not Started (0%): Progress stops at previous milestone's end.
+                            // We do not update pVisualDate further. STOP.
+                            break;
+                        }
+                    }
+                }
+
+                // 3. Find the Group Minimum (The bottleneck)
+                if (!minProgressDate || pVisualDate < minProgressDate) {
+                    minProgressDate = pVisualDate;
                 }
 
                 // Stats
