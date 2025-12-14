@@ -9,43 +9,56 @@ $(document).ready(function () {
     const CURRENT_DATE = new Date("2025-03-15");
 
     // --- Global State ---
-    let currentFilter = 'ALL'; // 'ALL', 'EXCELLENT', 'BUFFER_USED', 'PLAN_FAIL', 'CRITICAL'
-    
-    // Shared variable to hold currently processed data (date calculations done)
-    let currentRevisedData = null; 
-    // Variable to hold preprocessed status counts and tagged projects
-    let currentProcessedStats = null; 
+    let currentFilter = 'ALL';
 
-    // --- Data Source ---
+    // Shared variable to hold currently processed data
+    let currentRevisedData = null;
+    let currentProcessedStats = null;
+
+    // --- Data Source (Nested Structure) ---
     const rawTrackerData = {
-        "tracker_title": "Enterprise IT Roadmap 2025 (Dashboard)",
-        "projects": [
+        "tracker_title": "Enterprise IT Roadmap 2025 (Group View)",
+        "groups": [
             {
-                "project_id": "PRJ-001",
-                "project_name": "E-Commerce Platform",
-                "start_date": "2025-01-05",
-                "milestones": [
-                    { "name": "UI Design", "status_progress": 1.0, "planned_end": "2025-02-15", "actual_completion_date": "2025-02-10", "demand_due_date": "2025-02-15", "color": "#0d6efd" },
-                    { "name": "Frontend", "status_progress": 1.0, "planned_end": "2025-03-25", "actual_completion_date": "2025-04-05", "demand_due_date": "2025-03-25", "color": "#198754" },
-                    { "name": "Backend", "status_progress": 0.0, "planned_end": "2025-05-15", "actual_completion_date": null, "demand_due_date": "2025-05-01", "color": "#6f42c1" }
+                "group_id": "GRP-01",
+                "group_name": "Digital Transformation",
+                "is_expanded": true,
+                "projects": [
+                    {
+                        "project_id": "PRJ-001",
+                        "project_name": "E-Commerce Platform",
+                        "start_date": "2025-01-05",
+                        "milestones": [
+                            { "name": "UI Design", "status_progress": 1.0, "planned_end": "2025-02-15", "actual_completion_date": "2025-02-10", "demand_due_date": "2025-02-15", "color": "#0d6efd" },
+                            { "name": "Frontend", "status_progress": 1.0, "planned_end": "2025-03-25", "actual_completion_date": "2025-04-05", "demand_due_date": "2025-03-25", "color": "#198754" },
+                            { "name": "Backend", "status_progress": 0.0, "planned_end": "2025-05-15", "actual_completion_date": null, "demand_due_date": "2025-05-01", "color": "#6f42c1" }
+                        ]
+                    },
+                    {
+                        "project_id": "PRJ-002",
+                        "project_name": "Mobile App Launch",
+                        "start_date": "2025-02-01",
+                        "milestones": [
+                            { "name": "Requirement", "status_progress": 1.0, "planned_end": "2025-02-20", "actual_completion_date": "2025-02-20", "demand_due_date": "2025-02-25", "color": "#fd7e14" },
+                            { "name": "Alpha Ver.", "status_progress": 0.4, "planned_end": "2025-05-10", "actual_completion_date": null, "demand_due_date": "2025-05-10", "color": "#20c997" }
+                        ]
+                    }
                 ]
             },
             {
-                "project_id": "PRJ-007",
-                "project_name": "Cloud Infra Setup",
-                "start_date": "2025-01-20",
-                "milestones": [
-                    { "name": "AWS Setup", "status_progress": 0.8, "planned_end": "2025-02-15", "actual_completion_date": null, "demand_due_date": "2025-02-15", "color": "#fd7e14" },
-                    { "name": "K8s Config", "status_progress": 0.0, "planned_end": "2025-04-05", "actual_completion_date": null, "demand_due_date": "2025-03-30", "color": "#6f42c1" }
-                ]
-            },
-            {
-                "project_id": "PRJ-002",
-                "project_name": "Mobile App Launch",
-                "start_date": "2025-02-01",
-                "milestones": [
-                    { "name": "Requirement", "status_progress": 1.0, "planned_end": "2025-02-20", "actual_completion_date": "2025-02-20", "demand_due_date": "2025-02-25", "color": "#fd7e14" },
-                    { "name": "Alpha Ver.", "status_progress": 0.4, "planned_end": "2025-05-10", "actual_completion_date": null, "demand_due_date": "2025-05-10", "color": "#20c997" }
+                "group_id": "GRP-02",
+                "group_name": "Infrastructure Upgrade",
+                "is_expanded": true,
+                "projects": [
+                    {
+                        "project_id": "PRJ-007",
+                        "project_name": "Cloud Infra Setup",
+                        "start_date": "2025-01-20",
+                        "milestones": [
+                            { "name": "AWS Setup", "status_progress": 0.8, "planned_end": "2025-02-15", "actual_completion_date": null, "demand_due_date": "2025-02-15", "color": "#fd7e14" },
+                            { "name": "K8s Config", "status_progress": 0.0, "planned_end": "2025-04-05", "actual_completion_date": null, "demand_due_date": "2025-03-30", "color": "#6f42c1" }
+                        ]
+                    }
                 ]
             }
         ]
@@ -64,47 +77,50 @@ $(document).ready(function () {
         return result;
     }
 
-    // --- CORE LOGIC: Dynamic Schedule Revision ---
+    // --- CORE LOGIC: Dynamic Schedule Revision (Nested) ---
     function reviseProjectData(originalData) {
         const revisedData = JSON.parse(JSON.stringify(originalData));
-        revisedData.projects.forEach(project => {
-            let chainCursor = new Date(project.start_date);
-            let previousOriginalPlanEnd = new Date(project.start_date);
 
-            project.milestones.forEach(ms => {
-                const originalPlanEnd = new Date(ms.planned_end);
-                const durationDays = Math.max(1, getDaysDiff(previousOriginalPlanEnd, originalPlanEnd));
+        revisedData.groups.forEach(group => {
+            group.projects.forEach(project => {
+                let chainCursor = new Date(project.start_date);
+                let previousOriginalPlanEnd = new Date(project.start_date);
 
-                const revisedStart = new Date(chainCursor);
-                const revisedEnd = addDays(revisedStart, durationDays);
+                project.milestones.forEach(ms => {
+                    const originalPlanEnd = new Date(ms.planned_end);
+                    const durationDays = Math.max(1, getDaysDiff(previousOriginalPlanEnd, originalPlanEnd));
 
-                ms.revised_start_date = revisedStart.toISOString().split('T')[0];
-                ms.revised_end_date = revisedEnd.toISOString().split('T')[0];
-                ms.duration_days = Math.floor(durationDays);
+                    const revisedStart = new Date(chainCursor);
+                    const revisedEnd = addDays(revisedStart, durationDays);
 
-                if (ms.actual_completion_date) {
-                    chainCursor = new Date(ms.actual_completion_date);
-                } else {
-                    if (CURRENT_DATE > revisedEnd) {
-                        chainCursor = new Date(CURRENT_DATE);
+                    ms.revised_start_date = revisedStart.toISOString().split('T')[0];
+                    ms.revised_end_date = revisedEnd.toISOString().split('T')[0];
+                    ms.duration_days = Math.floor(durationDays);
+
+                    if (ms.actual_completion_date) {
+                        chainCursor = new Date(ms.actual_completion_date);
                     } else {
-                        chainCursor = new Date(revisedEnd);
+                        if (CURRENT_DATE > revisedEnd) {
+                            chainCursor = new Date(CURRENT_DATE);
+                        } else {
+                            chainCursor = new Date(revisedEnd);
+                        }
                     }
-                }
-                previousOriginalPlanEnd = originalPlanEnd;
+                    previousOriginalPlanEnd = originalPlanEnd;
+                });
             });
         });
         return revisedData;
     }
 
-    // --- CORE LOGIC: Project Status Calculation (Single Item) ---
+    // --- Single Project Status ---
     function calculateSingleProjectStatus(project) {
         if (!project.milestones || project.milestones.length === 0) {
-            return { code: 'NO_DATA', label: "No Data", class: "bg-secondary" };
+            return { code: 'NO_DATA', label: "No Data", class: "bg-secondary", priority: 0 };
         }
 
         const lastMs = project.milestones[project.milestones.length - 1];
-        const revisedEnd = new Date(lastMs.revised_end_date); 
+        const revisedEnd = new Date(lastMs.revised_end_date);
         const originalPlan = new Date(lastMs.planned_end);
         const demandDate = new Date(lastMs.demand_due_date || lastMs.planned_end);
 
@@ -113,21 +129,36 @@ $(document).ready(function () {
 
         if (isExternalRisk) {
             if (isInternalDelayed) {
-                return { code: 'CRITICAL', label: "Critical", class: "bg-critical" }; 
+                return { code: 'CRITICAL', label: "Critical", class: "bg-critical", priority: 4 };
             } else {
-                return { code: 'PLAN_FAIL', label: "Plan Fail", class: "bg-danger" };
+                return { code: 'PLAN_FAIL', label: "Plan Fail", class: "bg-danger", priority: 3 };
             }
         } else {
             if (isInternalDelayed) {
-                return { code: 'BUFFER_USED', label: "Buffer Used", class: "bg-warning" };
+                return { code: 'BUFFER_USED', label: "Buffer Used", class: "bg-warning", priority: 2 };
             } else {
-                return { code: 'EXCELLENT', label: "Excellent", class: "bg-success" };
+                return { code: 'EXCELLENT', label: "Excellent", class: "bg-success", priority: 1 };
             }
         }
     }
 
-    // --- CORE LOGIC: Preprocessing & Counting (The Pipeline) ---
-    // Efficiently calculate all statuses once, count them, and tag the projects
+    // --- Group Status Aggregation ---
+    // Rule: Show the worst status of child projects
+    function calculateGroupStatus(group) {
+        let maxPriority = 0;
+        let worstStatus = { class: 'bg-secondary' };
+
+        group.projects.forEach(p => {
+            const s = p._computedStatus;
+            if (s.priority > maxPriority) {
+                maxPriority = s.priority;
+                worstStatus = s;
+            }
+        });
+        return worstStatus;
+    }
+
+    // --- Preprocessing & Counting (Nested) ---
     function preprocessData(data) {
         const counts = {
             ALL: 0,
@@ -137,15 +168,17 @@ $(document).ready(function () {
             CRITICAL: 0
         };
 
-        // Tag each project with its calculated status
-        data.projects.forEach(project => {
-            const status = calculateSingleProjectStatus(project);
-            project._computedStatus = status; // Cache it on the object
-            
-            counts.ALL++;
-            if (counts.hasOwnProperty(status.code)) {
-                counts[status.code]++;
-            }
+        data.groups.forEach(group => {
+            group.projects.forEach(project => {
+                const status = calculateSingleProjectStatus(project);
+                project._computedStatus = status;
+
+                counts.ALL++;
+                if (counts.hasOwnProperty(status.code)) {
+                    counts[status.code]++;
+                }
+            });
+            group._computedStatus = calculateGroupStatus(group);
         });
 
         return { counts, data };
@@ -195,13 +228,13 @@ $(document).ready(function () {
         `;
     }
 
-    // --- Render: Dashboard Cards (Stats Bar) ---
+    // --- Render: Dashboard Cards ---
     function renderDashboardStats(counts) {
         const $container = $('#dashboard-stats-container');
         $container.empty();
 
         const cardsConfig = [
-            { code: 'ALL', label: 'All Projects', colorClass: 'bg-primary' }, // Use primary for ALL generic
+            { code: 'ALL', label: 'All Projects', colorClass: 'bg-primary' },
             { code: 'EXCELLENT', label: 'Excellent', colorClass: 'bg-success' },
             { code: 'BUFFER_USED', label: 'Buffer Used', colorClass: 'bg-warning' },
             { code: 'PLAN_FAIL', label: 'Plan Fail', colorClass: 'bg-danger' },
@@ -211,9 +244,7 @@ $(document).ready(function () {
         cardsConfig.forEach(cfg => {
             const count = counts[cfg.code] || 0;
             const isActive = currentFilter === cfg.code ? 'active' : '';
-            // Use specific color for the bar, generic color for text if needed
-            const barColor = cfg.colorClass.replace('bg-', ''); 
-            
+
             const html = `
                 <div class="stat-card ${isActive}" data-filter="${cfg.code}">
                     <div class="color-bar ${cfg.colorClass}"></div>
@@ -224,30 +255,22 @@ $(document).ready(function () {
             $container.append(html);
         });
 
-        // Bind Click Events
-        $('.stat-card').click(function() {
+        $('.stat-card').click(function () {
             const newFilter = $(this).data('filter');
             if (newFilter !== currentFilter) {
                 currentFilter = newFilter;
-                
-                // Update UI active state
                 $('.stat-card').removeClass('active');
                 $(this).addClass('active');
-
-                // Re-render Timeline ONLY (No need to recalc dates)
                 renderTracker(currentRevisedData);
             }
         });
     }
 
-    // --- Render: Main Timeline (High Performance Version) ---
+    // --- Render: Main Timeline (Nested Groups) ---
     function renderTracker(data) {
         const $container = $('#projects-container');
         const $headerTicks = $('#header-ticks-container');
 
-        // Note: We do NOT use .empty() here yet because we want to minimize flash
-        // But for simplicity in this version, we will clear first.
-        // For 3000 items, clearing DOM is fast, inserting is the bottleneck.
         $container.empty();
         $headerTicks.empty();
         $container.css('position', 'relative');
@@ -256,21 +279,21 @@ $(document).ready(function () {
         let totalTimelineWidth = 0;
         const SHOW_DAYS_THRESHOLD = 4;
 
-        for(let i=0; i < RENDER_MONTHS_COUNT; i++) {
+        for (let i = 0; i < RENDER_MONTHS_COUNT; i++) {
             let targetMonthDate = new Date(TRACKER_START_DATE);
             targetMonthDate.setMonth(targetMonthDate.getMonth() + i);
             let daysFromStart = getDaysDiff(TRACKER_START_DATE, targetMonthDate);
             let leftPos = daysFromStart * pixelsPerDay;
             let monthName = targetMonthDate.toLocaleString('default', { month: 'short' });
-            
+
             $headerTicks.append(`<div class="time-mark" style="left: ${leftPos}px">${monthName}</div>`);
-            
+
             let daysInMonth = new Date(targetMonthDate.getFullYear(), targetMonthDate.getMonth() + 1, 0).getDate();
 
             if (pixelsPerDay >= SHOW_DAYS_THRESHOLD) {
                 let step;
-                if (pixelsPerDay >= 18) { step = 1; } 
-                else if (pixelsPerDay >= 10) { step = 5; } 
+                if (pixelsPerDay >= 18) { step = 1; }
+                else if (pixelsPerDay >= 10) { step = 5; }
                 else { step = 15; }
 
                 for (let d = 1; d <= daysInMonth; d++) {
@@ -285,175 +308,186 @@ $(document).ready(function () {
                 }
             }
             let monthWidth = daysInMonth * pixelsPerDay;
-            totalTimelineWidth = leftPos + monthWidth; 
+            totalTimelineWidth = leftPos + monthWidth;
         }
         $headerTicks.css('min-width', (totalTimelineWidth + 0) + 'px');
 
-        // Past Zone & Today Marker
+        // Past Zone
         const todayOffsetDays = getDaysDiff(TRACKER_START_DATE, CURRENT_DATE);
         if (todayOffsetDays >= 0) {
             const todayLeft = todayOffsetDays * pixelsPerDay;
             const sidebarWidth = $('.header-corner-placeholder').outerWidth() || 220;
-
-            $headerTicks.append(`
-                <div class="today-header-marker" style="left: ${todayLeft}px;">
-                    <span class="today-label">Today</span>
-                </div>
-            `);
-            $container.append(`
-                <div class="past-time-zone" style="width: ${todayLeft + sidebarWidth}px;"></div>
-            `);
+            $headerTicks.append(`<div class="today-header-marker" style="left: ${todayLeft}px;"><span class="today-label">Today</span></div>`);
+            $container.append(`<div class="past-time-zone" style="width: ${todayLeft + sidebarWidth}px;"></div>`);
         }
 
-        // 2. Render Projects (OPTIMIZED: String Buffer Pattern)
-        // We accumulate HTML in a string to avoid repeated DOM insertion (Reflow)
-        let projectsHtmlBuffer = ""; 
+        // 2. Render Groups and Projects
+        let htmlBuffer = "";
         let visibleCount = 0;
 
-        data.projects.forEach((project, pIndex) => {
-            // FILTER CHECK
-            const status = project._computedStatus; // Use pre-calculated status
-            if (currentFilter !== 'ALL' && status.code !== currentFilter) {
-                return; // Skip this project
-            }
+        data.groups.forEach((group, gIndex) => {
 
-            visibleCount++;
+            // Check if group matches filter
+            const matchingProjects = group.projects.filter(p => {
+                return currentFilter === 'ALL' || p._computedStatus.code === currentFilter;
+            });
 
-            // Use data-bs-toggle="tooltip" for the status strip
-            // NOTE: We do NOT initialize the tooltip here inside the loop. Performance killer.
-            const statusStrip = `
-                <div class="status-strip ${status.class}" 
-                     data-bs-toggle="tooltip" 
-                     data-bs-placement="right" 
-                     title="Status: ${status.label}">
+            if (matchingProjects.length === 0) return;
+
+            const grpStatus = group._computedStatus;
+
+            // Expansion Logic: Filter active = force expand
+            const isFilterActive = currentFilter !== 'ALL';
+            const isExpanded = isFilterActive ? true : group.is_expanded;
+            const toggleIcon = isExpanded ? '<i class="bi bi-chevron-down"></i>' : '<i class="bi bi-chevron-right"></i>';
+
+            // Render Group Row
+            htmlBuffer += `
+                <div class="group-row" data-g-idx="${gIndex}">
+                    <div class="group-name-label">
+                        <div class="status-strip ${grpStatus.class}"></div>
+                        <span class="group-toggle-icon">${toggleIcon}</span>
+                        <span>${group.group_name}</span>
+                        <span class="badge bg-secondary ms-2" style="font-size:9px">${matchingProjects.length}</span>
+                    </div>
+                    <div class="milestone-container" style="min-width: ${totalTimelineWidth}px"></div>
                 </div>
             `;
 
-            projectsHtmlBuffer += `
-                <div class="project-row">
-                    <div class="project-name-label">
-                        ${statusStrip}
-                        <div class="fw-bold text-dark">
-                            ${project.project_name}
+            if (isExpanded) {
+                group.projects.forEach((project, pIndex) => {
+                    const status = project._computedStatus;
+                    if (currentFilter !== 'ALL' && status.code !== currentFilter) return;
+
+                    visibleCount++;
+
+                    const statusStrip = `
+                        <div class="status-strip ${status.class}" 
+                            data-bs-toggle="tooltip" 
+                            data-bs-placement="right" 
+                            title="Status: ${status.label}">
                         </div>
-                        <div style="font-size:10px; color:#6c757d; margin-top:4px;">
-                            ID: ${project.project_id}
-                        </div>
-                    </div>
-                    <div class="milestone-container" id="milestones-${project.project_id}" style="min-width: ${totalTimelineWidth}px">
-            `;
+                    `;
 
-            let currentDemandAnchor = project.start_date;
+                    htmlBuffer += `
+                        <div class="project-row">
+                            <div class="project-name-label">
+                                ${statusStrip}
+                                <div class="fw-bold text-dark text-truncate">
+                                    ${project.project_name}
+                                </div>
+                                <div style="font-size:10px; color:#6c757d; margin-top:4px;">
+                                    ID: ${project.project_id}
+                                </div>
+                            </div>
+                            <div class="milestone-container" id="milestones-${project.project_id}" style="min-width: ${totalTimelineWidth}px">
+                    `;
 
-            project.milestones.forEach((ms, mIndex) => {
-                // Calculation Logic ...
-                const demandEndDate = ms.demand_due_date ? ms.demand_due_date : ms.planned_end;
-                const demandDuration = getDaysDiff(currentDemandAnchor, demandEndDate);
-                const demandOffset = getDaysDiff(TRACKER_START_DATE, currentDemandAnchor);
-                const demandWidth = Math.max(demandDuration * pixelsPerDay, 2);
-                const demandLeft = demandOffset * pixelsPerDay;
-                
-                // Note: We store data in attributes, but we won't init Popover yet
-                // Use single quotes for HTML attributes inside JS strings to avoid escaping hell
-                const demandPopoverContent = `Demand: ${ms.name}<br>Due: ${demandEndDate}`;
+                    let currentDemandAnchor = project.start_date;
 
-                projectsHtmlBuffer += `
-                    <div class="gantt-bar demand-bar clickable" 
-                         style="left: ${demandLeft}px; width: ${demandWidth}px; background-color: ${ms.color};"
-                         data-p-idx="${pIndex}" data-m-idx="${mIndex}"
-                         data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-placement="top"
-                         data-bs-content="${demandPopoverContent}"></div>
-                `;
+                    project.milestones.forEach((ms, mIndex) => {
+                        const demandEndDate = ms.demand_due_date ? ms.demand_due_date : ms.planned_end;
+                        const demandDuration = getDaysDiff(currentDemandAnchor, demandEndDate);
+                        const demandOffset = getDaysDiff(TRACKER_START_DATE, currentDemandAnchor);
+                        const demandWidth = Math.max(demandDuration * pixelsPerDay, 2);
+                        const demandLeft = demandOffset * pixelsPerDay;
+                        const demandPopoverContent = `Demand: ${ms.name}<br>Due: ${demandEndDate}`;
 
-                // Plan Track Logic
-                const revisedStart = ms.revised_start_date;
-                const revisedEnd = ms.revised_end_date;
-                const actualDate = ms.actual_completion_date;
-                let solidBarEnd = revisedEnd;
-                let tailType = null;
-                let tailStart = null;
-                let tailEnd = null;
-                let statusInfo = { isOverdue: false, extraInfo: '' };
+                        htmlBuffer += `
+                            <div class="gantt-bar demand-bar clickable" 
+                                style="left: ${demandLeft}px; width: ${demandWidth}px; background-color: ${ms.color};"
+                                data-g-idx="${gIndex}" data-p-idx="${pIndex}" data-m-idx="${mIndex}"
+                                data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-placement="top"
+                                data-bs-content="${demandPopoverContent}"></div>
+                        `;
 
-                if (actualDate) {
-                    if (new Date(actualDate) > new Date(revisedEnd)) {
-                        solidBarEnd = revisedEnd; tailType = 'late'; tailStart = revisedEnd; tailEnd = actualDate;
-                        const diff = Math.floor(getDaysDiff(revisedEnd, actualDate));
-                        statusInfo.extraInfo = `⚠️ Late by ${diff} days`;
-                    } else if (new Date(actualDate) < new Date(revisedEnd)) {
-                        solidBarEnd = actualDate; tailType = 'early'; tailStart = actualDate; tailEnd = revisedEnd;
-                        const diff = Math.floor(getDaysDiff(actualDate, revisedEnd));
-                        statusInfo.extraInfo = `✅ Early by ${diff} days`;
-                    } else {
-                        solidBarEnd = actualDate;
-                        statusInfo.extraInfo = `✅ On Time`;
-                    }
-                } else {
-                    if (CURRENT_DATE > new Date(revisedEnd)) {
-                        solidBarEnd = revisedEnd; tailType = 'late'; tailStart = revisedEnd; tailEnd = CURRENT_DATE.toISOString().split('T')[0];
-                        statusInfo.isOverdue = true;
-                        const diff = Math.floor(getDaysDiff(revisedEnd, CURRENT_DATE));
-                        statusInfo.extraInfo = `🔥 Overdue: ${diff} days so far`;
-                    }
-                }
+                        const revisedStart = ms.revised_start_date;
+                        const revisedEnd = ms.revised_end_date;
+                        const actualDate = ms.actual_completion_date;
+                        let solidBarEnd = revisedEnd;
+                        let tailType = null;
+                        let tailStart = null;
+                        let tailEnd = null;
+                        let statusInfo = { isOverdue: false, extraInfo: '' };
 
-                const planDuration = getDaysDiff(revisedStart, solidBarEnd);
-                const planOffset = getDaysDiff(TRACKER_START_DATE, revisedStart);
-                const planWidth = Math.max(planDuration * pixelsPerDay, 2);
-                const planLeft = planOffset * pixelsPerDay;
-                const progressPct = Math.round(ms.status_progress * 100);
-                
-                // We escape the JSON content for the data attribute
-                const popContent = createPopoverContent(ms, revisedStart, solidBarEnd, statusInfo).replace(/"/g, '&quot;');
+                        if (actualDate) {
+                            if (new Date(actualDate) > new Date(revisedEnd)) {
+                                solidBarEnd = revisedEnd; tailType = 'late'; tailStart = revisedEnd; tailEnd = actualDate;
+                                const diff = Math.floor(getDaysDiff(revisedEnd, actualDate));
+                                statusInfo.extraInfo = `⚠️ Late by ${diff} days`;
+                            } else if (new Date(actualDate) < new Date(revisedEnd)) {
+                                solidBarEnd = actualDate; tailType = 'early'; tailStart = actualDate; tailEnd = revisedEnd;
+                                const diff = Math.floor(getDaysDiff(actualDate, revisedEnd));
+                                statusInfo.extraInfo = `✅ Early by ${diff} days`;
+                            } else {
+                                solidBarEnd = actualDate;
+                                statusInfo.extraInfo = `✅ On Time`;
+                            }
+                        } else {
+                            if (CURRENT_DATE > new Date(revisedEnd)) {
+                                solidBarEnd = revisedEnd; tailType = 'late'; tailStart = revisedEnd; tailEnd = CURRENT_DATE.toISOString().split('T')[0];
+                                statusInfo.isOverdue = true;
+                                const diff = Math.floor(getDaysDiff(revisedEnd, CURRENT_DATE));
+                                statusInfo.extraInfo = `🔥 Overdue: ${diff} days so far`;
+                            }
+                        }
 
-                let innerContent = '';
-                if (planWidth > 60) {
-                    innerContent = `<div class="plan-bar-content"><span class="plan-name">${ms.name}</span><span class="plan-pct">${progressPct}%</span></div>`;
-                }
+                        const planDuration = getDaysDiff(revisedStart, solidBarEnd);
+                        const planOffset = getDaysDiff(TRACKER_START_DATE, revisedStart);
+                        const planWidth = Math.max(planDuration * pixelsPerDay, 2);
+                        const planLeft = planOffset * pixelsPerDay;
+                        const progressPct = Math.round(ms.status_progress * 100);
+                        const popContent = createPopoverContent(ms, revisedStart, solidBarEnd, statusInfo).replace(/"/g, '&quot;');
 
-                let animClass = '';
-                if (ms.status_progress > 0 && ms.status_progress < 1.0) {
-                    animClass = 'active-anim';
-                }
+                        let innerContent = '';
+                        if (planWidth > 60) {
+                            innerContent = `<div class="plan-bar-content"><span class="plan-name">${ms.name}</span><span class="plan-pct">${progressPct}%</span></div>`;
+                        }
 
-                projectsHtmlBuffer += `
-                    <div class="gantt-bar plan-bar clickable" 
-                         style="left: ${planLeft}px; width: ${planWidth}px; background-color: ${ms.color};"
-                         data-p-idx="${pIndex}" data-m-idx="${mIndex}"
-                         data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-placement="top"
-                         data-bs-content="${popContent}">
-                        <div class="progress-overlay ${animClass}" style="width: ${progressPct}%"></div>
-                        ${innerContent}
-                    </div>
-                `;
+                        let animClass = '';
+                        if (ms.status_progress > 0 && ms.status_progress < 1.0) {
+                            animClass = 'active-anim';
+                        }
 
-                if (tailType) {
-                    const tStart = new Date(tailStart);
-                    const tEnd = new Date(tailEnd);
-                    const tailDuration = (tEnd - tStart) / (1000 * 60 * 60 * 24);
-                    const tailOffset = getDaysDiff(TRACKER_START_DATE, tStart);
-                    const tailWidth = Math.max(tailDuration * pixelsPerDay, 2);
-                    const tailLeft = tailOffset * pixelsPerDay;
-                    const tailClass = tailType === 'late' ? 'gantt-tail-delay' : 'gantt-tail-early';
-                    const tailPopover = tailType === 'late'
-                        ? `Delay Segment<br>From: ${tailStart}<br>To: ${tailEnd}`
-                        : `Saved Segment<br>Orig End: ${tailEnd}`;
+                        htmlBuffer += `
+                            <div class="gantt-bar plan-bar clickable" 
+                                style="left: ${planLeft}px; width: ${planWidth}px; background-color: ${ms.color};"
+                                data-g-idx="${gIndex}" data-p-idx="${pIndex}" data-m-idx="${mIndex}"
+                                data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-placement="top"
+                                data-bs-content="${popContent}">
+                                <div class="progress-overlay ${animClass}" style="width: ${progressPct}%"></div>
+                                ${innerContent}
+                            </div>
+                        `;
 
-                    projectsHtmlBuffer += `<div class="gantt-bar ${tailClass} clickable" 
-                        style="left: ${tailLeft}px; width: ${tailWidth}px;"
-                        data-p-idx="${pIndex}" data-m-idx="${mIndex}"
-                        data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-content="${tailPopover}"></div>`;
-                }
+                        if (tailType) {
+                            const tStart = new Date(tailStart);
+                            const tEnd = new Date(tailEnd);
+                            const tailDuration = (tEnd - tStart) / (1000 * 60 * 60 * 24);
+                            const tailOffset = getDaysDiff(TRACKER_START_DATE, tStart);
+                            const tailWidth = Math.max(tailDuration * pixelsPerDay, 2);
+                            const tailLeft = tailOffset * pixelsPerDay;
+                            const tailClass = tailType === 'late' ? 'gantt-tail-delay' : 'gantt-tail-early';
+                            const tailPopover = tailType === 'late'
+                                ? `Delay Segment<br>From: ${tailStart}<br>To: ${tailEnd}`
+                                : `Saved Segment<br>Orig End: ${tailEnd}`;
 
-                currentDemandAnchor = demandEndDate;
-            });
+                            htmlBuffer += `<div class="gantt-bar ${tailClass} clickable" 
+                                style="left: ${tailLeft}px; width: ${tailWidth}px;"
+                                data-g-idx="${gIndex}" data-p-idx="${pIndex}" data-m-idx="${mIndex}"
+                                data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-content="${tailPopover}"></div>`;
+                        }
 
-            // Close Project Row
-            projectsHtmlBuffer += `</div></div>`;
+                        currentDemandAnchor = demandEndDate;
+                    });
+
+                    htmlBuffer += `</div></div>`;
+                });
+            }
         });
 
-        // 3. Inject HTML (Single Reflow)
-        if (visibleCount === 0) {
+        // 3. Inject HTML
+        if (visibleCount === 0 && currentFilter !== 'ALL' && data.groups.length > 0) {
             $container.html(`
                 <div class="empty-state">
                     <i class="bi bi-folder2-open display-4 mb-3"></i>
@@ -461,18 +495,25 @@ $(document).ready(function () {
                     <p>There are no projects matching the "<strong>${currentFilter}</strong>" filter.</p>
                 </div>
             `);
+        } else if (data.groups.length === 0) {
+            $container.html(`<div class="empty-state">No Data Loaded</div>`);
         } else {
-            $container.html(projectsHtmlBuffer);
+            $container.html(htmlBuffer);
         }
 
-        // 4. Lazy Initialization of Tooltips/Popovers (PERFORMANCE FIX)
-        // Instead of initializing thousands of popovers, we init on mouseenter
-        
-        // A. Popovers for Bars
-        $container.off('mouseenter', '[data-bs-toggle="popover"]'); // Remove old handlers if any
-        $container.on('mouseenter', '[data-bs-toggle="popover"]', function() {
+        // 4. Bind Events (Group Toggle)
+        $('.group-row').click(function () {
+            if (currentFilter !== 'ALL') return;
+
+            const gIdx = $(this).data('g-idx');
+            currentRevisedData.groups[gIdx].is_expanded = !currentRevisedData.groups[gIdx].is_expanded;
+            renderTracker(currentRevisedData);
+        });
+
+        // 5. Lazy Initialization
+        $container.off('mouseenter', '[data-bs-toggle="popover"]');
+        $container.on('mouseenter', '[data-bs-toggle="popover"]', function () {
             const el = this;
-            // Check if instance already exists
             let popover = bootstrap.Popover.getInstance(el);
             if (!popover) {
                 popover = new bootstrap.Popover(el);
@@ -480,9 +521,8 @@ $(document).ready(function () {
             }
         });
 
-        // B. Tooltips for Status Strips
         $container.off('mouseenter', '[data-bs-toggle="tooltip"]');
-        $container.on('mouseenter', '[data-bs-toggle="tooltip"]', function() {
+        $container.on('mouseenter', '[data-bs-toggle="tooltip"]', function () {
             const el = this;
             let tooltip = bootstrap.Tooltip.getInstance(el);
             if (!tooltip) {
@@ -492,32 +532,33 @@ $(document).ready(function () {
         });
     }
 
-    // --- Edit & Interaction Logic ---
+    // --- Edit Logic ---
     function initEditHandlers() {
         const modalEl = document.getElementById('editMilestoneModal');
-        const modal = new bootstrap.Modal(modalEl, {
-            backdrop: 'static', 
-            keyboard: false     
-        });
-        const $errorMsg = $('#edit-error-msg'); 
+        const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+        const $errorMsg = $('#edit-error-msg');
 
         $(modalEl).on('hidden.bs.modal', function () {
             $errorMsg.addClass('d-none').text('');
         });
 
-        // 1. Click on Bar to Open Modal
-        $('#projects-container').on('click', '.clickable', function () {
+        $('#projects-container').on('click', '.clickable', function (e) {
+            e.stopPropagation();
+
             const popover = bootstrap.Popover.getInstance(this);
             if (popover) popover.hide();
-
             $errorMsg.addClass('d-none').text('');
 
+            const gIdx = $(this).data('g-idx');
             const pIdx = $(this).data('p-idx');
             const mIdx = $(this).data('m-idx');
-            const msData = rawTrackerData.projects[pIdx].milestones[mIdx];
 
+            const msData = rawTrackerData.groups[gIdx].projects[pIdx].milestones[mIdx];
+
+            $('#edit-g-index').val(gIdx);
             $('#edit-p-index').val(pIdx);
             $('#edit-m-index').val(mIdx);
+
             $('#edit-name').val(msData.name);
             $('#edit-planned-end').val(msData.planned_end);
             $('#edit-actual-date').val(msData.actual_completion_date || '');
@@ -528,15 +569,14 @@ $(document).ready(function () {
             modal.show();
         });
 
-        // 2. Slider Update
         $('#edit-progress').on('input', function () {
             $('#edit-progress-val').text(Math.round($(this).val() * 100) + '%');
         });
 
-        // 3. Save Changes
         $('#btn-save-changes').click(function () {
             $errorMsg.addClass('d-none');
 
+            const gIdx = parseInt($('#edit-g-index').val());
             const pIdx = parseInt($('#edit-p-index').val());
             const mIdx = parseInt($('#edit-m-index').val());
 
@@ -546,7 +586,7 @@ $(document).ready(function () {
             const inputActualDate = $('#edit-actual-date').val();
             const inputProgress = parseFloat($('#edit-progress').val());
 
-            const project = rawTrackerData.projects[pIdx];
+            const project = rawTrackerData.groups[gIdx].projects[pIdx];
             const milestones = project.milestones;
             const projectStart = project.start_date;
 
@@ -578,19 +618,17 @@ $(document).ready(function () {
                 $errorMsg.text(errorText).removeClass('d-none');
                 $('.modal-content').addClass('shake-animation');
                 setTimeout(() => $('.modal-content').removeClass('shake-animation'), 500);
-                return; 
+                return;
             }
 
-            const msData = rawTrackerData.projects[pIdx].milestones[mIdx];
+            const msData = rawTrackerData.groups[gIdx].projects[pIdx].milestones[mIdx];
             msData.name = inputName;
             msData.planned_end = inputPlannedEnd;
             msData.demand_due_date = inputDemandDate;
             msData.actual_completion_date = inputActualDate ? inputActualDate : null;
             msData.status_progress = inputProgress;
 
-            // Pipeline Execution on Save
             runPipeline();
-            
             modal.hide();
         });
     }
@@ -615,12 +653,10 @@ $(document).ready(function () {
         });
     }
 
-    // --- Draggable Modal Logic ---
     function makeModalDraggable(modalId) {
         const $modal = $(modalId);
         const $dialog = $modal.find('.modal-dialog');
         const $header = $modal.find('.modal-header');
-
         let isDragging = false;
         let startX, startY, startLeft, startTop;
 
@@ -633,13 +669,7 @@ $(document).ready(function () {
             const offset = $dialog.offset();
             startLeft = offset.left;
             startTop = offset.top;
-            $dialog.css({
-                'width': currentWidth + 'px', 
-                'margin': '0',
-                'position': 'absolute',
-                'left': startLeft + 'px',
-                'top': startTop + 'px'
-            });
+            $dialog.css({ 'width': currentWidth + 'px', 'margin': '0', 'position': 'absolute', 'left': startLeft + 'px', 'top': startTop + 'px' });
             e.preventDefault();
         });
 
@@ -650,29 +680,15 @@ $(document).ready(function () {
             $dialog.css({ 'left': (startLeft + dx) + 'px', 'top': (startTop + dy) + 'px' });
         });
 
-        $(document).on('mouseup', function () {
-            isDragging = false;
-        });
-
-        $modal.on('hidden.bs.modal', function () {
-            $dialog.css({ 'left': '', 'top': '', 'margin': '', 'position': '', 'width': '' });
-        });
+        $(document).on('mouseup', function () { isDragging = false; });
+        $modal.on('hidden.bs.modal', function () { $dialog.css({ 'left': '', 'top': '', 'margin': '', 'position': '', 'width': '' }); });
     }
 
-    // --- MAIN PIPELINE CONTROLLER ---
-    // Calculates everything and updates the view
     function runPipeline() {
-        // 1. Calc Dates
         currentRevisedData = reviseProjectData(rawTrackerData);
-        
-        // 2. Preprocess Stats & Tag Projects
         const result = preprocessData(currentRevisedData);
         currentProcessedStats = result.counts;
-
-        // 3. Render Dashboard Top Bar
         renderDashboardStats(currentProcessedStats);
-
-        // 4. Render Main Tracker (using the current filter)
         renderTracker(currentRevisedData);
     }
 
@@ -680,7 +696,5 @@ $(document).ready(function () {
     initZoomControls();
     initEditHandlers();
     makeModalDraggable('#editMilestoneModal');
-    
-    // Initial Run
     runPipeline();
 });

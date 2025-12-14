@@ -1,6 +1,6 @@
 /* --- Layout & Container --- */
 body {
-    background-color: #f8f9fa; /* Lighter background for dashboard feel */
+    background-color: #f8f9fa;
 }
 
 /* Dashboard Filter Cards */
@@ -20,7 +20,7 @@ body {
 
 .stat-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
     border-color: #adb5bd;
 }
 
@@ -68,18 +68,13 @@ body {
     background-color: #fff;
     border: 1px solid #dee2e6;
     border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    
-    /* Limit height and enable 2-axis scrolling */
-    max-height: 650px; /* Slightly taller */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    max-height: 650px;
     overflow: auto;
-
-    /* Firefox Scrollbar Support */
     scrollbar-width: thin;
     scrollbar-color: #adb5bd #f1f3f5;
 }
 
-/* --- Custom Scrollbar Styling --- */
 #tracker-wrapper::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -109,23 +104,22 @@ body {
     top: 0;
     z-index: 1000;
     display: flex;
-    min-width: max-content; 
+    min-width: max-content;
 }
 
-/* Corner Placeholder (Sticky Top-Left) */
 .header-corner-placeholder {
     width: 220px;
     flex-shrink: 0;
     background: #f8f9fa;
     border-right: none;
-    border-bottom: none; 
+    border-bottom: none;
     position: sticky;
     left: 0;
     top: 0;
     z-index: 1100;
     display: flex;
     align-items: center;
-    padding-left: 20px; /* Match project row padding */
+    padding-left: 20px;
     font-weight: bold;
     color: #495057;
     font-size: 14px;
@@ -136,12 +130,11 @@ body {
     flex-grow: 1;
 }
 
-/* Month Label */
 .time-mark {
     position: absolute;
     top: 0;
     bottom: 0;
-    border-left: none; 
+    border-left: none;
     display: flex;
     align-items: start;
     padding-top: 2px;
@@ -152,18 +145,16 @@ body {
     z-index: 10;
 }
 
-/* Month Divider Line */
 .time-mark::after {
     content: '';
     position: absolute;
-    bottom: 0; 
+    bottom: 0;
     left: 0;
     width: 1px;
     height: 30px;
     background-color: #adb5bd;
 }
 
-/* Day Ticks */
 .day-tick {
     position: absolute;
     bottom: 0;
@@ -177,6 +168,45 @@ body {
     z-index: 5;
 }
 
+/* --- Group Row Styling (NEW) --- */
+.group-row {
+    height: 40px;
+    background-color: #e9ecef;
+    border-bottom: 1px solid #dee2e6;
+    display: flex;
+    align-items: center;
+    font-weight: bold;
+    color: #495057;
+    cursor: pointer;
+    position: relative;
+    contain: layout style;
+}
+
+.group-row:hover {
+    background-color: #dee2e6;
+}
+
+.group-name-label {
+    position: sticky;
+    left: 0;
+    z-index: 950;
+    background: inherit;
+    width: 220px;
+    height: 100%;
+    padding: 0 15px;
+    display: flex;
+    align-items: center;
+    border-right: 1px solid #dee2e6;
+}
+
+.group-toggle-icon {
+    margin-right: 8px;
+    font-size: 12px;
+    transition: transform 0.2s;
+    width: 16px;
+    text-align: center;
+}
+
 /* --- Project Row --- */
 .project-row {
     height: 60px;
@@ -185,8 +215,7 @@ body {
     background-color: #fff;
     display: flex;
     align-items: center;
-    min-width: max-content; 
-    /* Perf optimization for scrolling */
+    min-width: max-content;
     contain: layout style;
 }
 
@@ -194,7 +223,6 @@ body {
     background-color: #fafafa;
 }
 
-/* Sticky Left Column (Project Name) */
 .project-name-label {
     position: sticky;
     left: 0;
@@ -202,14 +230,14 @@ body {
     background: #fff;
     width: 220px;
     height: 100%;
-    /* Padding-left increased for Status Strip */
-    padding: 10px 15px 10px 20px; 
-    border-right: none; 
+    /* INDENTATION: Increased padding for hierarchy */
+    padding: 10px 15px 10px 35px;
+    border-right: none;
     box-shadow: none;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    overflow: hidden; 
+    overflow: hidden;
 }
 
 .milestone-container {
@@ -230,10 +258,9 @@ body {
     overflow: hidden;
     white-space: nowrap;
     cursor: pointer;
-    transition: width 0.2s, left 0.2s; /* Only animate transform props if needed */
+    transition: width 0.2s, left 0.2s;
 }
 
-/* Demand Bar */
 .demand-bar {
     height: 8px;
     top: 10px;
@@ -245,13 +272,12 @@ body {
     font-size: 0;
 }
 
-/* Plan Bar */
 .plan-bar {
     height: 32px;
     top: 20px;
     color: #fff;
     z-index: 20;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
     line-height: 32px;
     border-radius: 0 0 2px 2px;
 }
@@ -260,13 +286,13 @@ body {
 .gantt-tail-delay {
     height: 32px;
     top: 20px;
-    background-color: #dc3545; 
-    background-image: linear-gradient(45deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent);
+    background-color: #dc3545;
+    background-image: linear-gradient(45deg, rgba(255, 255, 255, .15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .15) 50%, rgba(255, 255, 255, .15) 75%, transparent 75%, transparent);
     background-size: 10px 10px;
-    z-index: 30; 
+    z-index: 30;
     pointer-events: auto !important;
     border-radius: 0 2px 2px 0;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     cursor: help;
 }
 
@@ -322,7 +348,7 @@ body {
     top: 0;
     bottom: 0;
     width: 2px;
-    background-color: #0d6efd; 
+    background-color: #0d6efd;
     z-index: 2000;
 }
 
@@ -343,17 +369,17 @@ body {
     position: absolute;
     top: 0;
     bottom: 0;
-    left: 0; 
-    background-color: rgba(0, 0, 0, 0.08); 
-    border-right: none; 
-    z-index: 5; 
-    pointer-events: none; 
+    left: 0;
+    background-color: rgba(0, 0, 0, 0.08);
+    border-right: none;
+    z-index: 5;
+    pointer-events: none;
 }
 
 /* --- Popover Styling --- */
 .popover {
     border: none;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     max-width: 280px;
 }
 
@@ -398,30 +424,47 @@ body {
 
 /* Shake Animation */
 @keyframes shake {
-  0% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  50% { transform: translateX(5px); }
-  75% { transform: translateX(-5px); }
-  100% { transform: translateX(0); }
+    0% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-5px);
+    }
+
+    50% {
+        transform: translateX(5px);
+    }
+
+    75% {
+        transform: translateX(-5px);
+    }
+
+    100% {
+        transform: translateX(0);
+    }
 }
 
 .shake-animation {
-  animation: shake 0.3s;
+    animation: shake 0.3s;
 }
 
 /* --- Active Progress Animation (Shimmer) --- */
 @keyframes shimmer-flow {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
 }
 
 .progress-overlay.active-anim {
-    background: linear-gradient(
-        to right, 
-        rgba(0, 0, 0, 0.25) 0%,       
-        rgba(255, 255, 255, 0.1) 50%, 
-        rgba(0, 0, 0, 0.25) 100%      
-    );
+    background: linear-gradient(to right,
+            rgba(0, 0, 0, 0.25) 0%,
+            rgba(255, 255, 255, 0.1) 50%,
+            rgba(0, 0, 0, 0.25) 100%);
     background-size: 200% auto;
     animation: shimmer-flow 6s linear infinite;
 }
@@ -432,10 +475,10 @@ body {
     left: 0;
     top: 0;
     bottom: 0;
-    width: 6px; 
-    cursor: help; 
-    transition: width 0.2s; 
-    z-index: 10; 
+    width: 6px;
+    cursor: help;
+    transition: width 0.2s;
+    z-index: 10;
 }
 
 .status-strip:hover {
@@ -443,8 +486,22 @@ body {
 }
 
 /* Force Colors */
-.status-strip.bg-success { background-color: #198754 !important; }
-.status-strip.bg-warning { background-color: #ffc107 !important; }
-.status-strip.bg-danger { background-color: #dc3545 !important; }
-.status-strip.bg-critical { background-color: #6f42c1 !important; }
-.status-strip.bg-secondary { background-color: #6c757d !important; }
+.status-strip.bg-success {
+    background-color: #198754 !important;
+}
+
+.status-strip.bg-warning {
+    background-color: #ffc107 !important;
+}
+
+.status-strip.bg-danger {
+    background-color: #dc3545 !important;
+}
+
+.status-strip.bg-critical {
+    background-color: #6f42c1 !important;
+}
+
+.status-strip.bg-secondary {
+    background-color: #6c757d !important;
+}
