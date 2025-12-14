@@ -339,60 +339,114 @@ $(document).ready(function () {
 
             // --- Step B: Prepare Data for Visuals ---
             
-            // 1. Calculate Date Range for Ghost Bar
-            // FIX: Initialize with Project Start Date (because Demand Bar starts here)
-            // This ensures Ghost Bar aligns with the leftmost visible element (Demand Bar)
             let minStart = null;
             let maxEnd = null;
+            let minProgressDate = null;
             
-            // 2. Calculate Status Counts for Health Bar
             const groupStats = { 'CRITICAL': 0, 'PLAN_FAIL': 0, 'BUFFER_USED': 0, 'EXCELLENT': 0 };
             let totalProjects = 0;
 
             group.projects.forEach(p => {
-                // Initialize range with Project Start (Demand Anchor)
                 const pStart = new Date(p.start_date);
-                
                 if (!minStart || pStart < minStart) minStart = pStart;
                 if (!maxEnd || pStart > maxEnd) maxEnd = pStart;
 
-                // Check Milestones for wider range (Plan/Revised)
+                // Track the effective end of this project (including delays)
+                let pEffectiveEnd = pStart; 
+
+                // 1. Calculate Project Range (Considering Delays for Ghost Bar Span)
                 if (p.milestones.length > 0) {
                     p.milestones.forEach(ms => {
                         const msStart = new Date(ms.revised_start_date);
-                        const msEnd = new Date(ms.revised_end_date);
+                        let msEnd = new Date(ms.revised_end_date);
                         
-                        // Expand range if Revised Plan is earlier or later
+                        // FIX: If task is overdue, its effective end is CURRENT_DATE
+                        // This ensures the Ghost Bar covers the red delay tail
+                        if (!ms.actual_completion_date && CURRENT_DATE > msEnd) {
+                            msEnd = new Date(CURRENT_DATE);
+                        }
+
                         if (msStart < minStart) minStart = msStart;
                         if (msEnd > maxEnd) maxEnd = msEnd;
+                        if (msEnd > pEffectiveEnd) pEffectiveEnd = msEnd;
                     });
                 }
 
-                // Health Bar Math
-                const code = p._computedStatus.code;
-                if (groupStats.hasOwnProperty(code)) {
-                    groupStats[code]++;
+                // 2. Calculate Weighted Progress (Dynamic Weight based on Delay)
+                let totalEffectiveDuration = 0;
+                let completedEffectiveDuration = 0;
+                
+                if (p.milestones.length > 0) {
+                    p.milestones.forEach(ms => {
+                        const rStart = new Date(ms.revised_start_date);
+                        let rEnd = new Date(ms.revised_end_date);
+                        
+                        // FIX: Important! Use the extended date for weight calculation too.
+                        // If a task is dragged out to today, 80% of it is a much larger amount of work.
+                        if (!ms.actual_completion_date && CURRENT_DATE > rEnd) {
+                            rEnd = new Date(CURRENT_DATE);
+                        }
+                        
+                        const dur = Math.max(1, getDaysDiff(rStart, rEnd));
+                        
+                        totalEffectiveDuration += dur;
+                        completedEffectiveDuration += (dur * ms.status_progress);
+                    });
                 }
+                
+                const pPercent = totalEffectiveDuration === 0 ? 0 : (completedEffectiveDuration / totalEffectiveDuration);
+                
+                // 3. Map % to Date
+                // Use the Effective Span (Start -> Effective End)
+                const totalSpanDays = getDaysDiff(pStart, pEffectiveEnd);
+                const progressDays = Math.round(totalSpanDays * pPercent);
+                
+                // Construct the exact date
+                const pProgressDate = new Date(pStart);
+                pProgressDate.setDate(pProgressDate.getDate() + progressDays);
+
+                if (!minProgressDate || pProgressDate < minProgressDate) {
+                    minProgressDate = pProgressDate;
+                }
+
+                // Stats
+                const code = p._computedStatus.code;
+                if (groupStats.hasOwnProperty(code)) groupStats[code]++;
                 totalProjects++;
             });
 
             // --- Step C: Generate HTML for Visuals ---
 
-            // 1. Ghost Bar HTML
+            // 1. Ghost Bar & Progress Fill HTML
             let ghostBarHtml = '';
             if (minStart && maxEnd) {
                 const gStartOffset = getDaysDiff(TRACKER_START_DATE, minStart);
                 const gDuration = getDaysDiff(minStart, maxEnd);
+                
                 const gLeft = gStartOffset * pixelsPerDay;
                 const gWidth = gDuration * pixelsPerDay;
                 
-                ghostBarHtml = `<div class="group-ghost-bar" style="left: ${gLeft}px; width: ${gWidth}px;"></div>`;
+                // Calculate Fill Width
+                // Fill goes from minStart -> minProgressDate
+                let fillWidth = 0;
+                if (minProgressDate && minProgressDate > minStart) {
+                    const progressDuration = getDaysDiff(minStart, minProgressDate);
+                    fillWidth = Math.max(0, progressDuration * pixelsPerDay);
+                    // Cap it at max width (just in case)
+                    if (fillWidth > gWidth) fillWidth = gWidth;
+                }
+
+                // Render Container + Inner Fill
+                ghostBarHtml = `
+                    <div class="group-ghost-bar" style="left: ${gLeft}px; width: ${gWidth}px;">
+                        <div class="ghost-progress-fill" style="width: ${fillWidth}px;"></div>
+                    </div>
+                `;
             }
 
-            // 2. Health Distribution Bar HTML
+            // 2. Health Distribution Bar HTML (Left Side) - No Changes
             let healthBarSegments = '';
             if (totalProjects > 0) {
-                // Order: Critical -> Plan Fail -> Buffer -> Excellent
                 const order = ['CRITICAL', 'PLAN_FAIL', 'BUFFER_USED', 'EXCELLENT'];
                 const colorMap = {
                     'CRITICAL': 'bg-critical',
@@ -400,7 +454,6 @@ $(document).ready(function () {
                     'BUFFER_USED': 'bg-warning',
                     'EXCELLENT': 'bg-success'
                 };
-                
                 order.forEach(code => {
                     const count = groupStats[code];
                     if (count > 0) {
