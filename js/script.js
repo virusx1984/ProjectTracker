@@ -1133,6 +1133,6 @@ $(document).ready(function () {
     initEditHandlers();
     initProjectStructureHandlers(); 
     makeModalDraggable('#editMilestoneModal');
-    // makeModalDraggable('#editProjectStructureModal'); // Table modal usually better fixed
+    makeModalDraggable('#editProjectStructureModal'); // Table modal usually better fixed
     runPipeline();
 });
