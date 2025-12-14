@@ -738,7 +738,7 @@ $(document).ready(function () {
         });
     }
 
-    // --- Edit & Interaction Logic (Complete) ---
+    // --- Edit & Interaction Logic (Complete with Reverse Calculation) ---
     function initEditHandlers() {
         const modalEl = document.getElementById('editMilestoneModal');
         // Prevent accidental closing
@@ -755,38 +755,30 @@ $(document).ready(function () {
 
         // 1. Click on Bar to Open Modal
         $('#projects-container').on('click', '.clickable', function (e) {
-            e.stopPropagation(); // Prevent clicking bar from toggling group
+            e.stopPropagation(); 
             
-            // Hide active popovers
             const popover = bootstrap.Popover.getInstance(this);
             if (popover) popover.hide();
             
-            // Clear previous errors
             $errorMsg.addClass('d-none').text('');
 
-            // Get Indices
             const gIdx = $(this).data('g-idx');
             const pIdx = $(this).data('p-idx');
             const mIdx = $(this).data('m-idx');
             
-            // Get Data Context
-            const project = rawTrackerData.groups[gIdx].projects[pIdx];
+            // --- FIX: Read from 'currentRevisedData' to get the calculated dates ---
+            // rawTrackerData does not contain revised_start_date/revised_end_date
+            const project = currentRevisedData.groups[gIdx].projects[pIdx];
             const msData = project.milestones[mIdx];
 
             // --- CALCULATE ORIGINAL REFERENCE DATA ---
-            // 1. Determine Original Start Date
-            // If first milestone, use Project Start. Otherwise, use previous milestone's Planned End.
             let origStart = project.start_date;
             if (mIdx > 0) {
                 origStart = project.milestones[mIdx - 1].planned_end;
             }
-
-            // 2. Calculate Original Duration
-            // Note: We use the global helper getDaysDiff here
             const origEnd = msData.planned_end;
             const origDuration = Math.max(1, getDaysDiff(origStart, origEnd));
 
-            // 3. Populate Read-Only Fields
             $('#read-orig-start').val(origStart);
             $('#read-orig-duration').val(origDuration);
 
@@ -797,6 +789,11 @@ $(document).ready(function () {
             
             $('#edit-name').val(msData.name);
             $('#edit-planned-end').val(msData.planned_end);
+            
+            // Now these will have values because we are using currentRevisedData
+            $('#edit-revised-start').val(msData.revised_start_date);
+            $('#edit-revised-end').val(msData.revised_end_date);
+
             $('#edit-actual-date').val(msData.actual_completion_date || '');
             $('#edit-demand-date').val(msData.demand_due_date || '');
             $('#edit-progress').val(msData.status_progress);
@@ -810,7 +807,7 @@ $(document).ready(function () {
             $('#edit-progress-val').text(Math.round($(this).val() * 100) + '%');
         });
 
-        // 3. Save Changes (With Strict Validation)
+        // 3. Save Changes (With Reverse Calculation & Validation)
         $('#btn-save-changes').click(function () {
             // Hide error first
             $errorMsg.addClass('d-none');
@@ -821,10 +818,32 @@ $(document).ready(function () {
 
             // Get Inputs
             const inputName = $('#edit-name').val().trim();
-            const inputPlannedEnd = $('#edit-planned-end').val();
+            // We do NOT read inputPlannedEnd directly from the box anymore.
+            // We calculate it from Revised End.
+            const inputRevisedStart = $('#edit-revised-start').val();
+            const inputRevisedEnd = $('#edit-revised-end').val();
+            
             const inputDemandDate = $('#edit-demand-date').val();
             const inputActualDate = $('#edit-actual-date').val();
             const inputProgress = parseFloat($('#edit-progress').val());
+
+            // --- REVERSE CALCULATION START ---
+            // 1. Calculate New Duration based on user's Revised End
+            // New Duration = Revised End - Revised Start
+            if (!inputRevisedEnd) {
+                $errorMsg.text("Revised End Date cannot be empty.").removeClass('d-none');
+                return;
+            }
+
+            const newDurationDays = Math.max(1, getDaysDiff(inputRevisedStart, inputRevisedEnd));
+
+            // 2. Derive New "Original Planned End"
+            // Original Planned End = Original Reference Start + New Duration
+            // We grab the Original Start from the hidden/read-only field we populated earlier
+            const origStartRef = $('#read-orig-start').val();
+            const newPlannedEndDateObj = addDays(origStartRef, newDurationDays);
+            const inputPlannedEnd = newPlannedEndDateObj.toISOString().split('T')[0];
+            // --- REVERSE CALCULATION END ---
 
             // Get Context Data for Validation
             const project = rawTrackerData.groups[gIdx].projects[pIdx];
@@ -836,7 +855,6 @@ $(document).ready(function () {
 
             // Rule 2 & 3: Non-Empty Checks
             if (!inputName) errorText = "Task Name cannot be empty.";
-            else if (!inputPlannedEnd) errorText = "Original Planned End cannot be empty.";
             else if (!inputDemandDate) errorText = "Demand / Target Date cannot be empty.";
 
             // Rule 1: Actual Date vs Progress Consistency
@@ -847,9 +865,9 @@ $(document).ready(function () {
                 errorText = "Must set Actual Completion Date if progress is 100%.";
             }
 
-            // Rule 5: Project Boundaries
+            // Rule 5: Project Boundaries (Check using the Calculated Planned End)
             else if (inputPlannedEnd < projectStart) {
-                errorText = `Planned End (${inputPlannedEnd}) cannot be earlier than Project Start (${projectStart}).`;
+                errorText = `Calculated Planned End (${inputPlannedEnd}) cannot be earlier than Project Start (${projectStart}).`;
             }
             else if (inputActualDate && inputActualDate < projectStart) {
                 errorText = `Actual Date (${inputActualDate}) cannot be earlier than Project Start (${projectStart}).`;
@@ -861,9 +879,9 @@ $(document).ready(function () {
                 if (mIdx > 0) {
                     const prevMs = milestones[mIdx - 1];
 
-                    // Date Order Check
+                    // Date Order Check (using Calculated Planned End)
                     if (inputPlannedEnd < prevMs.planned_end) {
-                        errorText = `Planned End cannot be earlier than previous task's Planned End (${prevMs.planned_end}).`;
+                        errorText = `Calculated Planned End cannot be earlier than previous task's Planned End (${prevMs.planned_end}).`;
                     }
                     else if (inputDemandDate < prevMs.demand_due_date) {
                         errorText = `Demand Date cannot be earlier than previous task's Demand Date (${prevMs.demand_due_date}).`;
@@ -878,9 +896,9 @@ $(document).ready(function () {
                 if (!errorText && mIdx < milestones.length - 1) {
                     const nextMs = milestones[mIdx + 1];
 
-                    // Date Order Check
+                    // Date Order Check (using Calculated Planned End)
                     if (inputPlannedEnd > nextMs.planned_end) {
-                        errorText = `Planned End cannot be later than next task's Planned End (${nextMs.planned_end}).`;
+                        errorText = `Calculated Planned End cannot be later than next task's Planned End (${nextMs.planned_end}).`;
                     }
                     else if (inputDemandDate > nextMs.demand_due_date) {
                         errorText = `Demand Date cannot be later than next task's Demand Date (${nextMs.demand_due_date}).`;
@@ -905,7 +923,7 @@ $(document).ready(function () {
             const msData = rawTrackerData.groups[gIdx].projects[pIdx].milestones[mIdx];
 
             msData.name = inputName;
-            msData.planned_end = inputPlannedEnd;
+            msData.planned_end = inputPlannedEnd; // Saved the derived value
             msData.demand_due_date = inputDemandDate;
             msData.actual_completion_date = inputActualDate ? inputActualDate : null;
             msData.status_progress = inputProgress;
