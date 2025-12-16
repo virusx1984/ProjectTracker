@@ -159,6 +159,7 @@ body {
     position: absolute;
     bottom: 0;
     height: 15px;
+    z-index: 5;
     border-left: 1px solid #b9b9b9;
     font-size: 12px;
     color: #999;
@@ -166,6 +167,38 @@ body {
     line-height: 15px;
     white-space: nowrap;
     z-index: 5;
+}
+
+/* --- Timeline Header Year Anchors (Refined) --- */
+.time-mark.year-boundary {
+    border-left: none; 
+    font-weight: 800;
+    color: #212529;
+    background-color: rgba(0,0,0,0.02);
+    /* Ensure high z-index so its child (the line) sits on top */
+    z-index: 20; 
+}
+
+/* 2. Style the Line (Pseudo-element) to override the default gray line */
+.time-mark.year-boundary::after {
+    /* Exact same positioning as standard time-mark */
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    
+    /* OVERRIDE: Darker and Higher Priority */
+    width: 1px !important;        /* Strictly 1px */
+    background-color: #212529 !important; /* Dark Black */
+    height: 100% !important;      /* Full height */
+    z-index: 25;                  /* Higher than day-tick (which is usually z-index 5) */
+}
+
+/* Optional: Make the year number slightly smaller/distinct if needed */
+.year-label {
+    font-size: 11px;
+    opacity: 0.8;
+    margin-right: 3px;
 }
 
 /* --- Group Row Styling --- */

@@ -71,15 +71,38 @@ function renderTracker(data) {
     // 1. Header Rendering
     let totalTimelineWidth = 0;
     const SHOW_DAYS_THRESHOLD = 4;
+
     for(let i=0; i < CONFIG.RENDER_MONTHS; i++) {
         let targetMonthDate = new Date(CONFIG.TRACKER_START_DATE);
         targetMonthDate.setMonth(targetMonthDate.getMonth() + i);
+        
         let daysFromStart = getDaysDiff(CONFIG.TRACKER_START_DATE, targetMonthDate);
         let leftPos = daysFromStart * pixelsPerDay;
-        let monthName = targetMonthDate.toLocaleString('default', { month: 'short' });
         
-        $headerTicks.append(`<div class="time-mark" style="left: ${leftPos}px">${monthName}</div>`);
+        // Month Data
+        const currentYear = targetMonthDate.getFullYear();
+        const shortMonth = targetMonthDate.toLocaleString('default', { month: 'short' });
+        const isJanuary = targetMonthDate.getMonth() === 0;
         
+        // --- LOGIC: Year Anchor Decision ---
+        // Show Year if: It's the very first month rendered OR It's January
+        let labelHtml = shortMonth;
+        let boundaryClass = "";
+
+        if (i === 0 || isJanuary) {
+            // Format: "2025 Jan"
+            labelHtml = `<span class="year-label">${currentYear}</span>${shortMonth}`;
+            
+            // Add visual divider only for actual January (New Year boundary), 
+            // not necessarily for the first month if it's like May.
+            if (isJanuary) {
+                boundaryClass = "year-boundary";
+            }
+        }
+
+        $headerTicks.append(`<div class="time-mark ${boundaryClass}" style="left: ${leftPos}px">${labelHtml}</div>`);
+        
+        // Days Rendering (Unchanged)
         let daysInMonth = new Date(targetMonthDate.getFullYear(), targetMonthDate.getMonth() + 1, 0).getDate();
         if (pixelsPerDay >= SHOW_DAYS_THRESHOLD) {
             let step = (pixelsPerDay >= 18) ? 1 : ((pixelsPerDay >= 10) ? 5 : 15);
