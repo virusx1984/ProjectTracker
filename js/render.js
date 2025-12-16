@@ -128,7 +128,11 @@ function renderTracker(data) {
             p.milestones.forEach(ms => {
                 const msStart = new Date(ms.revised_start_date);
                 let msEnd = new Date(ms.revised_end_date);
-                if (!ms.actual_completion_date && CONFIG.CURRENT_DATE > msEnd) msEnd = new Date(CONFIG.CURRENT_DATE);
+                
+                // Logic for Ghost Bar Range: Extends to Today if overdue
+                if (!ms.actual_completion_date && CONFIG.CURRENT_DATE > msEnd) {
+                    msEnd = new Date(CONFIG.CURRENT_DATE);
+                }
 
                 if (msStart < minStart) minStart = msStart;
                 if (msEnd > maxEnd) maxEnd = msEnd;
@@ -137,24 +141,43 @@ function renderTracker(data) {
                 if (msDemand > maxDemandEnd) maxDemandEnd = msDemand;
             });
 
-            // Solid Progress Logic
+            // --- Solid Progress Logic (FIXED) ---
             let pVisualDate = new Date(pStart);
-            for (let i = 0; i < p.milestones.length; i++) {
-                const ms = p.milestones[i];
-                const msStart = new Date(ms.revised_start_date);
-                let msEnd = new Date(ms.revised_end_date);
-                if (!ms.actual_completion_date && CONFIG.CURRENT_DATE > msEnd) msEnd = new Date(CONFIG.CURRENT_DATE);
+            if (p.milestones.length > 0) {
+                for (let i = 0; i < p.milestones.length; i++) {
+                    const ms = p.milestones[i];
+                    const msStart = new Date(ms.revised_start_date);
+                    let msEnd = new Date(ms.revised_end_date);
+                    
+                    // Logic for Calculation Context
+                    if (!ms.actual_completion_date && CONFIG.CURRENT_DATE > msEnd) {
+                        msEnd = new Date(CONFIG.CURRENT_DATE);
+                    }
 
-                if (ms.status_progress === 1.0) {
-                    if (msEnd > pVisualDate) pVisualDate = msEnd;
-                } else if (ms.status_progress > 0) {
-                    const duration = Math.max(1, getDaysDiff(msStart, msEnd));
-                    const doneDays = Math.round(duration * ms.status_progress);
-                    const partialDate = new Date(msStart);
-                    partialDate.setDate(partialDate.getDate() + doneDays);
-                    if (partialDate > pVisualDate) pVisualDate = partialDate;
-                    break; 
-                } else break;
+                    if (ms.status_progress === 1.0) {
+                        // FIX: If task is Done, use Actual Date. 
+                        // If no actual date (data error?), fallback to revised end.
+                        // This prevents the bar from shrinking back to planned date if finished late.
+                        let effectiveDoneDate = ms.actual_completion_date ? new Date(ms.actual_completion_date) : msEnd;
+                        
+                        if (effectiveDoneDate > pVisualDate) {
+                            pVisualDate = effectiveDoneDate;
+                        }
+                    } else if (ms.status_progress > 0) {
+                        const duration = Math.max(1, getDaysDiff(msStart, msEnd));
+                        const doneDays = Math.round(duration * ms.status_progress);
+                        const partialDate = new Date(msStart);
+                        partialDate.setDate(partialDate.getDate() + doneDays);
+                        
+                        if (partialDate > pVisualDate) {
+                            pVisualDate = partialDate;
+                        }
+                        break; // Stop at first active task (Waterfall visual)
+                    } else {
+                        // Not Started (0%) - Stop here
+                        break;
+                    }
+                }
             }
             if (!minProgressDate || pVisualDate < minProgressDate) minProgressDate = pVisualDate;
 
@@ -169,8 +192,10 @@ function renderTracker(data) {
             const gLeft = getDaysDiff(CONFIG.TRACKER_START_DATE, minStart) * pixelsPerDay;
             const gWidth = getDaysDiff(minStart, maxEnd) * pixelsPerDay;
             let fillWidth = 0, dateLabel = "N/A";
+            
             if (minProgressDate && minProgressDate > minStart) {
                 fillWidth = Math.max(0, getDaysDiff(minStart, minProgressDate) * pixelsPerDay);
+                // Cap fill width at container width
                 if (fillWidth > gWidth) fillWidth = gWidth;
                 dateLabel = minProgressDate.toLocaleString('default', { month: 'short', day: 'numeric' });
             }
