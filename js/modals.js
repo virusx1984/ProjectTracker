@@ -43,7 +43,24 @@ function initEditHandlers() {
     });
 
     $('#edit-progress').on('input', function () { $('#edit-progress-val').text(Math.round($(this).val() * 100) + '%'); });
-    $('#btn-set-today').click(function() { $('#edit-actual-date').val(new Date().toISOString().split('T')[0]); });
+    
+    // 1. Set Today Button: Sets Date to Today AND Progress to 100%
+    $('#btn-set-today').click(function() {
+        // Set Date
+        // Note: Ensure CONFIG.CURRENT_DATE is used if you want simulation time, 
+        // otherwise use new Date() for real system time. Here we use system time for "Today".
+        const today = new Date().toISOString().split('T')[0];
+        $('#edit-actual-date').val(today);
+
+        // Auto-set Progress to 100%
+        $('#edit-progress').val(1.0);
+        $('#edit-progress-val').text('100%');
+    });
+
+    // 2. Clear Date Button
+    $('#btn-clear-date').click(function() {
+        $('#edit-actual-date').val('');
+    });
 
     $('#btn-save-changes').click(function () {
         $errorMsg.addClass('d-none');
