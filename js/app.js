@@ -3,9 +3,18 @@
 // Main Pipeline Runner
 // Exposed globally so moduls.js can access it
 function runPipeline() {
+    // 1. Calculate Revised Dates (Logic derivation)
     currentRevisedData = reviseProjectData(rawTrackerData);
+    
+    // 2. NEW: Auto-Scale Timeline based on revised dates
+    // This updates CONFIG.TRACKER_START_DATE and CONFIG.RENDER_MONTHS dynamically
+    calculateAutoBounds(currentRevisedData);
+
+    // 3. Preprocess for Stats
     const result = preprocessData(currentRevisedData);
     currentProcessedStats = result.counts;
+    
+    // 4. Render
     renderDashboardStats(currentProcessedStats);
     renderTracker(currentRevisedData);
 }

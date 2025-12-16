@@ -1,9 +1,9 @@
 // --- Configuration & Constants ---
 const CONFIG = {
     DEFAULT_PIXELS_PER_DAY: 6,
-    RENDER_MONTHS: 15,
-    TRACKER_START_DATE: new Date("2025-01-01"),
-    CURRENT_DATE: new Date("2025-03-15") // Demo Date
+    RENDER_MONTHS: 12, // Default fallback
+    TRACKER_START_DATE: new Date(), // Default fallback (will be overridden)
+    CURRENT_DATE: new Date("2025-03-15") // Fixed Demo Date
 };
 
 // Predefined Colors for Dropdown

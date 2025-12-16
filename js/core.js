@@ -110,3 +110,67 @@ function preprocessData(data) {
 
     return { counts, data };
 }
+
+// 5. Auto-Scale Logic: Calculate Timeline Boundaries
+function calculateAutoBounds(data) {
+    let minTime = new Date("2099-12-31").getTime();
+    let maxTime = new Date("1970-01-01").getTime();
+    let hasData = false;
+
+    // 1. Scan Data for Extremes
+    data.groups.forEach(g => {
+        g.projects.forEach(p => {
+            hasData = true;
+            // Check Project Start
+            const pStart = new Date(p.start_date).getTime();
+            if (pStart < minTime) minTime = pStart;
+
+            // Check Milestones (Revised End & Demand Date)
+            p.milestones.forEach(ms => {
+                const rEnd = new Date(ms.revised_end_date).getTime();
+                const dDue = ms.demand_due_date ? new Date(ms.demand_due_date).getTime() : 0;
+                
+                if (rEnd > maxTime) maxTime = rEnd;
+                if (dDue > maxTime) maxTime = dDue;
+            });
+        });
+    });
+
+    // Handle Empty Data Case
+    if (!hasData) {
+        // Default: Today - 1 month to Today + 6 months
+        const defStart = new Date(CONFIG.CURRENT_DATE);
+        defStart.setMonth(defStart.getMonth() - 1);
+        CONFIG.TRACKER_START_DATE = defStart;
+        CONFIG.RENDER_MONTHS = 6;
+        return;
+    }
+
+    // 2. Include "Today" in the view (Ensure today is always visible)
+    const todayTime = CONFIG.CURRENT_DATE.getTime();
+    if (todayTime < minTime) minTime = todayTime;
+    if (todayTime > maxTime) maxTime = todayTime;
+
+    // 3. Apply Buffer (Padding)
+    // Start: 1 month before the earliest date
+    const newStart = new Date(minTime);
+    newStart.setDate(1); // Snap to first of the month
+    newStart.setMonth(newStart.getMonth() - 1); 
+
+    // End: 2 months after the latest date (for popover space)
+    const newEnd = new Date(maxTime);
+    newEnd.setDate(1);
+    newEnd.setMonth(newEnd.getMonth() + 2);
+
+    // 4. Update Global Configuration
+    CONFIG.TRACKER_START_DATE = newStart;
+
+    // Calculate total months duration
+    const monthsDiff = (newEnd.getFullYear() - newStart.getFullYear()) * 12 + (newEnd.getMonth() - newStart.getMonth());
+    
+    // Ensure at least 6 months render to look good
+    CONFIG.RENDER_MONTHS = Math.max(6, monthsDiff);
+    
+    // Optional: Log for debugging
+    // console.log("Auto-Scale:", newStart.toISOString().split('T')[0], "to", newEnd.toISOString().split('T')[0], "Months:", CONFIG.RENDER_MONTHS);
+}
