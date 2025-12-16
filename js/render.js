@@ -114,7 +114,7 @@ function renderTracker(data) {
         const matchingProjects = group.projects.filter(p => currentFilter === 'ALL' || p._computedStatus.code === currentFilter);
         if (matchingProjects.length === 0) return;
 
-        // Group Stats Calculation
+        // --- Group Stats Calculation ---
         let minStart = null, maxEnd = null, maxDemandEnd = null, minProgressDate = null;
         const groupStats = { 'CRITICAL': 0, 'PLAN_FAIL': 0, 'BUFFER_USED': 0, 'EXCELLENT': 0 };
         let totalProjects = 0;
@@ -122,14 +122,17 @@ function renderTracker(data) {
         group.projects.forEach(p => {
             const pStart = new Date(p.start_date);
             if (!minStart || pStart < minStart) minStart = pStart;
+            // Ghost Bar Calculation (Part 1): Base Range
             if (!maxEnd || pStart > maxEnd) maxEnd = pStart;
             if (!maxDemandEnd || pStart > maxDemandEnd) maxDemandEnd = pStart;
 
+            // 1. Calculate Ghost Bar Range (Gray Background)
+            // This MUST extend to Today if overdue
             p.milestones.forEach(ms => {
                 const msStart = new Date(ms.revised_start_date);
                 let msEnd = new Date(ms.revised_end_date);
                 
-                // Logic for Ghost Bar Range: Extends to Today if overdue
+                // IMPORTANT: For the Ghost Bar (Background), we EXTEND to Today
                 if (!ms.actual_completion_date && CONFIG.CURRENT_DATE > msEnd) {
                     msEnd = new Date(CONFIG.CURRENT_DATE);
                 }
@@ -141,31 +144,31 @@ function renderTracker(data) {
                 if (msDemand > maxDemandEnd) maxDemandEnd = msDemand;
             });
 
-            // --- Solid Progress Logic (FIXED) ---
+            // 2. Calculate Visual Progress Date (Solid Bar)
+            // This determines where the solid fill stops.
             let pVisualDate = new Date(pStart);
+            
             if (p.milestones.length > 0) {
                 for (let i = 0; i < p.milestones.length; i++) {
                     const ms = p.milestones[i];
                     const msStart = new Date(ms.revised_start_date);
                     let msEnd = new Date(ms.revised_end_date);
                     
-                    // Logic for Calculation Context
-                    if (!ms.actual_completion_date && CONFIG.CURRENT_DATE > msEnd) {
-                        msEnd = new Date(CONFIG.CURRENT_DATE);
-                    }
+                    // CHANGE: We do NOT extend msEnd to Today here.
+                    // We want to calculate % based on the Workload (Revised Plan), not Time Wasted.
+                    // This ensures 60% means "60% of the work", putting the bar at March 5th, not August.
 
                     if (ms.status_progress === 1.0) {
-                        // FIX: If task is Done, use Actual Date. 
-                        // If no actual date (data error?), fallback to revised end.
-                        // This prevents the bar from shrinking back to planned date if finished late.
+                        // If done, use Actual Date. If Actual Date missing (data error), fallback to Revised End.
                         let effectiveDoneDate = ms.actual_completion_date ? new Date(ms.actual_completion_date) : msEnd;
-                        
                         if (effectiveDoneDate > pVisualDate) {
                             pVisualDate = effectiveDoneDate;
                         }
                     } else if (ms.status_progress > 0) {
+                        // In Progress: Calculate days based on PLANNED duration
                         const duration = Math.max(1, getDaysDiff(msStart, msEnd));
                         const doneDays = Math.round(duration * ms.status_progress);
+                        
                         const partialDate = new Date(msStart);
                         partialDate.setDate(partialDate.getDate() + doneDays);
                         
@@ -179,6 +182,7 @@ function renderTracker(data) {
                     }
                 }
             }
+            // Group Progress is the MINIMUM of its projects (Bottleneck)
             if (!minProgressDate || pVisualDate < minProgressDate) minProgressDate = pVisualDate;
 
             const code = p._computedStatus.code;
@@ -186,7 +190,7 @@ function renderTracker(data) {
             totalProjects++;
         });
 
-        // Group Visuals HTML
+        // --- Generate Group HTML ---
         let ghostBarHtml = '';
         if (minStart && maxEnd) {
             const gLeft = getDaysDiff(CONFIG.TRACKER_START_DATE, minStart) * pixelsPerDay;
@@ -195,7 +199,7 @@ function renderTracker(data) {
             
             if (minProgressDate && minProgressDate > minStart) {
                 fillWidth = Math.max(0, getDaysDiff(minStart, minProgressDate) * pixelsPerDay);
-                // Cap fill width at container width
+                // Cap fill width (in case visual date > max end for some reason)
                 if (fillWidth > gWidth) fillWidth = gWidth;
                 dateLabel = minProgressDate.toLocaleString('default', { month: 'short', day: 'numeric' });
             }
@@ -225,7 +229,6 @@ function renderTracker(data) {
         const isExpanded = (currentFilter !== 'ALL') ? true : group.is_expanded;
         const toggleIcon = isExpanded ? '<i class="bi bi-chevron-down"></i>' : '<i class="bi bi-chevron-right"></i>';
 
-        // Group Row HTML
         htmlBuffer += `
             <div class="group-row" data-g-idx="${gIndex}">
                 <div class="group-name-label">
