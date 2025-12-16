@@ -41,30 +41,46 @@ function reviseProjectData(originalData) {
     return revisedData;
 }
 
-// 2. Single Project Status Calculation
+// 2. Single Project Status Calculation (Fixed Logic)
 function calculateSingleProjectStatus(project) {
     if (!project.milestones || project.milestones.length === 0) {
         return { code: 'NO_DATA', label: "No Data", class: "bg-secondary", priority: 0 };
     }
 
     const lastMs = project.milestones[project.milestones.length - 1];
-    const revisedEnd = new Date(lastMs.revised_end_date); 
+    
+    // Original Planned End & Demand Date
     const originalPlan = new Date(lastMs.planned_end);
     const demandDate = new Date(lastMs.demand_due_date || lastMs.planned_end);
 
-    const isInternalDelayed = revisedEnd > originalPlan;
-    const isExternalRisk = revisedEnd > demandDate;
+    // Determine the "Effective" End Date
+    // Start with the revised schedule
+    let effectiveEnd = new Date(lastMs.revised_end_date);
+
+    // FIX: If the last task is NOT finished, and Today is later than the scheduled end,
+    // the project is effectively delayed until at least Today.
+    if (lastMs.status_progress < 1.0 && CONFIG.CURRENT_DATE > effectiveEnd) {
+        effectiveEnd = new Date(CONFIG.CURRENT_DATE);
+    }
+
+    // Now compare the Effective End against targets
+    const isInternalDelayed = effectiveEnd > originalPlan;
+    const isExternalRisk = effectiveEnd > demandDate;
 
     if (isExternalRisk) {
         if (isInternalDelayed) {
+            // Late vs Plan AND Late vs Demand = Critical
             return { code: 'CRITICAL', label: "Critical", class: "bg-critical", priority: 4 }; 
         } else {
+            // On time vs Plan, but Late vs Demand (Plan was bad)
             return { code: 'PLAN_FAIL', label: "Plan Fail", class: "bg-danger", priority: 3 };
         }
     } else {
         if (isInternalDelayed) {
+            // Late vs Plan, but OK vs Demand
             return { code: 'BUFFER_USED', label: "Buffer Used", class: "bg-warning", priority: 2 };
         } else {
+            // All Good
             return { code: 'EXCELLENT', label: "Excellent", class: "bg-success", priority: 1 };
         }
     }
