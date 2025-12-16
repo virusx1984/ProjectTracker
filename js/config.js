@@ -25,7 +25,7 @@ let currentRevisedData = null;
 let currentProcessedStats = null; 
 
 // --- Data Source (Source of Truth) ---
-const rawTrackerData = {
+let rawTrackerData = {
     "tracker_title": "Enterprise IT Roadmap 2025 (Dashboard)",
     "groups": [
         {

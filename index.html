@@ -19,6 +19,7 @@
     <script src="js/core.js"></script>
     <script src="js/render.js"></script>
     <script src="js/modals.js"></script>
+    <script src="js/data.js"></script>
     <script src="js/app.js"></script>
 
 </head>
@@ -56,6 +57,13 @@
                         Zoom In <i class="bi bi-plus"></i>
                     </button>
                 </div>
+
+                <div class="btn-group me-3" role="group">
+                    <button type="button" class="btn btn-outline-dark btn-sm" id="btn-open-data">
+                        <i class="bi bi-database-fill-gear"></i> Data
+                    </button>
+                </div>
+                
             </div>
         </div>
 
@@ -168,15 +176,20 @@
                             </div>
                             <div class="row align-items-center">
                                 <div class="col-3">
-                                    <label class="form-label fw-bold mb-0 text-secondary" style="font-size:12px;">Completion</label>
+                                    <label class="form-label fw-bold mb-0 text-secondary"
+                                        style="font-size:12px;">Completion</label>
                                 </div>
-                                <div class="col-5"> <input type="date" class="form-control form-control-sm" id="edit-actual-date">
+                                <div class="col-5"> <input type="date" class="form-control form-control-sm"
+                                        id="edit-actual-date">
                                 </div>
-                                <div class="col-4 text-end"> <div class="btn-group btn-group-sm" role="group">
-                                        <button type="button" class="btn btn-outline-secondary" id="btn-clear-date" title="Clear Date">
+                                <div class="col-4 text-end">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button" class="btn btn-outline-secondary" id="btn-clear-date"
+                                            title="Clear Date">
                                             <i class="bi bi-x-lg"></i>
                                         </button>
-                                        <button type="button" class="btn btn-outline-primary" id="btn-set-today">Set Today</button>
+                                        <button type="button" class="btn btn-outline-primary" id="btn-set-today">Set
+                                            Today</button>
                                     </div>
                                 </div>
                             </div>
@@ -270,8 +283,70 @@
         </div>
     </div>
 
-    
 
+    <div class="modal fade" id="dataSettingsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-hdd-network"></i> Data Management</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+
+                    <ul class="nav nav-tabs mb-3" id="dataTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="export-tab" data-bs-toggle="tab"
+                                data-bs-target="#export-pane" type="button">Export (Backup)</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="import-tab" data-bs-toggle="tab" data-bs-target="#import-pane"
+                                type="button">Import (Restore)</button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
+
+                        <div class="tab-pane fade show active" id="export-pane">
+                            <div class="alert alert-info small py-2">
+                                <i class="bi bi-info-circle"></i> Save current project state to a JSON file.
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Current Data Summary</label>
+                                <div class="form-control-plaintext form-control-sm" id="export-summary">-</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Filename</label>
+                                <input type="text" class="form-control" id="export-filename"
+                                    value="tracker_backup.json">
+                            </div>
+                            <div class="d-grid">
+                                <button class="btn btn-primary" id="btn-download-json">
+                                    <i class="bi bi-download"></i> Download JSON
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="import-pane">
+                            <div class="alert alert-warning small py-2">
+                                <i class="bi bi-exclamation-triangle"></i> <strong>Warning:</strong> Importing will
+                                overwrite all current data.
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Select Backup File</label>
+                                <input class="form-control" type="file" id="import-file-input" accept=".json">
+                            </div>
+                            <div class="d-grid">
+                                <button class="btn btn-danger" id="btn-import-json">
+                                    <i class="bi bi-upload"></i> Load & Overwrite
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
 </body>
 

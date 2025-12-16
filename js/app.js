@@ -39,6 +39,7 @@ $(document).ready(function () {
     // 2. Initialize Modals
     initEditHandlers();
     initProjectStructureHandlers();
+    initDataManager();
     
     // 3. Enable Dragging
     makeModalDraggable('#editMilestoneModal');
