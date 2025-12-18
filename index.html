@@ -328,20 +328,24 @@
 
                         <div class="tab-pane fade" id="import-pane">
                             <div class="alert alert-warning small py-2">
-                                <i class="bi bi-exclamation-triangle"></i> <strong>Warning:</strong> Importing will
-                                overwrite all current data.
+                                <i class="bi bi-exclamation-triangle"></i> <strong>Warning:</strong> Importing will overwrite all current data.
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label small fw-bold">Select Backup File</label>
-                                <input class="form-control" type="file" id="import-file-input" accept=".json">
+                            
+                            <div id="import-drop-zone" class="upload-drop-zone mb-3">
+                                <i class="bi bi-cloud-arrow-up display-4 text-secondary"></i>
+                                <p class="mb-0 fw-bold text-dark mt-2">Drag & Drop JSON file here</p>
+                                <div class="small text-secondary">or click to browse</div>
+                                <input type="file" id="import-file-input" accept=".json" style="display: none;">
                             </div>
+
+                            <div id="import-file-name" class="text-center text-success fw-bold small mb-3" style="min-height: 20px;"></div>
+
                             <div class="d-grid">
-                                <button class="btn btn-danger" id="btn-import-json">
+                                <button class="btn btn-danger" id="btn-import-json" disabled>
                                     <i class="bi bi-upload"></i> Load & Overwrite
                                 </button>
                             </div>
                         </div>
-
                     </div>
                 </div>
             </div>
