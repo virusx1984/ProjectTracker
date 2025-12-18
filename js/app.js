@@ -43,7 +43,7 @@ $(document).ready(function () {
     
     // 3. Enable Dragging
     makeModalDraggable('#editMilestoneModal');
-    // makeModalDraggable('#editProjectStructureModal'); // Optional for table view
+    makeModalDraggable('#editProjectStructureModal'); // Optional for table view
 
     // 4. Initial Run
     runPipeline();
