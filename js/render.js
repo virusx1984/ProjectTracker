@@ -120,12 +120,63 @@ function renderTracker(data) {
     }
     $headerTicks.css('min-width', totalTimelineWidth + 'px');
 
-    // Past Zone & Today Marker
-    const todayOffsetDays = getDaysDiff(CONFIG.TRACKER_START_DATE, CONFIG.CURRENT_DATE);
+    // --- Past Zone & Today Marker (UI Upgrade) ---
+    // CHANGE: Added (+ 1) to align marker to the end of the day (visually connecting to tomorrow)
+    const todayOffsetDays = getDaysDiff(CONFIG.TRACKER_START_DATE, CONFIG.CURRENT_DATE) + 1;
+
     if (todayOffsetDays >= 0) {
         const todayLeft = todayOffsetDays * pixelsPerDay;
         const sidebarWidth = $('.header-corner-placeholder').outerWidth() || 220;
-        $headerTicks.append(`<div class="today-header-marker" style="left: ${todayLeft}px;"><span class="today-label">Today</span></div>`);
+        
+        // 1. Format Date (e.g., Thursday, January 1, 2026)
+        const dateStr = CONFIG.CURRENT_DATE.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric', 
+            weekday: 'long' 
+        });
+
+        // 2. Design Fancy Popup Content (HTML)
+        // Using Bootstrap classes to create a card-like effect
+        const popupContent = `
+            <div class="text-center p-1">
+                <div class="text-primary fw-bold mb-1" style="font-size: 1.1em;">${dateStr}</div>
+                <div class="d-flex justify-content-center align-items-center gap-2 mt-2">
+                    <span class="badge bg-primary">Today</span>
+                    <span class="text-muted small" style="font-size: 0.8em;">Timeline Anchor</span>
+                </div>
+                <div class="mt-2 pt-2 border-top text-muted" style="font-size: 0.75rem;">
+                    <i class="bi bi-clock"></i> End-of-day cutoff (24:00)
+                </div>
+            </div>
+        `;
+
+        // 3. Render Header Marker (Enable Popover)
+        // We append the element first, then manually initialize the Popover.
+        // This is necessary because $headerTicks is separate from $container.
+        const markerHtml = `
+            <div class="today-header-marker" 
+                 style="left: ${todayLeft}px; cursor: help;">
+                <span class="today-label">Today</span>
+            </div>
+        `;
+        
+        $headerTicks.append(markerHtml);
+
+        // --- FIX: Explicitly Initialize Popover ---
+        // Locate the newly created element and activate Bootstrap Popover on it immediately
+        const markerEl = $headerTicks.find('.today-header-marker')[0];
+        if (markerEl) {
+            new bootstrap.Popover(markerEl, {
+                trigger: 'hover focus',
+                html: true,
+                placement: 'bottom',
+                content: popupContent, // Pass the HTML string directly here
+                title: '' // Ensure no default browser tooltip appears
+            });
+        }
+
+        // 4. Render the gray "Past Zone" overlay
         $container.append(`<div class="past-time-zone" style="width: ${todayLeft + sidebarWidth}px;"></div>`);
     }
 
