@@ -300,7 +300,11 @@ body {
     font-size: 11px;
     display: flex;
     align-items: center;
-    padding: 0 8px;
+    
+    /* CHANGED: Remove padding and min-width to allow pixel-perfect tiny bars */
+    padding: 0 !important; 
+    min-width: 0 !important;
+    
     overflow: hidden;
     white-space: nowrap;
     cursor: pointer;

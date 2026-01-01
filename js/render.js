@@ -286,11 +286,20 @@ function renderTracker(data) {
                 let currentDemandAnchor = project.start_date;
                 // ... inside renderTracker, inside project.milestones.forEach ...
 
+                // ... inside renderTracker function ...
+
                 project.milestones.forEach((ms, mIndex) => {
-                    // 1. Demand Bar (Unchanged)
+                    // 1. Demand Bar
+                    // REMOVE Math.max(..., 2). Trust the pure math for alignment.
                     const demandEndDate = ms.demand_due_date || ms.planned_end;
                     const demandLeft = getDaysDiff(CONFIG.TRACKER_START_DATE, currentDemandAnchor) * pixelsPerDay;
-                    const demandWidth = Math.max(getDaysDiff(currentDemandAnchor, demandEndDate) * pixelsPerDay, 2);
+                    const demandDiff = getDaysDiff(currentDemandAnchor, demandEndDate);
+                    
+                    // Inclusive Width: (Diff + 1) * px
+                    // We use Math.max(..., 0.5) just to ensure it's barely visible if zoom is tiny, 
+                    // but NOT 2px which breaks alignment.
+                    const demandWidth = (demandDiff + 1) * pixelsPerDay;
+                    
                     htmlBuffer += `<div class="gantt-bar demand-bar clickable" style="left: ${demandLeft}px; width: ${demandWidth}px; background-color: ${ms.color};" data-g-idx="${gIndex}" data-p-idx="${pIndex}" data-m-idx="${mIndex}" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-placement="top" data-bs-content="Demand: ${ms.name}<br>Due: ${demandEndDate}"></div>`;
 
                     // 2. Prepare Dates
@@ -298,33 +307,11 @@ function renderTracker(data) {
                     const revisedEnd = ms.revised_end_date;
                     const actualDate = ms.actual_completion_date;
                     
-                    // 3. Logic: Determine the "Solid Bar" Cutoff Date
-                    let progressCutoffDate = new Date(revisedStart); // Default to start (0%)
-
-                    if (ms.status_progress === 1.0) {
-                        // Case A: 100% Completed
-                        // Stop at Actual Date (if exists) or Revised End
-                        progressCutoffDate = actualDate ? new Date(actualDate) : new Date(revisedEnd);
-                    } else if (ms.status_progress > 0) {
-                        // Case B: In Progress (The "Workload Mapping" Logic)
-                        // Formula: Start + (PlannedDuration * %)
-                        const totalDuration = getDaysDiff(revisedStart, revisedEnd);
-                        const doneDays = totalDuration * ms.status_progress;
-                        
-                        progressCutoffDate = new Date(revisedStart);
-                        progressCutoffDate.setDate(progressCutoffDate.getDate() + Math.round(doneDays));
-                        
-                        // Safety: Don't exceed revisedEnd in this specific visualization context 
-                        // (unless we want to show overburn, but usually solid bar stays within plan)
-                        if (progressCutoffDate > new Date(revisedEnd)) progressCutoffDate = new Date(revisedEnd);
-                    }
-
-                    // 4. Calculate Ghost/Tail Dimensions
+                    // 3. Determine Solid Bar End
                     let solidBarEnd = revisedEnd; 
                     let tailType = null, tailStart = null, tailEnd = null;
 
                     if (actualDate) {
-                        // Finished Logic
                         if (new Date(actualDate) > new Date(revisedEnd)) { 
                             solidBarEnd = revisedEnd; 
                             tailType = 'late'; tailStart = revisedEnd; tailEnd = actualDate; 
@@ -335,26 +322,23 @@ function renderTracker(data) {
                             solidBarEnd = actualDate; 
                         }
                     } else if (CONFIG.CURRENT_DATE > new Date(revisedEnd)) {
-                        // Overdue Logic
                         solidBarEnd = revisedEnd; 
                         tailType = 'late'; tailStart = revisedEnd; tailEnd = CONFIG.CURRENT_DATE.toISOString().split('T')[0];
                     }
 
-                    // 5. Render The Plan Bar (Container)
+                    // 4. Render The Plan Bar (Container)
                     const planLeft = getDaysDiff(CONFIG.TRACKER_START_DATE, revisedStart) * pixelsPerDay;
-                    // The container always spans to the "Solid Bar End" (Plan or Actual Cutoff)
-                    const planWidth = Math.max(getDaysDiff(revisedStart, solidBarEnd) * pixelsPerDay, 2);
+                    const planDays = getDaysDiff(revisedStart, solidBarEnd) + 1;
                     
-                    // 6. Render The Progress Fill (Calculated by PIXELS now, not %)
-                    // We calculate width from Start to the calculated 'progressCutoffDate'
-                    let progressPixelWidth = 0;
-                    if (ms.status_progress > 0) {
-                        progressPixelWidth = getDaysDiff(revisedStart, progressCutoffDate) * pixelsPerDay;
-                        // Clamp: Cannot be wider than the container
-                        if (progressPixelWidth > planWidth) progressPixelWidth = planWidth;
-                    }
+                    // REMOVE Math.max(..., 2)
+                    const planWidth = planDays * pixelsPerDay;
+                    
+                    // 5. Render The Progress Fill
+                    let progressPct = Math.round(ms.status_progress * 100);
+                    let progressStyleWidth = `${progressPct}%`;
+                    if (ms.status_progress > 0 && planWidth < 5) progressStyleWidth = '100%';
 
-                    const progressPct = Math.round(ms.status_progress * 100);
+                    // 6. Popover & Inner Content
                     const statusInfo = { isOverdue: !actualDate && CONFIG.CURRENT_DATE > new Date(revisedEnd) };
                     if (statusInfo.isOverdue) statusInfo.extraInfo = `🔥 Overdue: ${Math.floor(getDaysDiff(revisedEnd, CONFIG.CURRENT_DATE))} days`;
                     else if (tailType === 'late') statusInfo.extraInfo = `⚠️ Late by ${Math.floor(getDaysDiff(revisedEnd, actualDate))} days`;
@@ -362,38 +346,44 @@ function renderTracker(data) {
 
                     const popContent = createPopoverContent(ms, revisedStart, solidBarEnd, statusInfo).replace(/"/g, '&quot;');
                     
-                    // Display Text inside bar
                     let innerContent = (planWidth > 60) ? `<div class="plan-bar-content"><span class="plan-name">${ms.name}</span><span class="plan-pct">${progressPct}%</span></div>` : '';
                     let animClass = (ms.status_progress > 0 && ms.status_progress < 1.0) ? 'active-anim' : '';
 
-                    // CHANGED: style="width: ${progressPixelWidth}px" (Was percentage)
                     htmlBuffer += `
                         <div class="gantt-bar plan-bar clickable" 
                              style="left: ${planLeft}px; width: ${planWidth}px; background-color: ${ms.color};" 
                              data-g-idx="${gIndex}" data-p-idx="${pIndex}" data-m-idx="${mIndex}" 
                              data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-placement="top" 
                              data-bs-content="${popContent}">
-                             
-                             <div class="progress-overlay ${animClass}" style="width: ${progressPixelWidth}px"></div>
+                             <div class="progress-overlay ${animClass}" style="width: ${progressStyleWidth}"></div>
                              ${innerContent}
                         </div>`;
 
-                    // 7. Render Tails (Unchanged)
+                    // 7. Render Tails
                     if (tailType) {
-                        const tailLeft = getDaysDiff(CONFIG.TRACKER_START_DATE, tailStart) * pixelsPerDay;
-                        const tailWidth = Math.max(getDaysDiff(tailStart, tailEnd) * pixelsPerDay, 2);
+                        const tailLeft = planLeft + planWidth; 
+                        const tailDiffDays = Math.abs(getDaysDiff(tailStart, tailEnd));
+                        
+                        // REMOVE Math.max(..., 2). Precision is key here.
+                        const tailWidth = tailDiffDays * pixelsPerDay;
+                        
                         const tailClass = tailType === 'late' ? 'gantt-tail-delay' : 'gantt-tail-early';
                         const isFinished = !!actualDate;
-                        const diffDays = Math.abs(Math.round(getDaysDiff(revisedEnd, isFinished ? actualDate : tailEnd)));
                         const displayActual = isFinished ? actualDate : `<span class="text-danger">In Progress (Today)</span>`;
+                        
                         const tailPopover = tailType === 'late' ? 
-                            `<div class="popover-body-content"><div class="mb-1"><strong>⚠️ Delay: ${ms.name}</strong></div><div class="text-danger mb-2">${isFinished ? 'Finished' : 'Overdue by'} ${diffDays} days late</div><div style="border-top:1px solid #eee; padding-top:4px; font-size:11px;"><div>Target End: <b>${revisedEnd}</b></div><div>Actual End: <b>${displayActual}</b></div></div></div>` :
-                            `<div class="popover-body-content"><div class="mb-1"><strong>✅ Saved: ${ms.name}</strong></div><div class="text-success mb-2">Finished ${diffDays} days early</div><div style="border-top:1px solid #eee; padding-top:4px; font-size:11px;"><div>Target End: <b>${revisedEnd}</b></div><div>Actual End: <b>${displayActual}</b></div></div></div>`;
+                            `<div class="popover-body-content"><div class="mb-1"><strong>⚠️ Delay: ${ms.name}</strong></div><div class="text-danger mb-2">${isFinished ? 'Finished' : 'Overdue by'} ${tailDiffDays} days late</div><div style="border-top:1px solid #eee; padding-top:4px; font-size:11px;"><div>Target End: <b>${revisedEnd}</b></div><div>Actual End: <b>${displayActual}</b></div></div></div>` :
+                            `<div class="popover-body-content"><div class="mb-1"><strong>✅ Saved: ${ms.name}</strong></div><div class="text-success mb-2">Finished ${tailDiffDays} days early</div><div style="border-top:1px solid #eee; padding-top:4px; font-size:11px;"><div>Target End: <b>${revisedEnd}</b></div><div>Actual End: <b>${displayActual}</b></div></div></div>`;
                         
                         htmlBuffer += `<div class="gantt-bar ${tailClass} clickable" style="left: ${tailLeft}px; width: ${tailWidth}px;" data-g-idx="${gIndex}" data-p-idx="${pIndex}" data-m-idx="${mIndex}" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-content="${tailPopover.replace(/"/g, '&quot;')}"></div>`;
                     }
-                    currentDemandAnchor = demandEndDate;
+
+                    // Next Anchor (+1 Day logic)
+                    let nextAnchorDate = new Date(demandEndDate);
+                    nextAnchorDate.setDate(nextAnchorDate.getDate() + 1);
+                    currentDemandAnchor = nextAnchorDate;
                 });
+
                 htmlBuffer += `</div></div>`;
             });
         }

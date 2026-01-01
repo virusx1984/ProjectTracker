@@ -6,16 +6,23 @@ function reviseProjectData(originalData) {
     
     revisedData.groups.forEach(group => {
         group.projects.forEach(project => {
+            // Initialize cursor at Project Start Date
             let chainCursor = new Date(project.start_date);
             let previousOriginalPlanEnd = new Date(project.start_date);
 
-            project.milestones.forEach(ms => {
+            project.milestones.forEach((ms, index) => {
                 const originalPlanEnd = new Date(ms.planned_end);
-                // Calculate original planned duration
+                
+                // Calculate original planned duration (Plan End - Previous Plan End)
+                // Ensure at least 1 day duration
                 const durationDays = Math.max(1, getDaysDiff(previousOriginalPlanEnd, originalPlanEnd));
 
-                // Apply to current cursor
+                // A. Determine Revised Start Date
+                // The cursor is already positioned correctly (either Project Start OR PrevEnd + 1)
                 const revisedStart = new Date(chainCursor);
+                
+                // B. Determine Revised End Date (Start + Duration)
+                // Note: This calculates the date. render.js handles the visual "inclusive" width.
                 const revisedEnd = addDays(revisedStart, durationDays);
 
                 // Update properties
@@ -23,17 +30,27 @@ function reviseProjectData(originalData) {
                 ms.revised_end_date = revisedEnd.toISOString().split('T')[0];
                 ms.duration_days = Math.floor(durationDays);
 
-                // Update Cursor for next task
+                // C. Update Cursor for the NEXT task
+                let effectiveEndForChaining;
+
                 if (ms.actual_completion_date) {
-                    chainCursor = new Date(ms.actual_completion_date);
+                    // If finished, next task follows Actual End
+                    effectiveEndForChaining = new Date(ms.actual_completion_date);
                 } else {
-                    // If overdue, push out; otherwise keep plan
+                    // If overdue, next task is pushed by Today; otherwise follows Revised Plan
                     if (CONFIG.CURRENT_DATE > revisedEnd) {
-                        chainCursor = new Date(CONFIG.CURRENT_DATE);
+                        effectiveEndForChaining = new Date(CONFIG.CURRENT_DATE);
                     } else {
-                        chainCursor = new Date(revisedEnd);
+                        effectiveEndForChaining = new Date(revisedEnd);
                     }
                 }
+
+                // CRITICAL FIX: "Finish-to-Start" Logic
+                // The NEXT task must start 1 day AFTER this task ends to avoid overlap.
+                chainCursor = new Date(effectiveEndForChaining);
+                chainCursor.setDate(chainCursor.getDate() + 1);
+
+                // Update baseline for next iteration's duration calculation
                 previousOriginalPlanEnd = originalPlanEnd;
             });
         });
