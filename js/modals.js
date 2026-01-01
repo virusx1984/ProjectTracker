@@ -123,7 +123,8 @@ function initEditHandlers() {
     });
 }
 
-// 2. Project Structure Handler (Sequencer)
+
+// [MODIFIED] Project Structure Handler with "Position Order" Logic
 function initProjectStructureHandlers() {
     const modalEl = document.getElementById('editProjectStructureModal');
     const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
@@ -131,13 +132,75 @@ function initProjectStructureHandlers() {
     let tempMilestones = []; 
     let sortableInstance = null;
 
-    // --- [NEW] Dynamically Inject "Delete Project" Button ---
-    // We check if it exists first to avoid duplicates
+    // Inject "Delete" button if missing
     const $modalFooter = $(modalEl).find('.modal-footer');
     if ($modalFooter.find('#btn-delete-project').length === 0) {
-        // 'me-auto' pushes it to the left side (Bootstrap utility)
         $modalFooter.prepend('<button type="button" class="btn btn-danger me-auto" id="btn-delete-project"><i class="bi bi-trash"></i> Delete Project</button>');
     }
+
+    // [NEW] Inject "Parent Group" AND "Display Order" Selects
+    const $modalBody = $(modalEl).find('.modal-body');
+    if ($('#struct-group-select').length === 0) {
+        $modalBody.find('#struct-proj-name').parent().after(`
+            <div class="row mb-3">
+                <div class="col-8">
+                    <label class="form-label fw-bold small text-muted">Parent Group</label>
+                    <select class="form-select form-select-sm" id="struct-group-select"></select>
+                    <input type="text" class="form-control form-control-sm mt-1 d-none" id="struct-new-group-name" placeholder="Enter new group name...">
+                </div>
+                <div class="col-4">
+                    <label class="form-label fw-bold small text-muted">Display Order</label>
+                    <select class="form-select form-select-sm" id="struct-order-select"></select>
+                </div>
+            </div>
+        `);
+    }
+
+    // Helper: Populate Order Select based on selected Group
+    function updateOrderSelect(targetGroupIdx, currentPIdx = -1) {
+        const $orderSelect = $('#struct-order-select');
+        $orderSelect.empty();
+        
+        let count = 0;
+        if (targetGroupIdx === '__NEW__') {
+            count = 0; // New group has 0 existing projects, so we will become #1
+        } else {
+            count = rawTrackerData.groups[targetGroupIdx].projects.length;
+        }
+
+        // If we are editing within the same group, the count includes 'self', so valid positions are 1..count
+        // If we are moving to a different group, valid positions are 1..(count + 1)
+        
+        // Simplified Logic: Just show 1 to (Count or Count+1)
+        // If changing group, we are adding a NEW item to that group effectively.
+        const originalGIdx = parseInt($('#struct-g-idx').val());
+        const isSameGroup = (targetGroupIdx == originalGIdx); // loose compare for string/int
+        
+        const maxPos = isSameGroup ? count : count + 1;
+        
+        for (let i = 1; i <= maxPos; i++) {
+            $orderSelect.append(`<option value="${i - 1}">Position ${i}${i===maxPos ? ' (Last)' : ''}</option>`);
+        }
+
+        // Set default selection
+        if (isSameGroup && currentPIdx !== -1) {
+            $orderSelect.val(currentPIdx);
+        } else {
+            // Default to last
+            $orderSelect.val(maxPos - 1);
+        }
+    }
+
+    // Event: Toggle New Group Input & Update Order
+    $('#struct-group-select').change(function() {
+        const val = $(this).val();
+        if (val === '__NEW__') {
+            $('#struct-new-group-name').removeClass('d-none').focus();
+        } else {
+            $('#struct-new-group-name').addClass('d-none');
+        }
+        updateOrderSelect(val);
+    });
 
     $('#projects-container').on('click', '.project-name-clickable', function (e) {
         e.stopPropagation();
@@ -149,6 +212,19 @@ function initProjectStructureHandlers() {
         $('#struct-proj-name').val(project.project_name);
         $('#struct-proj-desc').val(project.description || '');
         $('#struct-proj-start').val(project.start_date);
+
+        // Populate Group Select
+        const $grpSelect = $('#struct-group-select');
+        $grpSelect.empty();
+        rawTrackerData.groups.forEach((g, i) => {
+            const selected = (i === gIdx) ? 'selected' : '';
+            $grpSelect.append(`<option value="${i}" ${selected}>${g.group_name}</option>`);
+        });
+        $grpSelect.append(`<option value="__NEW__" style="color:#0d6efd; font-weight:bold;">✨ + Move to New Group...</option>`);
+        $('#struct-new-group-name').addClass('d-none').val('');
+
+        // Populate Order Select
+        updateOrderSelect(gIdx, pIdx);
 
         tempMilestones = JSON.parse(JSON.stringify(project.milestones));
         let cursorDate = new Date(project.start_date);
@@ -165,22 +241,7 @@ function initProjectStructureHandlers() {
         modal.show();
     });
 
-    // --- [NEW] Delete Project Logic ---
-    $('#btn-delete-project').off('click').on('click', function() {
-        const gIdx = parseInt($('#struct-g-idx').val());
-        const pIdx = parseInt($('#struct-p-idx').val());
-        const projName = $('#struct-proj-name').val();
-
-        if (confirm(`⚠️ Are you sure you want to delete project: "${projName}"?\n\nThis action CANNOT be undone.`)) {
-            // Remove project from data source
-            rawTrackerData.groups[gIdx].projects.splice(pIdx, 1);
-            
-            // Refresh Dashboard
-            runPipeline();
-            modal.hide();
-        }
-    });
-
+    // ... (Keep renderMilestoneList, bindInputs, recalculateSchedule logic EXACTLY as before) ...
     function renderMilestoneList() {
         listContainer.innerHTML = '';
         tempMilestones.forEach((ms, index) => {
@@ -189,39 +250,13 @@ function initProjectStructureHandlers() {
             const lockIcon = isLocked ? '<i class="bi bi-lock-fill text-success"></i>' : '<i class="bi bi-grip-vertical"></i>';
             const deleteBtn = isLocked ? `<button type="button" class="btn btn-sm text-muted" disabled><i class="bi bi-lock"></i></button>` : `<button type="button" class="btn btn-sm text-danger btn-delete-ms" data-idx="${index}"><i class="bi bi-trash"></i></button>`;
             const colorOptions = PREDEFINED_COLORS.map(c => `<option value="${c.code}" style="background-color:${c.code}; color:#fff;" ${c.code === ms.color ? 'selected' : ''}>${c.name}</option>`).join('');
-
-            const html = `
-                <div class="list-group-item milestone-item p-0 ${lockClass}" data-idx="${index}">
-                    <div class="row g-2 align-items-center m-0 py-2">
-                        <div class="col-1 text-center drag-handle">${lockIcon}</div>
-                        <div class="col-1"><select class="form-select form-select-sm ms-color-input p-1 text-center text-white" style="background-color: ${ms.color}; border:none; cursor:pointer;" data-idx="${index}">${colorOptions}</select></div>
-                        <div class="col-4">
-                            <input type="text" class="form-control form-control-sm ms-name-input fw-bold" value="${ms.name}" placeholder="Name" data-idx="${index}">
-                            <input type="text" class="form-control form-control-sm ms-desc-input mt-1 text-muted" style="font-size: 11px;" value="${ms.description || ''}" placeholder="Description (Optional)" data-idx="${index}">
-                        </div>
-                        <div class="col-2"><div class="input-group input-group-sm"><input type="number" class="form-control ms-duration-input" value="${ms._temp_duration}" min="1" data-idx="${index}"><span class="input-group-text">d</span></div></div>
-                        <div class="col-3"><input type="text" class="form-control form-control-sm bg-light border-0 ms-calc-date" readonly tabindex="-1"></div>
-                        <div class="col-1 text-center">${deleteBtn}</div>
-                    </div>
-                </div>
-            `;
+            const html = `<div class="list-group-item milestone-item p-0 ${lockClass}" data-idx="${index}"><div class="row g-2 align-items-center m-0 py-2"><div class="col-1 text-center drag-handle">${lockIcon}</div><div class="col-1"><select class="form-select form-select-sm ms-color-input p-1 text-center text-white" style="background-color: ${ms.color}; border:none; cursor:pointer;" data-idx="${index}">${colorOptions}</select></div><div class="col-4"><input type="text" class="form-control form-control-sm ms-name-input fw-bold" value="${ms.name}" placeholder="Name" data-idx="${index}"><input type="text" class="form-control form-control-sm ms-desc-input mt-1 text-muted" style="font-size: 11px;" value="${ms.description || ''}" placeholder="Description (Optional)" data-idx="${index}"></div><div class="col-2"><div class="input-group input-group-sm"><input type="number" class="form-control ms-duration-input" value="${ms._temp_duration}" min="1" data-idx="${index}"><span class="input-group-text">d</span></div></div><div class="col-3"><input type="text" class="form-control form-control-sm bg-light border-0 ms-calc-date" readonly tabindex="-1"></div><div class="col-1 text-center">${deleteBtn}</div></div></div>`;
             listContainer.insertAdjacentHTML('beforeend', html);
         });
-
         if (sortableInstance) sortableInstance.destroy();
-        sortableInstance = new Sortable(listContainer, {
-            handle: '.drag-handle', animation: 150, filter: '.locked',
-            onMove: function (evt) { return !evt.related.classList.contains('locked'); },
-            onEnd: function (evt) {
-                const newOrder = [];
-                $(listContainer).find('.milestone-item').each(function() { newOrder.push(tempMilestones[$(this).data('idx')]); });
-                tempMilestones = newOrder;
-                renderMilestoneList(); recalculateSchedule();
-            }
-        });
+        sortableInstance = new Sortable(listContainer, { handle: '.drag-handle', animation: 150, filter: '.locked', onMove: function (evt) { return !evt.related.classList.contains('locked'); }, onEnd: function (evt) { const newOrder = []; $(listContainer).find('.milestone-item').each(function() { newOrder.push(tempMilestones[$(this).data('idx')]); }); tempMilestones = newOrder; renderMilestoneList(); recalculateSchedule(); } });
         bindInputs();
     }
-
     function bindInputs() {
         $('.ms-duration-input').on('change input', function() { let val = parseInt($(this).val()); if(isNaN(val) || val < 1) val = 1; tempMilestones[$(this).data('idx')]._temp_duration = val; recalculateSchedule(); });
         $('.ms-name-input').on('change input', function() { tempMilestones[$(this).data('idx')].name = $(this).val(); });
@@ -229,42 +264,174 @@ function initProjectStructureHandlers() {
         $('.ms-color-input').on('change', function() { tempMilestones[$(this).data('idx')].color = $(this).val(); $(this).css('background-color', $(this).val()); });
         $('.btn-delete-ms').on('click', function() { tempMilestones.splice($(this).data('idx'), 1); renderMilestoneList(); recalculateSchedule(); });
     }
-
     function recalculateSchedule() {
-        const startVal = $('#struct-proj-start').val();
-        if(!startVal) return;
-        let cursor = new Date(startVal), totalDays = 0;
-        const dateInputs = $('.ms-calc-date');
-        tempMilestones.forEach((ms, i) => {
-            const dur = ms._temp_duration || 1;
-            const endDate = addDays(cursor, dur);
-            $(dateInputs[i]).val(`${endDate.toISOString().split('T')[0]} (End)`);
-            cursor = endDate; totalDays += dur; ms._calc_planned_end = endDate.toISOString().split('T')[0];
-        });
+        const startVal = $('#struct-proj-start').val(); if(!startVal) return; let cursor = new Date(startVal), totalDays = 0; const dateInputs = $('.ms-calc-date');
+        tempMilestones.forEach((ms, i) => { const dur = ms._temp_duration || 1; const endDate = addDays(cursor, dur); $(dateInputs[i]).val(`${endDate.toISOString().split('T')[0]} (End)`); cursor = endDate; totalDays += dur; ms._calc_planned_end = endDate.toISOString().split('T')[0]; });
         $('#struct-total-days').text(totalDays); $('#struct-final-date').text(cursor.toISOString().split('T')[0]);
     }
-
-    $('#btn-add-milestone').click(function() {
-        tempMilestones.push({ name: "New Milestone", description: "", status_progress: 0.0, _temp_duration: 10, _is_locked: false, color: "#0d6efd", demand_due_date: "" });
-        renderMilestoneList(); recalculateSchedule();
-    });
-
+    $('#btn-add-milestone').click(function() { tempMilestones.push({ name: "New Milestone", description: "", status_progress: 0.0, _temp_duration: 10, _is_locked: false, color: "#0d6efd", demand_due_date: "" }); renderMilestoneList(); recalculateSchedule(); });
     $('#struct-proj-start').on('change', function() { recalculateSchedule(); });
+    $('#btn-delete-project').off('click').on('click', function() { const gIdx = parseInt($('#struct-g-idx').val()); const pIdx = parseInt($('#struct-p-idx').val()); const projName = $('#struct-proj-name').val(); if (confirm(`⚠️ Are you sure you want to delete project: "${projName}"?\n\nThis action CANNOT be undone.`)) { rawTrackerData.groups[gIdx].projects.splice(pIdx, 1); runPipeline(); modal.hide(); } });
 
+    // [MODIFIED] Save Logic with Position Order Handling
     $('#btn-save-structure').click(function() {
-        const gIdx = parseInt($('#struct-g-idx').val()), pIdx = parseInt($('#struct-p-idx').val());
+        const currentGIdx = parseInt($('#struct-g-idx').val());
+        const currentPIdx = parseInt($('#struct-p-idx').val());
+        
         if (tempMilestones.length === 0) { alert("Project must have at least one milestone."); return; }
-        const project = rawTrackerData.groups[gIdx].projects[pIdx];
-        project.project_name = $('#struct-proj-name').val();
-        project.description = $('#struct-proj-desc').val();
-        project.start_date = $('#struct-proj-start').val();
-        project.milestones = tempMilestones.map(ms => {
-            return {
+        
+        // 1. Determine Target Group
+        const targetGroupVal = $('#struct-group-select').val();
+        let finalGroupIndex = currentGIdx;
+        let isMoveGroup = false;
+
+        if (targetGroupVal === '__NEW__') {
+            const newName = $('#struct-new-group-name').val().trim();
+            if (!newName) { alert("Please enter a name for the new group."); return; }
+            const newGroup = { group_name: newName, is_expanded: true, projects: [] };
+            rawTrackerData.groups.push(newGroup);
+            finalGroupIndex = rawTrackerData.groups.length - 1;
+            isMoveGroup = true;
+        } else {
+            finalGroupIndex = parseInt(targetGroupVal);
+            if (finalGroupIndex !== currentGIdx) isMoveGroup = true;
+        }
+
+        // 2. Determine Target Order Index
+        const targetOrderIdx = parseInt($('#struct-order-select').val());
+
+        // 3. Extract Project Data
+        const updatedProject = {
+            project_id: rawTrackerData.groups[currentGIdx].projects[currentPIdx].project_id, 
+            project_name: $('#struct-proj-name').val(),
+            description: $('#struct-proj-desc').val(),
+            start_date: $('#struct-proj-start').val(),
+            milestones: tempMilestones.map(ms => ({
                 name: ms.name, description: ms.description, status_progress: ms.status_progress,
                 planned_end: ms._calc_planned_end, actual_completion_date: ms.actual_completion_date || null,
                 demand_due_date: ms.demand_due_date || ms._calc_planned_end, color: ms.color
-            };
-        });
+            }))
+        };
+
+        // 4. Update Data Source (Move Logic)
+        if (isMoveGroup) {
+            // Case A: Moving to different group
+            rawTrackerData.groups[currentGIdx].projects.splice(currentPIdx, 1); // Remove from old
+            rawTrackerData.groups[finalGroupIndex].projects.splice(targetOrderIdx, 0, updatedProject); // Insert at specific pos in new
+            rawTrackerData.groups[finalGroupIndex].is_expanded = true;
+        } else {
+            // Case B: Same Group (Possible Reorder)
+            if (targetOrderIdx === currentPIdx) {
+                // No movement, just update data
+                rawTrackerData.groups[currentGIdx].projects[currentPIdx] = updatedProject;
+            } else {
+                // Reordering within same group
+                rawTrackerData.groups[currentGIdx].projects.splice(currentPIdx, 1); // Remove
+                rawTrackerData.groups[currentGIdx].projects.splice(targetOrderIdx, 0, updatedProject); // Insert at new pos
+            }
+        }
+
+        runPipeline();
+        modal.hide();
+    });
+}
+
+// [MODIFIED] 3. Create Project Handler (Updated for New Button Location)
+function initCreateProjectHandler() {
+    // We NO LONGER inject the button here, because it is now rendered by render.js
+    // We ONLY inject the modal if it doesn't exist
+    if ($('#createProjectModal').length === 0) {
+        const modalHtml = `
+            <div class="modal fade" id="createProjectModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Create New Project</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Project Name</label>
+                                <input type="text" class="form-control" id="create-proj-name" placeholder="e.g., Alpha Launch">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Project Group</label>
+                                <select class="form-select" id="create-group-select"></select>
+                                <input type="text" class="form-control mt-2 d-none" id="create-new-group-name" placeholder="Enter new group name...">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Start Date</label>
+                                <input type="date" class="form-control" id="create-proj-start">
+                            </div>
+                            <div id="create-error-msg" class="alert alert-danger d-none py-2 small"></div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" id="btn-confirm-create-project">Create Project</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        $('body').append(modalHtml);
+    }
+
+    const modalEl = document.getElementById('createProjectModal');
+    const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+    const $errorMsg = $('#create-error-msg');
+
+    // Use delegated event binding because the button is re-created by render.js every time
+    $('#dashboard-stats-container').on('click', '#btn-open-create-project', function() {
+        $('#create-proj-name').val('');
+        $('#create-new-group-name').val('').addClass('d-none');
+        $errorMsg.addClass('d-none').text('');
+        const todayStr = new Date().toISOString().split('T')[0];
+        $('#create-proj-start').val(todayStr);
+
+        const $select = $('#create-group-select');
+        $select.empty();
+        if (rawTrackerData.groups && rawTrackerData.groups.length > 0) {
+            rawTrackerData.groups.forEach((g, index) => {
+                $select.append(new Option(g.group_name, index));
+            });
+        }
+        $select.append(new Option('+ Create New Group...', '__NEW__'));
+        modal.show();
+    });
+
+    $('#create-group-select').change(function() {
+        if ($(this).val() === '__NEW__') {
+            $('#create-new-group-name').removeClass('d-none').focus();
+        } else {
+            $('#create-new-group-name').addClass('d-none');
+        }
+    });
+
+    $('#btn-confirm-create-project').click(function() {
+        const name = $('#create-proj-name').val().trim();
+        const start = $('#create-proj-start').val();
+        const groupVal = $('#create-group-select').val();
+        const newGroupName = $('#create-new-group-name').val().trim();
+        
+        if (!name) { $errorMsg.text("Project Name is required.").removeClass('d-none'); return; }
+        if (!start) { $errorMsg.text("Start Date is required.").removeClass('d-none'); return; }
+        if (groupVal === '__NEW__' && !newGroupName) { $errorMsg.text("New Group Name is required.").removeClass('d-none'); return; }
+
+        let targetGroupIndex = -1;
+        if (groupVal === '__NEW__') {
+            const newGroup = { group_name: newGroupName, is_expanded: true, projects: [] };
+            rawTrackerData.groups.push(newGroup);
+            targetGroupIndex = rawTrackerData.groups.length - 1;
+        } else {
+            targetGroupIndex = parseInt(groupVal);
+            rawTrackerData.groups[targetGroupIndex].is_expanded = true;
+        }
+
+        const newId = "PROJ-" + Date.now().toString().slice(-6);
+        const defaultMilestone = { name: "Kickoff", description: "Project initialization", status_progress: 0.0, planned_end: start, actual_completion_date: null, demand_due_date: "", color: "#0d6efd" };
+        const newProject = { project_id: newId, project_name: name, description: "", start_date: start, milestones: [defaultMilestone] };
+
+        rawTrackerData.groups[targetGroupIndex].projects.push(newProject);
         runPipeline();
         modal.hide();
     });
