@@ -259,9 +259,20 @@ function renderTracker(data) {
                 <div class="group-name-label">
                     <div class="status-strip ${grpStatus.class}"></div>
                     <span class="group-toggle-icon">${toggleIcon}</span>
-                    <div class="d-flex flex-column w-100 pe-2">
-                        <div class="d-flex justify-content-between align-items-center"><span>${group.group_name}</span><span class="badge bg-secondary" style="font-size:9px">${matchingProjects.length}</span></div>
-                        <div class="group-health-bar">${healthBarSegments}</div>
+                    
+                    <div class="d-flex flex-column justify-content-center w-100 pe-2" style="overflow: hidden;">
+                        <div class="d-flex align-items-center" style="width: 100%;">
+                            <span class="fw-bold text-truncate me-auto" 
+                                  style="font-size: 13px; color: #333; cursor: help;" 
+                                  data-bs-toggle="popover" 
+                                  data-bs-trigger="hover"
+                                  data-bs-placement="top"
+                                  data-bs-content="${group.group_name}">
+                                ${group.group_name}
+                            </span>
+                            <span class="badge bg-secondary flex-shrink-0 ms-1" style="font-size:9px">${matchingProjects.length}</span>
+                        </div>
+                        <div class="group-health-bar mt-1">${healthBarSegments}</div>
                     </div>
                 </div>
                 <div class="milestone-container" style="min-width: ${totalTimelineWidth}px">${demandStripHtml}${ghostBarHtml}</div>
@@ -281,16 +292,19 @@ function renderTracker(data) {
                     <div class="project-row" data-g-idx="${gIndex}" data-p-idx="${pIndex}">
                         <div class="project-name-label d-flex align-items-center">
                             ${statusStrip}
+                            
                             <div class="d-flex flex-column justify-content-center overflow-hidden flex-grow-1 ps-2">
                                 <div class="fw-bold text-dark text-truncate project-name-clickable" 
                                      data-g-idx="${gIndex}" 
                                      data-p-idx="${pIndex}" 
-                                     style="cursor: pointer;"
-                                     title="Click to Edit Project Structure">
+                                     style="cursor: pointer; font-size: 12px;"
+                                     data-bs-toggle="popover"
+                                     data-bs-trigger="hover"
+                                     data-bs-placement="top" 
+                                     data-bs-content="${project.project_name}">
                                     ${project.project_name}
                                 </div>
-                                <div style="font-size:10px; color:#6c757d; line-height: 1;">ID: ${project.project_id}</div>
-                            </div>
+                                </div>
                         </div>
                         <div class="milestone-container" id="milestones-${project.project_id}" style="min-width: ${totalTimelineWidth}px">
                 `;
