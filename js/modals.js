@@ -131,6 +131,14 @@ function initProjectStructureHandlers() {
     let tempMilestones = []; 
     let sortableInstance = null;
 
+    // --- [NEW] Dynamically Inject "Delete Project" Button ---
+    // We check if it exists first to avoid duplicates
+    const $modalFooter = $(modalEl).find('.modal-footer');
+    if ($modalFooter.find('#btn-delete-project').length === 0) {
+        // 'me-auto' pushes it to the left side (Bootstrap utility)
+        $modalFooter.prepend('<button type="button" class="btn btn-danger me-auto" id="btn-delete-project"><i class="bi bi-trash"></i> Delete Project</button>');
+    }
+
     $('#projects-container').on('click', '.project-name-clickable', function (e) {
         e.stopPropagation();
         const gIdx = $(this).data('g-idx'), pIdx = $(this).data('p-idx');
@@ -155,6 +163,22 @@ function initProjectStructureHandlers() {
         renderMilestoneList();
         recalculateSchedule(); 
         modal.show();
+    });
+
+    // --- [NEW] Delete Project Logic ---
+    $('#btn-delete-project').off('click').on('click', function() {
+        const gIdx = parseInt($('#struct-g-idx').val());
+        const pIdx = parseInt($('#struct-p-idx').val());
+        const projName = $('#struct-proj-name').val();
+
+        if (confirm(`⚠️ Are you sure you want to delete project: "${projName}"?\n\nThis action CANNOT be undone.`)) {
+            // Remove project from data source
+            rawTrackerData.groups[gIdx].projects.splice(pIdx, 1);
+            
+            // Refresh Dashboard
+            runPipeline();
+            modal.hide();
+        }
     });
 
     function renderMilestoneList() {
