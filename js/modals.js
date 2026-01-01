@@ -59,7 +59,12 @@ function initEditHandlers() {
 
     // 2. Clear Date Button
     $('#btn-clear-date').click(function() {
+        // Clear Date
         $('#edit-actual-date').val('');
+        
+        // Reset Progress to 0%
+        $('#edit-progress').val(0);
+        $('#edit-progress-val').text('0%');
     });
 
     $('#btn-save-changes').click(function () {
