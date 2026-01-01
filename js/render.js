@@ -284,27 +284,76 @@ function renderTracker(data) {
                 `;
 
                 let currentDemandAnchor = project.start_date;
+                // ... inside renderTracker, inside project.milestones.forEach ...
+
                 project.milestones.forEach((ms, mIndex) => {
+                    // 1. Demand Bar (Unchanged)
                     const demandEndDate = ms.demand_due_date || ms.planned_end;
                     const demandLeft = getDaysDiff(CONFIG.TRACKER_START_DATE, currentDemandAnchor) * pixelsPerDay;
                     const demandWidth = Math.max(getDaysDiff(currentDemandAnchor, demandEndDate) * pixelsPerDay, 2);
                     htmlBuffer += `<div class="gantt-bar demand-bar clickable" style="left: ${demandLeft}px; width: ${demandWidth}px; background-color: ${ms.color};" data-g-idx="${gIndex}" data-p-idx="${pIndex}" data-m-idx="${mIndex}" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-placement="top" data-bs-content="Demand: ${ms.name}<br>Due: ${demandEndDate}"></div>`;
 
+                    // 2. Prepare Dates
                     const revisedStart = ms.revised_start_date;
                     const revisedEnd = ms.revised_end_date;
                     const actualDate = ms.actual_completion_date;
-                    let solidBarEnd = revisedEnd, tailType = null, tailStart = null, tailEnd = null;
                     
-                    if (actualDate) {
-                        if (new Date(actualDate) > new Date(revisedEnd)) { solidBarEnd = revisedEnd; tailType = 'late'; tailStart = revisedEnd; tailEnd = actualDate; }
-                        else if (new Date(actualDate) < new Date(revisedEnd)) { solidBarEnd = actualDate; tailType = 'early'; tailStart = actualDate; tailEnd = revisedEnd; }
-                        else { solidBarEnd = actualDate; }
-                    } else if (CONFIG.CURRENT_DATE > new Date(revisedEnd)) {
-                        solidBarEnd = revisedEnd; tailType = 'late'; tailStart = revisedEnd; tailEnd = CONFIG.CURRENT_DATE.toISOString().split('T')[0];
+                    // 3. Logic: Determine the "Solid Bar" Cutoff Date
+                    let progressCutoffDate = new Date(revisedStart); // Default to start (0%)
+
+                    if (ms.status_progress === 1.0) {
+                        // Case A: 100% Completed
+                        // Stop at Actual Date (if exists) or Revised End
+                        progressCutoffDate = actualDate ? new Date(actualDate) : new Date(revisedEnd);
+                    } else if (ms.status_progress > 0) {
+                        // Case B: In Progress (The "Workload Mapping" Logic)
+                        // Formula: Start + (PlannedDuration * %)
+                        const totalDuration = getDaysDiff(revisedStart, revisedEnd);
+                        const doneDays = totalDuration * ms.status_progress;
+                        
+                        progressCutoffDate = new Date(revisedStart);
+                        progressCutoffDate.setDate(progressCutoffDate.getDate() + Math.round(doneDays));
+                        
+                        // Safety: Don't exceed revisedEnd in this specific visualization context 
+                        // (unless we want to show overburn, but usually solid bar stays within plan)
+                        if (progressCutoffDate > new Date(revisedEnd)) progressCutoffDate = new Date(revisedEnd);
                     }
 
+                    // 4. Calculate Ghost/Tail Dimensions
+                    let solidBarEnd = revisedEnd; 
+                    let tailType = null, tailStart = null, tailEnd = null;
+
+                    if (actualDate) {
+                        // Finished Logic
+                        if (new Date(actualDate) > new Date(revisedEnd)) { 
+                            solidBarEnd = revisedEnd; 
+                            tailType = 'late'; tailStart = revisedEnd; tailEnd = actualDate; 
+                        } else if (new Date(actualDate) < new Date(revisedEnd)) { 
+                            solidBarEnd = actualDate; 
+                            tailType = 'early'; tailStart = actualDate; tailEnd = revisedEnd; 
+                        } else { 
+                            solidBarEnd = actualDate; 
+                        }
+                    } else if (CONFIG.CURRENT_DATE > new Date(revisedEnd)) {
+                        // Overdue Logic
+                        solidBarEnd = revisedEnd; 
+                        tailType = 'late'; tailStart = revisedEnd; tailEnd = CONFIG.CURRENT_DATE.toISOString().split('T')[0];
+                    }
+
+                    // 5. Render The Plan Bar (Container)
                     const planLeft = getDaysDiff(CONFIG.TRACKER_START_DATE, revisedStart) * pixelsPerDay;
+                    // The container always spans to the "Solid Bar End" (Plan or Actual Cutoff)
                     const planWidth = Math.max(getDaysDiff(revisedStart, solidBarEnd) * pixelsPerDay, 2);
+                    
+                    // 6. Render The Progress Fill (Calculated by PIXELS now, not %)
+                    // We calculate width from Start to the calculated 'progressCutoffDate'
+                    let progressPixelWidth = 0;
+                    if (ms.status_progress > 0) {
+                        progressPixelWidth = getDaysDiff(revisedStart, progressCutoffDate) * pixelsPerDay;
+                        // Clamp: Cannot be wider than the container
+                        if (progressPixelWidth > planWidth) progressPixelWidth = planWidth;
+                    }
+
                     const progressPct = Math.round(ms.status_progress * 100);
                     const statusInfo = { isOverdue: !actualDate && CONFIG.CURRENT_DATE > new Date(revisedEnd) };
                     if (statusInfo.isOverdue) statusInfo.extraInfo = `🔥 Overdue: ${Math.floor(getDaysDiff(revisedEnd, CONFIG.CURRENT_DATE))} days`;
@@ -312,11 +361,24 @@ function renderTracker(data) {
                     else if (tailType === 'early') statusInfo.extraInfo = `✅ Early by ${Math.floor(getDaysDiff(actualDate, revisedEnd))} days`;
 
                     const popContent = createPopoverContent(ms, revisedStart, solidBarEnd, statusInfo).replace(/"/g, '&quot;');
+                    
+                    // Display Text inside bar
                     let innerContent = (planWidth > 60) ? `<div class="plan-bar-content"><span class="plan-name">${ms.name}</span><span class="plan-pct">${progressPct}%</span></div>` : '';
                     let animClass = (ms.status_progress > 0 && ms.status_progress < 1.0) ? 'active-anim' : '';
 
-                    htmlBuffer += `<div class="gantt-bar plan-bar clickable" style="left: ${planLeft}px; width: ${planWidth}px; background-color: ${ms.color};" data-g-idx="${gIndex}" data-p-idx="${pIndex}" data-m-idx="${mIndex}" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-placement="top" data-bs-content="${popContent}"><div class="progress-overlay ${animClass}" style="width: ${progressPct}%"></div>${innerContent}</div>`;
+                    // CHANGED: style="width: ${progressPixelWidth}px" (Was percentage)
+                    htmlBuffer += `
+                        <div class="gantt-bar plan-bar clickable" 
+                             style="left: ${planLeft}px; width: ${planWidth}px; background-color: ${ms.color};" 
+                             data-g-idx="${gIndex}" data-p-idx="${pIndex}" data-m-idx="${mIndex}" 
+                             data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-placement="top" 
+                             data-bs-content="${popContent}">
+                             
+                             <div class="progress-overlay ${animClass}" style="width: ${progressPixelWidth}px"></div>
+                             ${innerContent}
+                        </div>`;
 
+                    // 7. Render Tails (Unchanged)
                     if (tailType) {
                         const tailLeft = getDaysDiff(CONFIG.TRACKER_START_DATE, tailStart) * pixelsPerDay;
                         const tailWidth = Math.max(getDaysDiff(tailStart, tailEnd) * pixelsPerDay, 2);
