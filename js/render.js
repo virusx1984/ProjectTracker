@@ -1,11 +1,28 @@
 // --- UI Rendering Logic ---
 
-// [Modified] Updated signature to accept original and revised dates
+// [Modified] Updated logic to show Actual End Date & Actual Duration when finished
 function createPopoverContent(ms, origStart, origEnd, revStart, revEnd, status) {
     let badgeClass = 'bg-secondary';
     let statusText = 'Pending';
+    
+    // 1. Default Display Values (Revised Plan)
+    let displayEnd = revEnd;
+    let displayDuration = ms.duration_days;
 
-    if (ms.status_progress === 1.0) { badgeClass = 'bg-success'; statusText = 'Done'; } 
+    // 2. Logic: If task is finished (100%), override with Actual Data
+    if (ms.status_progress === 1.0) { 
+        badgeClass = 'bg-success'; 
+        statusText = 'Done'; 
+        
+        // Use Actual Completion Date if available
+        if (ms.actual_completion_date) {
+            displayEnd = ms.actual_completion_date;
+            
+            // Recalculate Duration: (Actual End - Revised Start) + 1 Day (Inclusive)
+            // Example: 2025-09-15 - 2025-09-01 = 14 days diff. +1 = 15 Days duration.
+            displayDuration = getDaysDiff(revStart, displayEnd) + 1;
+        }
+    } 
     else if (status.isOverdue) { badgeClass = 'bg-danger'; statusText = 'Overdue'; } 
     else if (ms.status_progress > 0) { badgeClass = 'bg-primary'; statusText = 'In Progress'; }
 
@@ -26,10 +43,10 @@ function createPopoverContent(ms, origStart, origEnd, revStart, revEnd, status) 
 
             <div class="info-row">
                 <span class="icon">📅</span> 
-                <span><b>Curr: ${revStart} ➝ ${revEnd}</b></span>
+                <span><b>Curr: ${revStart} ➝ ${displayEnd}</b></span>
             </div>
 
-            <div class="info-row"><span class="icon">⏱️</span> <span>Duration: <b>${ms.duration_days} Days</b></span></div>
+            <div class="info-row"><span class="icon">⏱️</span> <span>Duration: <b>${displayDuration} Days</b></span></div>
             <div class="info-row"><span class="icon">📊</span> <span>Progress: <b>${progressPct}%</b></span></div>
             
             ${status.extraInfo ? `<div class="info-row text-danger mt-1 border-top pt-1"><small>${status.extraInfo}</small></div>` : ''}
