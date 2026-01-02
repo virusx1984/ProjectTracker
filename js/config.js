@@ -25,9 +25,16 @@ let currentRevisedData = null;
 let currentProcessedStats = null; 
 
 // --- Data Source (Source of Truth) ---
-let rawTrackerData = {
-    "tracker_title": "Fab 2 Expansion - Q1 2026 Status Update",
-    "groups": [
+// [UPDATED STRUCTURE]
+// 1. 'meta' holds title and version info
+// 2. 'data' holds the array of groups (previously named 'groups')
+var rawTrackerData = {
+    "meta": {
+        "title": "Fab 2 Expansion - Q1 2026 Status Update",
+        "last_updated": "2026-01-02", 
+        "version": "1.0"
+    },
+    "data": [
       {
         "group_id": "GRP-LITHO",
         "group_name": "Lithography (Critical Path)",

@@ -234,7 +234,10 @@ function renderTracker(data) {
     let htmlBuffer = ""; 
     let visibleCount = 0;
 
-    data.groups.forEach((group, gIndex) => {
+    // [UPDATED] Use .data instead of .groups
+    const groupsToRender = data.data || [];
+
+    groupsToRender.forEach((group, gIndex) => {
         // Filter Logic
         const matchingProjects = group.projects.filter(p => currentFilter === 'ALL' || p._computedStatus.code === currentFilter);
         if (currentFilter !== 'ALL' && matchingProjects.length === 0) return;
@@ -495,9 +498,9 @@ function renderTracker(data) {
     });
 
     // 3. Empty State Handling
-    if (visibleCount === 0 && currentFilter !== 'ALL' && data.groups.length > 0) {
+    if (visibleCount === 0 && currentFilter !== 'ALL' && groupsToRender.length > 0) {
         $container.html(`<div class="empty-state"><i class="bi bi-folder2-open display-4 mb-3"></i><h5>No projects found</h5><p>There are no projects matching the "<strong>${currentFilter}</strong>" filter.</p></div>`);
-    } else if (data.groups.length === 0) {
+    } else if (groupsToRender.length === 0) {
          $container.html(`<div class="empty-state">No Data Loaded</div>`);
     } else {
         $container.html(htmlBuffer);
@@ -507,7 +510,8 @@ function renderTracker(data) {
     // Group Expand Toggle
     $('.group-row').click(function() { 
         if (currentFilter === 'ALL') { 
-            currentRevisedData.groups[$(this).data('g-idx')].is_expanded = !currentRevisedData.groups[$(this).data('g-idx')].is_expanded; 
+            // [UPDATED] Use .data instead of .groups
+            currentRevisedData.data[$(this).data('g-idx')].is_expanded = !currentRevisedData.data[$(this).data('g-idx')].is_expanded; 
             renderTracker(currentRevisedData); 
         } 
     });

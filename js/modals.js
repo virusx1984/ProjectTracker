@@ -14,7 +14,9 @@ function initEditHandlers() {
         $errorMsg.addClass('d-none').text('');
 
         const gIdx = $(this).data('g-idx'), pIdx = $(this).data('p-idx'), mIdx = $(this).data('m-idx');
-        const group = currentRevisedData.groups[gIdx];
+        
+        // [UPDATED] Access .data instead of .groups
+        const group = currentRevisedData.data[gIdx];
         const project = group.projects[pIdx];
         const msData = project.milestones[mIdx];
 
@@ -46,23 +48,15 @@ function initEditHandlers() {
     
     // 1. Set Today Button: Sets Date to Today AND Progress to 100%
     $('#btn-set-today').click(function() {
-        // Set Date
-        // Note: Ensure CONFIG.CURRENT_DATE is used if you want simulation time, 
-        // otherwise use new Date() for real system time. Here we use system time for "Today".
         const today = new Date().toISOString().split('T')[0];
         $('#edit-actual-date').val(today);
-
-        // Auto-set Progress to 100%
         $('#edit-progress').val(1.0);
         $('#edit-progress-val').text('100%');
     });
 
     // 2. Clear Date Button
     $('#btn-clear-date').click(function() {
-        // Clear Date
         $('#edit-actual-date').val('');
-        
-        // Reset Progress to 0%
         $('#edit-progress').val(0);
         $('#edit-progress-val').text('0%');
     });
@@ -84,7 +78,8 @@ function initEditHandlers() {
         const origStartRef = $('#read-orig-start').val();
         const inputPlannedEnd = addDays(origStartRef, newDurationDays).toISOString().split('T')[0];
 
-        const project = rawTrackerData.groups[gIdx].projects[pIdx];
+        // [UPDATED] Access .data instead of .groups
+        const project = rawTrackerData.data[gIdx].projects[pIdx];
         const milestones = project.milestones;
         let errorText = null;
 
@@ -111,7 +106,8 @@ function initEditHandlers() {
 
         if (errorText) { $errorMsg.text(errorText).removeClass('d-none'); return; }
 
-        const msData = rawTrackerData.groups[gIdx].projects[pIdx].milestones[mIdx];
+        // [UPDATED] Access .data
+        const msData = rawTrackerData.data[gIdx].projects[pIdx].milestones[mIdx];
         msData.name = inputName;
         msData.description = inputDesc;
         msData.planned_end = inputPlannedEnd;
@@ -165,16 +161,12 @@ function initProjectStructureHandlers() {
         if (targetGroupIdx === '__NEW__') {
             count = 0; // New group has 0 existing projects, so we will become #1
         } else {
-            count = rawTrackerData.groups[targetGroupIdx].projects.length;
+            // [UPDATED] Access .data
+            count = rawTrackerData.data[targetGroupIdx].projects.length;
         }
 
-        // If we are editing within the same group, the count includes 'self', so valid positions are 1..count
-        // If we are moving to a different group, valid positions are 1..(count + 1)
-        
-        // Simplified Logic: Just show 1 to (Count or Count+1)
-        // If changing group, we are adding a NEW item to that group effectively.
         const originalGIdx = parseInt($('#struct-g-idx').val());
-        const isSameGroup = (targetGroupIdx == originalGIdx); // loose compare for string/int
+        const isSameGroup = (targetGroupIdx == originalGIdx); 
         
         const maxPos = isSameGroup ? count : count + 1;
         
@@ -182,11 +174,9 @@ function initProjectStructureHandlers() {
             $orderSelect.append(`<option value="${i - 1}">Position ${i}${i===maxPos ? ' (Last)' : ''}</option>`);
         }
 
-        // Set default selection
         if (isSameGroup && currentPIdx !== -1) {
             $orderSelect.val(currentPIdx);
         } else {
-            // Default to last
             $orderSelect.val(maxPos - 1);
         }
     }
@@ -205,7 +195,9 @@ function initProjectStructureHandlers() {
     $('#projects-container').on('click', '.project-name-clickable', function (e) {
         e.stopPropagation();
         const gIdx = $(this).data('g-idx'), pIdx = $(this).data('p-idx');
-        const project = rawTrackerData.groups[gIdx].projects[pIdx];
+        
+        // [UPDATED] Access .data
+        const project = rawTrackerData.data[gIdx].projects[pIdx];
 
         $('#struct-g-idx').val(gIdx);
         $('#struct-p-idx').val(pIdx);
@@ -216,14 +208,15 @@ function initProjectStructureHandlers() {
         // Populate Group Select
         const $grpSelect = $('#struct-group-select');
         $grpSelect.empty();
-        rawTrackerData.groups.forEach((g, i) => {
+        
+        // [UPDATED] Access .data
+        rawTrackerData.data.forEach((g, i) => {
             const selected = (i === gIdx) ? 'selected' : '';
             $grpSelect.append(`<option value="${i}" ${selected}>${g.group_name}</option>`);
         });
         $grpSelect.append(`<option value="__NEW__" style="color:#0d6efd; font-weight:bold;">✨ + Move to New Group...</option>`);
         $('#struct-new-group-name').addClass('d-none').val('');
 
-        // Populate Order Select
         updateOrderSelect(gIdx, pIdx);
 
         tempMilestones = JSON.parse(JSON.stringify(project.milestones));
@@ -241,7 +234,6 @@ function initProjectStructureHandlers() {
         modal.show();
     });
 
-    // ... (Keep renderMilestoneList, bindInputs, recalculateSchedule logic EXACTLY as before) ...
     function renderMilestoneList() {
         listContainer.innerHTML = '';
         tempMilestones.forEach((ms, index) => {
@@ -271,7 +263,18 @@ function initProjectStructureHandlers() {
     }
     $('#btn-add-milestone').click(function() { tempMilestones.push({ name: "New Milestone", description: "", status_progress: 0.0, _temp_duration: 10, _is_locked: false, color: "#0d6efd", demand_due_date: "" }); renderMilestoneList(); recalculateSchedule(); });
     $('#struct-proj-start').on('change', function() { recalculateSchedule(); });
-    $('#btn-delete-project').off('click').on('click', function() { const gIdx = parseInt($('#struct-g-idx').val()); const pIdx = parseInt($('#struct-p-idx').val()); const projName = $('#struct-proj-name').val(); if (confirm(`⚠️ Are you sure you want to delete project: "${projName}"?\n\nThis action CANNOT be undone.`)) { rawTrackerData.groups[gIdx].projects.splice(pIdx, 1); runPipeline(); modal.hide(); } });
+    
+    // [UPDATED] Delete Logic (.data)
+    $('#btn-delete-project').off('click').on('click', function() { 
+        const gIdx = parseInt($('#struct-g-idx').val()); 
+        const pIdx = parseInt($('#struct-p-idx').val()); 
+        const projName = $('#struct-proj-name').val(); 
+        if (confirm(`⚠️ Are you sure you want to delete project: "${projName}"?\n\nThis action CANNOT be undone.`)) { 
+            rawTrackerData.data[gIdx].projects.splice(pIdx, 1); 
+            runPipeline(); 
+            modal.hide(); 
+        } 
+    });
 
     // [MODIFIED] Save Logic with Position Order Handling
     $('#btn-save-structure').click(function() {
@@ -280,7 +283,6 @@ function initProjectStructureHandlers() {
         
         if (tempMilestones.length === 0) { alert("Project must have at least one milestone."); return; }
         
-        // 1. Determine Target Group
         const targetGroupVal = $('#struct-group-select').val();
         let finalGroupIndex = currentGIdx;
         let isMoveGroup = false;
@@ -289,20 +291,21 @@ function initProjectStructureHandlers() {
             const newName = $('#struct-new-group-name').val().trim();
             if (!newName) { alert("Please enter a name for the new group."); return; }
             const newGroup = { group_name: newName, is_expanded: true, projects: [] };
-            rawTrackerData.groups.push(newGroup);
-            finalGroupIndex = rawTrackerData.groups.length - 1;
+            
+            // [UPDATED] Access .data
+            rawTrackerData.data.push(newGroup);
+            finalGroupIndex = rawTrackerData.data.length - 1;
             isMoveGroup = true;
         } else {
             finalGroupIndex = parseInt(targetGroupVal);
             if (finalGroupIndex !== currentGIdx) isMoveGroup = true;
         }
 
-        // 2. Determine Target Order Index
         const targetOrderIdx = parseInt($('#struct-order-select').val());
 
-        // 3. Extract Project Data
+        // [UPDATED] Access .data
         const updatedProject = {
-            project_id: rawTrackerData.groups[currentGIdx].projects[currentPIdx].project_id, 
+            project_id: rawTrackerData.data[currentGIdx].projects[currentPIdx].project_id, 
             project_name: $('#struct-proj-name').val(),
             description: $('#struct-proj-desc').val(),
             start_date: $('#struct-proj-start').val(),
@@ -313,21 +316,17 @@ function initProjectStructureHandlers() {
             }))
         };
 
-        // 4. Update Data Source (Move Logic)
+        // [UPDATED] Update Data Source (.data)
         if (isMoveGroup) {
-            // Case A: Moving to different group
-            rawTrackerData.groups[currentGIdx].projects.splice(currentPIdx, 1); // Remove from old
-            rawTrackerData.groups[finalGroupIndex].projects.splice(targetOrderIdx, 0, updatedProject); // Insert at specific pos in new
-            rawTrackerData.groups[finalGroupIndex].is_expanded = true;
+            rawTrackerData.data[currentGIdx].projects.splice(currentPIdx, 1); // Remove from old
+            rawTrackerData.data[finalGroupIndex].projects.splice(targetOrderIdx, 0, updatedProject); // Insert at specific pos in new
+            rawTrackerData.data[finalGroupIndex].is_expanded = true;
         } else {
-            // Case B: Same Group (Possible Reorder)
             if (targetOrderIdx === currentPIdx) {
-                // No movement, just update data
-                rawTrackerData.groups[currentGIdx].projects[currentPIdx] = updatedProject;
+                rawTrackerData.data[currentGIdx].projects[currentPIdx] = updatedProject;
             } else {
-                // Reordering within same group
-                rawTrackerData.groups[currentGIdx].projects.splice(currentPIdx, 1); // Remove
-                rawTrackerData.groups[currentGIdx].projects.splice(targetOrderIdx, 0, updatedProject); // Insert at new pos
+                rawTrackerData.data[currentGIdx].projects.splice(currentPIdx, 1); // Remove
+                rawTrackerData.data[currentGIdx].projects.splice(targetOrderIdx, 0, updatedProject); // Insert at new pos
             }
         }
 
@@ -336,10 +335,8 @@ function initProjectStructureHandlers() {
     });
 }
 
-// [MODIFIED] 3. Create Project Handler (Updated for New Button Location)
+// [MODIFIED] 3. Create Project Handler
 function initCreateProjectHandler() {
-    // We NO LONGER inject the button here, because it is now rendered by render.js
-    // We ONLY inject the modal if it doesn't exist
     if ($('#createProjectModal').length === 0) {
         const modalHtml = `
             <div class="modal fade" id="createProjectModal" tabindex="-1" aria-hidden="true">
@@ -380,7 +377,6 @@ function initCreateProjectHandler() {
     const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
     const $errorMsg = $('#create-error-msg');
 
-    // Use delegated event binding because the button is re-created by render.js every time
     $('#dashboard-stats-container').on('click', '#btn-open-create-project', function() {
         $('#create-proj-name').val('');
         $('#create-new-group-name').val('').addClass('d-none');
@@ -390,8 +386,10 @@ function initCreateProjectHandler() {
 
         const $select = $('#create-group-select');
         $select.empty();
-        if (rawTrackerData.groups && rawTrackerData.groups.length > 0) {
-            rawTrackerData.groups.forEach((g, index) => {
+        
+        // [UPDATED] Access .data
+        if (rawTrackerData.data && rawTrackerData.data.length > 0) {
+            rawTrackerData.data.forEach((g, index) => {
                 $select.append(new Option(g.group_name, index));
             });
         }
@@ -420,18 +418,22 @@ function initCreateProjectHandler() {
         let targetGroupIndex = -1;
         if (groupVal === '__NEW__') {
             const newGroup = { group_name: newGroupName, is_expanded: true, projects: [] };
-            rawTrackerData.groups.push(newGroup);
-            targetGroupIndex = rawTrackerData.groups.length - 1;
+            
+            // [UPDATED] Access .data
+            rawTrackerData.data.push(newGroup);
+            targetGroupIndex = rawTrackerData.data.length - 1;
         } else {
             targetGroupIndex = parseInt(groupVal);
-            rawTrackerData.groups[targetGroupIndex].is_expanded = true;
+            // [UPDATED] Access .data
+            rawTrackerData.data[targetGroupIndex].is_expanded = true;
         }
 
         const newId = "PROJ-" + Date.now().toString().slice(-6);
         const defaultMilestone = { name: "Kickoff", description: "Project initialization", status_progress: 0.0, planned_end: start, actual_completion_date: null, demand_due_date: "", color: "#0d6efd" };
         const newProject = { project_id: newId, project_name: name, description: "", start_date: start, milestones: [defaultMilestone] };
 
-        rawTrackerData.groups[targetGroupIndex].projects.push(newProject);
+        // [UPDATED] Access .data
+        rawTrackerData.data[targetGroupIndex].projects.push(newProject);
         runPipeline();
         modal.hide();
     });

@@ -2,59 +2,63 @@
 
 // 1. Dynamic Schedule Revision (Waterfall Calculation)
 function reviseProjectData(originalData) {
+    // Deep copy to avoid mutating the original data
     const revisedData = JSON.parse(JSON.stringify(originalData));
     
-    revisedData.groups.forEach(group => {
-        group.projects.forEach(project => {
-            // Initialize cursor at Project Start Date
-            let chainCursor = new Date(project.start_date);
-            let previousOriginalPlanEnd = new Date(project.start_date);
+    // [UPDATED] Access .data instead of .groups
+    if (revisedData.data) {
+        revisedData.data.forEach(group => {
+            group.projects.forEach(project => {
+                // Initialize cursor at Project Start Date
+                let chainCursor = new Date(project.start_date);
+                let previousOriginalPlanEnd = new Date(project.start_date);
 
-            project.milestones.forEach((ms, index) => {
-                const originalPlanEnd = new Date(ms.planned_end);
-                
-                // Calculate original planned duration (Plan End - Previous Plan End)
-                // Ensure at least 1 day duration
-                const durationDays = Math.max(1, getDaysDiff(previousOriginalPlanEnd, originalPlanEnd));
+                project.milestones.forEach((ms, index) => {
+                    const originalPlanEnd = new Date(ms.planned_end);
+                    
+                    // Calculate original planned duration (Plan End - Previous Plan End)
+                    // Ensure at least 1 day duration
+                    const durationDays = Math.max(1, getDaysDiff(previousOriginalPlanEnd, originalPlanEnd));
 
-                // A. Determine Revised Start Date
-                // The cursor is already positioned correctly (either Project Start OR PrevEnd + 1)
-                const revisedStart = new Date(chainCursor);
-                
-                // B. Determine Revised End Date (Start + Duration)
-                // Note: This calculates the date. render.js handles the visual "inclusive" width.
-                const revisedEnd = addDays(revisedStart, durationDays);
+                    // A. Determine Revised Start Date
+                    // The cursor is already positioned correctly (either Project Start OR PrevEnd + 1)
+                    const revisedStart = new Date(chainCursor);
+                    
+                    // B. Determine Revised End Date (Start + Duration)
+                    // Note: This calculates the date. render.js handles the visual "inclusive" width.
+                    const revisedEnd = addDays(revisedStart, durationDays);
 
-                // Update properties
-                ms.revised_start_date = revisedStart.toISOString().split('T')[0];
-                ms.revised_end_date = revisedEnd.toISOString().split('T')[0];
-                ms.duration_days = Math.floor(durationDays);
+                    // Update properties
+                    ms.revised_start_date = revisedStart.toISOString().split('T')[0];
+                    ms.revised_end_date = revisedEnd.toISOString().split('T')[0];
+                    ms.duration_days = Math.floor(durationDays);
 
-                // C. Update Cursor for the NEXT task
-                let effectiveEndForChaining;
+                    // C. Update Cursor for the NEXT task
+                    let effectiveEndForChaining;
 
-                if (ms.actual_completion_date) {
-                    // If finished, next task follows Actual End
-                    effectiveEndForChaining = new Date(ms.actual_completion_date);
-                } else {
-                    // If overdue, next task is pushed by Today; otherwise follows Revised Plan
-                    if (CONFIG.CURRENT_DATE > revisedEnd) {
-                        effectiveEndForChaining = new Date(CONFIG.CURRENT_DATE);
+                    if (ms.actual_completion_date) {
+                        // If finished, next task follows Actual End
+                        effectiveEndForChaining = new Date(ms.actual_completion_date);
                     } else {
-                        effectiveEndForChaining = new Date(revisedEnd);
+                        // If overdue, next task is pushed by Today; otherwise follows Revised Plan
+                        if (CONFIG.CURRENT_DATE > revisedEnd) {
+                            effectiveEndForChaining = new Date(CONFIG.CURRENT_DATE);
+                        } else {
+                            effectiveEndForChaining = new Date(revisedEnd);
+                        }
                     }
-                }
 
-                // CRITICAL FIX: "Finish-to-Start" Logic
-                // The NEXT task must start 1 day AFTER this task ends to avoid overlap.
-                chainCursor = new Date(effectiveEndForChaining);
-                chainCursor.setDate(chainCursor.getDate() + 1);
+                    // CRITICAL FIX: "Finish-to-Start" Logic
+                    // The NEXT task must start 1 day AFTER this task ends to avoid overlap.
+                    chainCursor = new Date(effectiveEndForChaining);
+                    chainCursor.setDate(chainCursor.getDate() + 1);
 
-                // Update baseline for next iteration's duration calculation
-                previousOriginalPlanEnd = originalPlanEnd;
+                    // Update baseline for next iteration's duration calculation
+                    previousOriginalPlanEnd = originalPlanEnd;
+                });
             });
         });
-    });
+    }
     return revisedData;
 }
 
@@ -128,18 +132,21 @@ function preprocessData(data) {
         CRITICAL: 0
     };
 
-    data.groups.forEach(group => {
-        group.projects.forEach(project => {
-            const status = calculateSingleProjectStatus(project);
-            project._computedStatus = status; 
-            
-            counts.ALL++;
-            if (counts.hasOwnProperty(status.code)) {
-                counts[status.code]++;
-            }
+    // [UPDATED] Access .data instead of .groups
+    if (data.data) {
+        data.data.forEach(group => {
+            group.projects.forEach(project => {
+                const status = calculateSingleProjectStatus(project);
+                project._computedStatus = status; 
+                
+                counts.ALL++;
+                if (counts.hasOwnProperty(status.code)) {
+                    counts[status.code]++;
+                }
+            });
+            group._computedStatus = calculateGroupStatus(group);
         });
-        group._computedStatus = calculateGroupStatus(group);
-    });
+    }
 
     return { counts, data };
 }
@@ -151,23 +158,26 @@ function calculateAutoBounds(data) {
     let hasData = false;
 
     // 1. Scan Data for Extremes
-    data.groups.forEach(g => {
-        g.projects.forEach(p => {
-            hasData = true;
-            // Check Project Start
-            const pStart = new Date(p.start_date).getTime();
-            if (pStart < minTime) minTime = pStart;
+    // [UPDATED] Access .data instead of .groups
+    if (data.data) {
+        data.data.forEach(g => {
+            g.projects.forEach(p => {
+                hasData = true;
+                // Check Project Start
+                const pStart = new Date(p.start_date).getTime();
+                if (pStart < minTime) minTime = pStart;
 
-            // Check Milestones (Revised End & Demand Date)
-            p.milestones.forEach(ms => {
-                const rEnd = new Date(ms.revised_end_date).getTime();
-                const dDue = ms.demand_due_date ? new Date(ms.demand_due_date).getTime() : 0;
-                
-                if (rEnd > maxTime) maxTime = rEnd;
-                if (dDue > maxTime) maxTime = dDue;
+                // Check Milestones (Revised End & Demand Date)
+                p.milestones.forEach(ms => {
+                    const rEnd = new Date(ms.revised_end_date).getTime();
+                    const dDue = ms.demand_due_date ? new Date(ms.demand_due_date).getTime() : 0;
+                    
+                    if (rEnd > maxTime) maxTime = rEnd;
+                    if (dDue > maxTime) maxTime = dDue;
+                });
             });
         });
-    });
+    }
 
     // Handle Empty Data Case
     if (!hasData) {

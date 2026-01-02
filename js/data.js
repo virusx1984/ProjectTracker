@@ -1,7 +1,5 @@
 // --- Data Manager: Import / Export Logic ---
 
-// --- Data Manager: Import / Export Logic ---
-
 function initDataManager() {
     const modalEl = document.getElementById('dataSettingsModal');
     const modal = new bootstrap.Modal(modalEl);
@@ -12,10 +10,12 @@ function initDataManager() {
         const dateStr = new Date().toISOString().split('T')[0];
         $('#export-filename').val(`tracker_backup_${dateStr}.json`);
         
-        // Show summary of current data
-        const groupCount = rawTrackerData.groups.length;
+        // [UPDATED] Show summary of current data (Access .data instead of .groups)
+        const groups = rawTrackerData.data || [];
+        const groupCount = groups.length;
         let projCount = 0;
-        rawTrackerData.groups.forEach(g => projCount += g.projects.length);
+        groups.forEach(g => projCount += g.projects.length);
+        
         $('#export-summary').text(`${groupCount} Groups, ${projCount} Projects`);
         
         // Reset Import UI state
@@ -32,18 +32,18 @@ function initDataManager() {
     $('#btn-download-json').click(function() {
         const filename = $('#export-filename').val() || 'tracker_backup.json';
         
-        // Construct Payload
+        // [UPDATED] Construct Payload matching standard structure
         const payload = {
             meta: {
-                version: "1.0",
-                app: "ProjectTracker Pro",
-                export_date: new Date().toISOString()
+                ...rawTrackerData.meta, // Preserve title, version, etc.
+                last_updated: new Date().toISOString() // Update timestamp
             },
             config: {
                 pixelsPerDay: pixelsPerDay, // Save current zoom level
                 filter: currentFilter       // Save current filter
             },
-            data: rawTrackerData // The source of truth (Clean data)
+            // The core data array
+            data: rawTrackerData.data 
         };
 
         // Convert to Blob and Download
@@ -137,9 +137,12 @@ function initDataManager() {
                 // 1. Parse JSON
                 const jsonContent = JSON.parse(e.target.result);
 
-                // 2. Validate Structure
-                if (!jsonContent.meta || !jsonContent.data || !Array.isArray(jsonContent.data.groups)) {
-                    throw new Error("Invalid file format: Missing 'meta' or 'data.groups' structure.");
+                // [UPDATED] 2. Validate Structure (Check for 'data' array)
+                // We check if jsonContent.data exists and is an array (Standard format)
+                if (!jsonContent.data || !Array.isArray(jsonContent.data)) {
+                    // Fallback check: maybe user uploaded old format (where root was data)
+                    // But for now, we enforce new structure or throw error
+                    throw new Error("Invalid file format: Missing 'data' array.");
                 }
 
                 // 3. User Confirmation
@@ -147,8 +150,17 @@ function initDataManager() {
                     return;
                 }
 
-                // 4. Hydrate Data (Overwrite Globals)
-                rawTrackerData = jsonContent.data; 
+                // [UPDATED] 4. Hydrate Data (Overwrite Globals)
+                // Reconstruct the global object
+                rawTrackerData = {
+                    meta: jsonContent.meta || { title: "Imported Project" }, // Fallback if meta missing
+                    data: jsonContent.data
+                };
+
+                // [NEW] Update Title UI immediately
+                if (rawTrackerData.meta.title) {
+                    $('#tracker-main-title').text(rawTrackerData.meta.title);
+                }
                 
                 // Restore Config if available
                 if (jsonContent.config) {
