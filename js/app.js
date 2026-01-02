@@ -21,21 +21,39 @@ function runPipeline() {
 }
 
 // Global Controls
+// Global Controls
 function initGlobalControls() {
-    // Zoom
-    $('#btn-zoom-in').click(function () { if (pixelsPerDay < 20) { pixelsPerDay += 2; renderTracker(currentRevisedData); } });
-    $('#btn-zoom-out').click(function () { if (pixelsPerDay > 2) { pixelsPerDay -= 2; renderTracker(currentRevisedData); } });
-    $('#btn-zoom-reset').click(function () { pixelsPerDay = CONFIG.DEFAULT_PIXELS_PER_DAY; renderTracker(currentRevisedData); });
+    // Zoom Logic Update
+    $('#btn-zoom-in').click(function () { 
+        if (pixelsPerDay < 20) { 
+            pixelsPerDay += 2; 
+            renderTracker(currentRevisedData); 
+        } 
+    });
 
-    // Group Expansion
-    // [UPDATED] Access .data instead of .groups
+    // [MODIFIED] Allow zooming out further to trigger Quarter View
+    $('#btn-zoom-out').click(function () { 
+        if (pixelsPerDay > 2) { 
+            pixelsPerDay -= 2; 
+        } else if (pixelsPerDay > 0.5) {
+            // Finer grain zoom when small to allow Quarter View (e.g. 1.0, 0.5)
+            pixelsPerDay -= 0.5; 
+        }
+        renderTracker(currentRevisedData); 
+    });
+
+    $('#btn-zoom-reset').click(function () { 
+        pixelsPerDay = CONFIG.DEFAULT_PIXELS_PER_DAY; 
+        renderTracker(currentRevisedData); 
+    });
+
+    // Group Expansion (Use .data)
     $('#btn-expand-all').click(function () { 
         if (currentFilter === 'ALL' && currentRevisedData.data) { 
             currentRevisedData.data.forEach(g => g.is_expanded = true); 
             renderTracker(currentRevisedData); 
         } 
     });
-    
     $('#btn-collapse-all').click(function () { 
         if (currentFilter === 'ALL' && currentRevisedData.data) { 
             currentRevisedData.data.forEach(g => g.is_expanded = false); 
