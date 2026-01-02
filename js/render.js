@@ -398,7 +398,7 @@ function renderTracker(data) {
                 // [UI Polish] Project Row: No ID, No Drag Handle, Popover enabled, 12px Font
                 htmlBuffer += `
                     <div class="project-row" data-g-idx="${gIndex}" data-p-idx="${pIndex}">
-                        <div class="project-name-label d-flex align-items-center">
+                        <div class="project-name-label d-flex">
                             ${statusStrip}
                             <div class="d-flex flex-column justify-content-center overflow-hidden flex-grow-1 ps-2">
                                 <div class="fw-bold text-dark text-truncate project-name-clickable" 
