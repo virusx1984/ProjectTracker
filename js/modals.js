@@ -438,3 +438,51 @@ function initCreateProjectHandler() {
         modal.hide();
     });
 }
+
+// [NEW] 4. Project Meta/Settings Handler
+function initMetaHandler() {
+    const modalEl = document.getElementById('projectSettingsModal');
+    const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+    
+    // Open Modal: Load data from rawTrackerData.meta
+    $('#btn-edit-meta').click(function() {
+        // Ensure meta object exists
+        if (!rawTrackerData.meta) rawTrackerData.meta = {};
+        
+        // Fill inputs
+        $('#meta-title-input').val(rawTrackerData.meta.title || '');
+        $('#meta-version-input').val(rawTrackerData.meta.version || '1.0');
+        
+        // Handle date: use meta.last_updated or today
+        const dateVal = rawTrackerData.meta.last_updated || new Date().toISOString().split('T')[0];
+        $('#meta-date-input').val(dateVal);
+        
+        modal.show();
+    });
+
+    // Save Changes
+    $('#btn-save-meta').click(function() {
+        const newTitle = $('#meta-title-input').val().trim();
+        const newVersion = $('#meta-version-input').val().trim();
+        const newDate = $('#meta-date-input').val();
+
+        if (!newTitle) {
+            alert("Project Title cannot be empty.");
+            return;
+        }
+
+        // Update Global Data
+        rawTrackerData.meta.title = newTitle;
+        rawTrackerData.meta.version = newVersion;
+        rawTrackerData.meta.last_updated = newDate;
+
+        // Update UI Immediately
+        $('#tracker-main-title').text(newTitle);
+        
+        // Close Modal
+        modal.hide();
+        
+        // Optional: Show a quick toast or log
+        // console.log("Meta updated:", rawTrackerData.meta);
+    });
+}

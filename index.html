@@ -30,7 +30,13 @@
 
         <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
             <div>
-                <h4 class="m-0 fw-bold text-dark" id="tracker-main-title">ProjectTracker Pro</h4>
+                <div class="d-flex align-items-center">
+                    <h4 class="m-0 fw-bold text-dark" id="tracker-main-title">ProjectTracker Pro</h4>
+                    <button class="btn btn-link text-secondary ms-2 p-0 border-0" id="btn-edit-meta"
+                        title="Project Settings">
+                        <i class="bi bi-pencil-square" style="font-size: 1rem;"></i>
+                    </button>
+                </div>
                 <div class="text-muted small">Target vs Actual Performance Dashboard</div>
             </div>
 
@@ -63,7 +69,7 @@
                         <i class="bi bi-database-fill-gear"></i> Data
                     </button>
                 </div>
-                
+
             </div>
         </div>
 
@@ -328,9 +334,10 @@
 
                         <div class="tab-pane fade" id="import-pane">
                             <div class="alert alert-warning small py-2">
-                                <i class="bi bi-exclamation-triangle"></i> <strong>Warning:</strong> Importing will overwrite all current data.
+                                <i class="bi bi-exclamation-triangle"></i> <strong>Warning:</strong> Importing will
+                                overwrite all current data.
                             </div>
-                            
+
                             <div id="import-drop-zone" class="upload-drop-zone mb-3">
                                 <i class="bi bi-cloud-arrow-up display-4 text-secondary"></i>
                                 <p class="mb-0 fw-bold text-dark mt-2">Drag & Drop JSON file here</p>
@@ -338,7 +345,8 @@
                                 <input type="file" id="import-file-input" accept=".json" style="display: none;">
                             </div>
 
-                            <div id="import-file-name" class="text-center text-success fw-bold small mb-3" style="min-height: 20px;"></div>
+                            <div id="import-file-name" class="text-center text-success fw-bold small mb-3"
+                                style="min-height: 20px;"></div>
 
                             <div class="d-grid">
                                 <button class="btn btn-danger" id="btn-import-json" disabled>
@@ -347,6 +355,42 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="projectSettingsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-sliders"></i> Project Settings</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="metaForm">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Project Title</label>
+                            <input type="text" class="form-control fw-bold" id="meta-title-input"
+                                placeholder="Enter project title">
+                        </div>
+
+                        <div class="row">
+                            <div class="col-6">
+                                <label class="form-label small text-muted">Version</label>
+                                <input type="text" class="form-control form-control-sm" id="meta-version-input"
+                                    placeholder="e.g. 1.0">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small text-muted">Last Updated</label>
+                                <input type="date" class="form-control form-control-sm" id="meta-date-input">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="btn-save-meta">Save Settings</button>
                 </div>
             </div>
         </div>
