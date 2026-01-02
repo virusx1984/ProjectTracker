@@ -1,6 +1,5 @@
 // --- UI Rendering Logic ---
 
-// [Modified] Updated logic to show Actual End Date & Actual Duration when finished
 function createPopoverContent(ms, origStart, origEnd, revStart, revEnd, status) {
     let badgeClass = 'bg-secondary';
     let statusText = 'Pending';
@@ -17,9 +16,7 @@ function createPopoverContent(ms, origStart, origEnd, revStart, revEnd, status) 
         // Use Actual Completion Date if available
         if (ms.actual_completion_date) {
             displayEnd = ms.actual_completion_date;
-            
             // Recalculate Duration: (Actual End - Revised Start) + 1 Day (Inclusive)
-            // Example: 2025-09-15 - 2025-09-01 = 14 days diff. +1 = 15 Days duration.
             displayDuration = getDaysDiff(revStart, displayEnd) + 1;
         }
     } 
@@ -27,6 +24,23 @@ function createPopoverContent(ms, origStart, origEnd, revStart, revEnd, status) 
     else if (ms.status_progress > 0) { badgeClass = 'bg-primary'; statusText = 'In Progress'; }
 
     const progressPct = Math.round(ms.status_progress * 100);
+
+    // [New Logic] Calculate the date corresponding to current progress
+    let progressDateSuffix = "";
+    if (ms.status_progress > 0 && ms.status_progress < 1.0) {
+        // Total duration (inclusive of start and end dates)
+        const totalRevDays = getDaysDiff(revStart, revEnd) + 1;
+        // Completed days based on percentage
+        const completedDays = Math.round(totalRevDays * ms.status_progress);
+        
+        // Calculate Date: Start Date + (Completed Days - 1)
+        let progressDate = new Date(revStart);
+        if (completedDays > 0) {
+            progressDate.setDate(progressDate.getDate() + (completedDays - 1));
+        }
+        // Generate display string (e.g., " ~ 2025-12-21")
+        progressDateSuffix = ` <span style="font-weight:normal; opacity:0.8;">(~ ${progressDate.toISOString().split('T')[0]})</span>`;
+    }
 
     return `
         <div class="popover-body-content">
@@ -47,7 +61,8 @@ function createPopoverContent(ms, origStart, origEnd, revStart, revEnd, status) 
             </div>
 
             <div class="info-row"><span class="icon">⏱️</span> <span>Duration: <b>${displayDuration} Days</b></span></div>
-            <div class="info-row"><span class="icon">📊</span> <span>Progress: <b>${progressPct}%</b></span></div>
+            
+            <div class="info-row"><span class="icon">📊</span> <span>Progress: <b>${progressPct}%</b>${progressDateSuffix}</span></div>
             
             ${status.extraInfo ? `<div class="info-row text-danger mt-1 border-top pt-1"><small>${status.extraInfo}</small></div>` : ''}
             
@@ -334,10 +349,29 @@ function renderTracker(data) {
                     } else if (CONFIG.CURRENT_DATE > new Date(revisedEnd)) {
                         solidBarEnd = revisedEnd; tailType = 'late'; tailStart = revisedEnd; tailEnd = CONFIG.CURRENT_DATE.toISOString().split('T')[0];
                     }
+                    
                     const planLeft = getDaysDiff(CONFIG.TRACKER_START_DATE, revisedStart) * pixelsPerDay;
+                    // Total width of the Plan Bar (in pixels)
                     const planWidth = (getDaysDiff(revisedStart, solidBarEnd) + 1) * pixelsPerDay;
+                    
                     let progressPct = Math.round(ms.status_progress * 100);
-                    let progressStyleWidth = (ms.status_progress > 0 && planWidth < 5) ? '100%' : `${progressPct}%`;
+
+                    // [Optimized Logic] Date-Driven Progress Calculation
+                    // 1. Calculate total planned days (inclusive of start and end dates, hence +1)
+                    const totalPlanDays = getDaysDiff(revisedStart, solidBarEnd) + 1;
+                    
+                    // 2. Calculate completed days (rounded)
+                    // Example: 101 days * 0.95 = 95.95 -> 96 days
+                    const completedDays = Math.round(totalPlanDays * ms.status_progress);
+                    
+                    // 3. Convert to pixel width
+                    let progressPixelWidth = completedDays * pixelsPerDay;
+
+                    // 4. Boundary Protection: 
+                    // If status is 0%, or calculated width is <= 0, force it to '0px' (hidden).
+                    // Otherwise, apply the calculated pixel width.
+                    let progressStyleWidth = (ms.status_progress <= 0 || progressPixelWidth <= 0) ? '0px' : `${progressPixelWidth}px`;
+
                     const statusInfo = { isOverdue: !actualDate && CONFIG.CURRENT_DATE > new Date(revisedEnd) };
                     if (statusInfo.isOverdue) statusInfo.extraInfo = `🔥 Overdue: ${Math.floor(getDaysDiff(revisedEnd, CONFIG.CURRENT_DATE))} days`;
                     else if (tailType === 'late') statusInfo.extraInfo = `⚠️ Late by ${Math.floor(getDaysDiff(revisedEnd, actualDate))} days`;
