@@ -35,7 +35,7 @@ function initGlobalControls() {
     // Zoom Out: Decrease by 20% each click (Inverse of 1.25)
     // Lower bound set to 0.25 to prevent it from becoming invisible
     $('#btn-zoom-out').click(function () { 
-        if (pixelsPerDay > 0.25) { 
+        if (pixelsPerDay > 0.15) { 
             pixelsPerDay = pixelsPerDay * 0.8; 
             renderTracker(currentRevisedData); 
         } 

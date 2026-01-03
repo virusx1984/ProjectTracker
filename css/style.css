@@ -175,7 +175,7 @@ body {
     border-left: none; 
     font-weight: 800;
     color: #212529;
-    background-color: rgba(0,0,0,0.02);
+    /* background-color: rgba(0,0,0,0.02); */
     /* Ensure high z-index so its child (the line) sits on top */
     z-index: 20; 
 }

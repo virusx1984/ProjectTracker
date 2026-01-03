@@ -149,10 +149,13 @@ function renderTracker(data) {
     // 3. Month View: Default
     const THRESHOLD_QUARTER = 1.8;      // Your setting
     const THRESHOLD_HALFYEAR = 0.8;     // [NEW] New threshold for H1/H2
+    const THRESHOLD_YEAR = 0.4;      // [NEW] Trigger Year View below 0.4 px/day
     const THRESHOLD_SHOW_DAYS = 4.0;  
 
-    const isHalfYearView = pixelsPerDay < THRESHOLD_HALFYEAR;
-    const isQuarterView = pixelsPerDay < THRESHOLD_QUARTER;
+    // Determine current mode priority (Check from macro to micro)
+    const isYearView = pixelsPerDay < THRESHOLD_YEAR;
+    const isHalfYearView = !isYearView && pixelsPerDay < THRESHOLD_HALFYEAR;
+    const isQuarterView = !isYearView && !isHalfYearView && pixelsPerDay < THRESHOLD_QUARTER;
 
     for(let i=0; i < CONFIG.RENDER_MONTHS; i++) {
         let targetMonthDate = new Date(CONFIG.TRACKER_START_DATE);
@@ -166,16 +169,24 @@ function renderTracker(data) {
         const shortMonth = targetMonthDate.toLocaleString('default', { month: 'short' }); 
         
         // --- RENDER LOGIC SWITCH ---
-        if (isHalfYearView) {
-            // [MODE A: HALF-YEAR VIEW (H1/H2)]
-            // Only draw ticks at Jan (0) and Jul (6)
+        if (isYearView) {
+            // [MODE A: YEAR VIEW]
+            // Draw ticks only at the start of the year (January / Month 0)
+            if (currentMonthIdx % 12 === 0) {
+                // Label is just the Year number
+                let labelHtml = `<span class="year-label" style="font-size:14px; font-weight:800; opacity:1;">${currentYear}</span>`;
+                let boundaryClass = "year-boundary"; // Always a strong boundary
+                
+                $headerTicks.append(`<div class="time-mark ${boundaryClass}" style="left: ${leftPos}px">${labelHtml}</div>`);
+            }
+        }
+        else if (isHalfYearView) {
+            // [MODE B: HALF-YEAR VIEW (H1/H2)]
             if (currentMonthIdx % 6 === 0) {
-                // Calculate 1 or 2
                 const hNum = Math.floor(currentMonthIdx / 6) + 1; 
                 let labelHtml = `H${hNum}`;
                 let boundaryClass = "";
 
-                // Show Year if H1 (Jan) or first rendered block
                 if (currentMonthIdx === 0 || i === 0) {
                     labelHtml = `<span class="year-label">${currentYear}</span> H${hNum}`;
                     boundaryClass = "year-boundary";
@@ -184,8 +195,7 @@ function renderTracker(data) {
             }
         } 
         else if (isQuarterView) {
-            // [MODE B: QUARTER VIEW (Q1-Q4)]
-            // Draw ticks at Jan, Apr, Jul, Oct
+            // [MODE C: QUARTER VIEW (Q1-Q4)]
             if (currentMonthIdx % 3 === 0) {
                 const qNum = Math.floor(currentMonthIdx / 3) + 1; 
                 let labelHtml = `Q${qNum}`;
@@ -199,7 +209,7 @@ function renderTracker(data) {
             }
         } 
         else {
-            // [MODE C: MONTH VIEW]
+            // [MODE D: MONTH VIEW]
             const isJanuary = currentMonthIdx === 0;
             let labelHtml = "";
             let boundaryClass = "";
@@ -214,11 +224,12 @@ function renderTracker(data) {
             $headerTicks.append(`<div class="time-mark ${boundaryClass}" style="left: ${leftPos}px">${labelHtml}</div>`);
         }
 
-        // [DAYS RENDER] (Only show in detailed views, never in Q or H)
+        // [DAYS RENDER] (Only in detailed views)
         let daysInMonth = new Date(targetMonthDate.getFullYear(), targetMonthDate.getMonth() + 1, 0).getDate();
         
         if (pixelsPerDay >= THRESHOLD_SHOW_DAYS) {
-            let step = (pixelsPerDay >= 18) ? 1 : ((pixelsPerDay >= 10) ? 5 : 15);
+            // ... (Days loop remains same) ...
+             let step = (pixelsPerDay >= 18) ? 1 : ((pixelsPerDay >= 10) ? 5 : 15);
             for (let d = 1; d <= daysInMonth; d++) {
                 if (d % step === 0 && d !== 1) {
                     if (step > 1 && d >= 30) continue; 
