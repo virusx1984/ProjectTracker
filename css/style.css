@@ -105,6 +105,7 @@ body {
     z-index: 1000;
     display: flex;
     min-width: max-content;
+    
 }
 
 .header-corner-placeholder {

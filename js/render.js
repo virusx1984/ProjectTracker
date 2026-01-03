@@ -218,15 +218,60 @@ function renderTracker(data) {
     $headerTicks.css('min-width', totalTimelineWidth + 'px');
 
     // "Today" Marker Logic (Same as before)
+    // =========================================================================
+    // [MODIFIED] "Today" Marker - Minimalist Faint Dashed Line
+    // =========================================================================
     const todayOffsetDays = getDaysDiff(CONFIG.TRACKER_START_DATE, CONFIG.CURRENT_DATE) + 1;
     if (todayOffsetDays >= 0) {
         const todayLeft = todayOffsetDays * pixelsPerDay;
         const sidebarWidth = $('.header-corner-placeholder').outerWidth() || 220;
+        
+        // --- 1. Header Trigger (Invisible) ---
+        // We create an invisible "hit box" in the header so you can still hover to see the date.
+        // It doesn't have any visual style (border/background), so it won't block text.
+        const headerTriggerStyle = `
+            position: absolute; 
+            left: ${todayLeft - 5}px; /* Center the 11px box on the specific pixel */
+            top: 0; 
+            bottom: 0; 
+            width: 11px; 
+            z-index: 100;
+            cursor: help;
+            /* The Magic: Draw a 1px dashed line in the center (5px transparent, 1px red, 5px transparent) */
+            background-image: linear-gradient(to right, transparent 5px, rgba(220, 53, 69, 0.5) 5px, rgba(220, 53, 69, 0.5) 6px, transparent 6px);
+            background-size: 100% 4px; /* Controls the dash spacing (4px height repeats) */
+            background-repeat: repeat-y;
+        `;
+        
+        $headerTicks.append(`<div class="today-header-trigger" style="${headerTriggerStyle}"></div>`);
+
+        // Initialize Popover on the invisible trigger
         const dateStr = CONFIG.CURRENT_DATE.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
-        const popupContent = `<div class="text-center p-1"><div class="text-primary fw-bold mb-1" style="font-size: 1.1em;">${dateStr}</div><div class="d-flex justify-content-center align-items-center gap-2 mt-2"><span class="badge bg-primary">Today</span></div></div>`;
-        $headerTicks.append(`<div class="today-header-marker" style="left: ${todayLeft}px; cursor: help;"><span class="today-label">Today</span></div>`);
-        const markerEl = $headerTicks.find('.today-header-marker')[0];
-        if (markerEl) { new bootstrap.Popover(markerEl, { trigger: 'hover focus', html: true, placement: 'bottom', content: popupContent, title: '' }); }
+        const popupContent = `<div class="text-center p-1"><div class="text-danger fw-bold mb-1">${dateStr}</div><div class="small text-muted">Today</div></div>`;
+        
+        const triggerEl = $headerTicks.find('.today-header-trigger')[0];
+        if (triggerEl) { 
+            new bootstrap.Popover(triggerEl, { trigger: 'hover focus', html: true, placement: 'bottom', content: popupContent }); 
+        }
+
+        // --- 2. The Faint Dashed Line (Overlay) ---
+        // This goes into the body container ($container).
+        // It sits on top of everything (z-index high) but lets clicks pass through (pointer-events: none).
+        const lineStyle = `
+            position: absolute;
+            left: ${todayLeft + sidebarWidth}px; 
+            top: 0;
+            bottom: 0; /* Full height */
+            width: 0;
+            border-left: 1px dashed rgba(220, 53, 69, 0.5); /* Faint Red Dashed Line */
+            z-index: 50; /* Above bars so you can see it cut through tasks */
+            pointer-events: none; /* Crucial: lets you click projects underneath */
+        `;
+        
+        $container.append(`<div class="today-dashed-line" style="${lineStyle}"></div>`);
+
+        // --- 3. Past Time Zone (Background) ---
+        // Just the grey background, no border.
         $container.append(`<div class="past-time-zone" style="width: ${todayLeft + sidebarWidth}px;"></div>`);
     }
 
