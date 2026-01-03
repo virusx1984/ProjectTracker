@@ -128,6 +128,7 @@ function renderDashboardStats(counts) {
 }
 
 // --- 2. Render Tracker with Sortable Wrappers ---
+// --- 2. Render Tracker with Sortable Wrappers ---
 function renderTracker(data) {
     const $container = $('#projects-container');
     const $headerTicks = $('#header-ticks-container');
@@ -138,17 +139,18 @@ function renderTracker(data) {
     $container.css('position', 'relative');
 
     // =========================================================================
-    // 1. Header Rendering (Quarter vs Compact Month vs Detailed Month)
+    // 1. Header Rendering (Direct Switch: Month <-> Quarter)
     // =========================================================================
     let totalTimelineWidth = 0;
     
-    // [NEW] View Thresholds
-    const THRESHOLD_QUARTER = 1.0;      // Below 1.0 -> Quarter View
-    const THRESHOLD_COMPACT = 3.0;      // 1.0 to 3.0 -> Compact Month View (J, F, M)
-    const THRESHOLD_SHOW_DAYS = 4.0;    // Above 4.0 -> Show Day Numbers
+    // [MODIFIED] Simplified View Thresholds
+    // Removed THRESHOLD_COMPACT.
+    // Raised THRESHOLD_QUARTER slightly (e.g. to 1.5) so it switches to Q earlier,
+    // avoiding the need for cramped single letters.
+    const THRESHOLD_QUARTER = 1.5;      
+    const THRESHOLD_SHOW_DAYS = 4.0;    
 
     const isQuarterView = pixelsPerDay < THRESHOLD_QUARTER;
-    const isCompactView = pixelsPerDay >= THRESHOLD_QUARTER && pixelsPerDay < THRESHOLD_COMPACT;
 
     for(let i=0; i < CONFIG.RENDER_MONTHS; i++) {
         let targetMonthDate = new Date(CONFIG.TRACKER_START_DATE);
@@ -160,12 +162,11 @@ function renderTracker(data) {
         const currentYear = targetMonthDate.getFullYear();
         const currentMonthIdx = targetMonthDate.getMonth(); // 0-11
         const shortMonth = targetMonthDate.toLocaleString('default', { month: 'short' }); // Jan, Feb
-        const firstLetter = shortMonth.charAt(0); // J, F
         
         // --- RENDER LOGIC SWITCH ---
         if (isQuarterView) {
             // [MODE A: QUARTER VIEW]
-            // Only draw ticks at the start of a Quarter (Jan, Apr, Jul, Oct)
+            // Draw ticks at the start of a Quarter (Jan, Apr, Jul, Oct)
             if (currentMonthIdx % 3 === 0) {
                 const qNum = Math.floor(currentMonthIdx / 3) + 1; // 1, 2, 3, 4
                 let labelHtml = `Q${qNum}`;
@@ -179,35 +180,23 @@ function renderTracker(data) {
                 $headerTicks.append(`<div class="time-mark ${boundaryClass}" style="left: ${leftPos}px">${labelHtml}</div>`);
             }
         } else {
-            // [MODE B & C: MONTH VIEWS]
-            // Draw every month, but style differs based on Compact vs Detailed
+            // [MODE B: STANDARD MONTH VIEW]
+            // Directly show "Jan", "Feb" etc. No single letter mode.
             const isJanuary = currentMonthIdx === 0;
             let labelHtml = "";
             let boundaryClass = "";
             
-            if (isCompactView) {
-                // Compact: Show "J", "F", "M"
-                // Only show Year on Jan or first block
-                if (i === 0 || isJanuary) {
-                    labelHtml = `<span class="year-label">${currentYear}</span> ${firstLetter}`;
-                    if (isJanuary) boundaryClass = "year-boundary";
-                } else {
-                    labelHtml = firstLetter; 
-                }
+            if (i === 0 || isJanuary) {
+                labelHtml = `<span class="year-label">${currentYear}</span>${shortMonth}`;
+                if (isJanuary) boundaryClass = "year-boundary";
             } else {
-                // Detailed: Show "Jan", "Feb"
-                if (i === 0 || isJanuary) {
-                    labelHtml = `<span class="year-label">${currentYear}</span>${shortMonth}`;
-                    if (isJanuary) boundaryClass = "year-boundary";
-                } else {
-                    labelHtml = shortMonth;
-                }
+                labelHtml = shortMonth;
             }
 
             $headerTicks.append(`<div class="time-mark ${boundaryClass}" style="left: ${leftPos}px">${labelHtml}</div>`);
         }
 
-        // [DAYS RENDER] Only show days in Detailed Mode (Zoom > 4.0)
+        // [DAYS RENDER] Only show days when zoomed in enough
         let daysInMonth = new Date(targetMonthDate.getFullYear(), targetMonthDate.getMonth() + 1, 0).getDate();
         
         if (pixelsPerDay >= THRESHOLD_SHOW_DAYS) {
@@ -249,9 +238,6 @@ function renderTracker(data) {
     const groupsToRender = data.data || [];
 
     // [TEXT VISIBILITY THRESHOLD]
-    // < 40px: Hide Text
-    // 40px - 70px: Compact Text
-    // > 70px: Full Text
     const THRESHOLD_TEXT_HIDE = 40; 
     const THRESHOLD_TEXT_FULL = 70;
 
@@ -259,7 +245,7 @@ function renderTracker(data) {
         const matchingProjects = group.projects.filter(p => currentFilter === 'ALL' || p._computedStatus.code === currentFilter);
         if (currentFilter !== 'ALL' && matchingProjects.length === 0) return;
 
-        // ... (GROUP STATS LOGIC - COPY FROM PREVIOUS) ...
+        // ... (GROUP STATS LOGIC - SAME AS BEFORE) ...
         // START COPY GROUP STATS
         let minStart = null, maxEnd = null, maxDemandEnd = null, minProgressDate = null;
         const groupStats = { 'CRITICAL': 0, 'PLAN_FAIL': 0, 'BUFFER_USED': 0, 'EXCELLENT': 0 };
@@ -436,18 +422,15 @@ function renderTracker(data) {
                     
                     const popContent = createPopoverContent(ms, origStart, ms.planned_end, revisedStart, revisedEnd, statusInfo).replace(/"/g, '&quot;');
                     
-                    // [SMOOTH TEXT HIDING LOGIC]
+                    // [TEXT VISIBILITY LOGIC]
                     let innerContent = '';
                     if (planWidth >= THRESHOLD_TEXT_HIDE) {
                         if (planWidth > THRESHOLD_TEXT_FULL) {
-                             // Full details
                              innerContent = `<div class="plan-bar-content"><span class="plan-name">${ms.name}</span><span class="plan-pct">${progressPct}%</span></div>`;
                         } else {
-                             // Compact details (No %, smaller text)
                              innerContent = `<div class="plan-bar-content"><span class="plan-name" style="font-size:10px;">${ms.name}</span></div>`;
                         }
                     } 
-                    // else: implicitly empty
 
                     let animClass = (ms.status_progress > 0 && ms.status_progress < 1.0) ? 'active-anim' : '';
 
@@ -498,3 +481,4 @@ function renderTracker(data) {
         if (!bootstrap.Tooltip.getInstance(this)) { new bootstrap.Tooltip(this).show(); }
     });
 }
+
