@@ -1,67 +1,95 @@
 // --- Core Logic: Calculation & Processing ---
-
 // 1. Dynamic Schedule Revision (Waterfall Calculation)
 function reviseProjectData(originalData) {
     // Deep copy to avoid mutating the original data
     const revisedData = JSON.parse(JSON.stringify(originalData));
     
-    // [UPDATED] Access .data instead of .groups
+    // Helper: Format Date to 'YYYY-MM-DD' (Local Time)
+    const toLocalYMD = (dateObj) => {
+        const y = dateObj.getFullYear();
+        const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const d = String(dateObj.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    };
+
+    // Helper: Parse 'YYYY-MM-DD' safely
+    const parseLocal = (dateStr) => {
+        if (!dateStr) return null;
+        const parts = dateStr.split('-');
+        return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    };
+
+    // Helper: Get difference in days
+    const getDiff = (d1, d2) => {
+        return Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+    };
+
+    const TODAY = new Date(CONFIG.CURRENT_DATE);
+    TODAY.setHours(0,0,0,0);
+
     if (revisedData.data) {
         revisedData.data.forEach(group => {
             group.projects.forEach(project => {
-                // Initialize cursor at Project Start Date
-                let chainCursor = new Date(project.start_date);
-                let previousOriginalPlanEnd = new Date(project.start_date);
+                
+                let prevEffectiveEnd = null; // The "Real" end of the previous task
+                let prevPlannedEnd = parseLocal(project.start_date); // Tracking the original plan timeline
 
                 project.milestones.forEach((ms, index) => {
-                    const originalPlanEnd = new Date(ms.planned_end);
-                    
-                    // Calculate original planned duration (Plan End - Previous Plan End)
-                    // Ensure at least 1 day duration
-                    const durationDays = Math.max(1, getDaysDiff(previousOriginalPlanEnd, originalPlanEnd));
-
-                    // A. Determine Revised Start Date
-                    // The cursor is already positioned correctly (either Project Start OR PrevEnd + 1)
-                    const revisedStart = new Date(chainCursor);
-                    
-                    // B. Determine Revised End Date (Start + Duration)
-                    // Note: This calculates the date. render.js handles the visual "inclusive" width.
-                    const revisedEnd = addDays(revisedStart, durationDays);
-
-                    // Update properties
-                    ms.revised_start_date = revisedStart.toISOString().split('T')[0];
-                    ms.revised_end_date = revisedEnd.toISOString().split('T')[0];
-                    ms.duration_days = Math.floor(durationDays);
-
-                    // C. Update Cursor for the NEXT task
-                    let effectiveEndForChaining;
-
-                    if (ms.actual_completion_date) {
-                        // If finished, next task follows Actual End
-                        effectiveEndForChaining = new Date(ms.actual_completion_date);
-                    } else {
-                        // If overdue, next task is pushed by Today; otherwise follows Revised Plan
-                        if (CONFIG.CURRENT_DATE > revisedEnd) {
-                            effectiveEndForChaining = new Date(CONFIG.CURRENT_DATE);
-                        } else {
-                            effectiveEndForChaining = new Date(revisedEnd);
-                        }
+                    // --- A. Calculate Original Duration (The "Truth") ---
+                    // Duration = (My Planned End) - (Previous Task Planned End)
+                    // This ensures "Production" keeps its 3-month length even if it moves.
+                    let currentPlannedEnd = parseLocal(ms.planned_end);
+                    if (!currentPlannedEnd) {
+                        // Fallback if planned_end missing: use start + 10
+                        currentPlannedEnd = new Date(prevPlannedEnd);
+                        currentPlannedEnd.setDate(currentPlannedEnd.getDate() + 10);
                     }
 
-                    // CRITICAL FIX: "Finish-to-Start" Logic
-                    // The NEXT task must start 1 day AFTER this task ends to avoid overlap.
-                    chainCursor = new Date(effectiveEndForChaining);
-                    chainCursor.setDate(chainCursor.getDate() + 1);
+                    // Duration should be at least 1 day
+                    let durationDays = Math.max(1, getDiff(prevPlannedEnd, currentPlannedEnd));
+                    ms.duration_days = durationDays; // Store for UI
 
-                    // Update baseline for next iteration's duration calculation
-                    previousOriginalPlanEnd = originalPlanEnd;
+                    // --- B. Determine Revised Start Date ---
+                    // It starts after the previous task effectively finished (or Project Start for the first one)
+                    let newStart;
+                    if (index === 0) {
+                        newStart = parseLocal(project.start_date);
+                    } else {
+                        newStart = new Date(prevEffectiveEnd);
+                        newStart.setDate(newStart.getDate() + 1); // Start next day
+                    }
+
+                    // --- C. Determine Revised End Date ---
+                    // End = New Start + Duration
+                    let newEnd = new Date(newStart);
+                    newEnd.setDate(newEnd.getDate() + durationDays);
+
+                    // --- D. Write Back to Data ---
+                    ms.revised_start_date = toLocalYMD(newStart);
+                    ms.revised_end_date = toLocalYMD(newEnd);
+
+                    // --- E. Calculate "Effective End" for the NEXT task ---
+                    // This determines when the NEXT task can start.
+                    let effectiveEndForChaining = newEnd;
+
+                    if (ms.actual_completion_date) {
+                        // Case 1: Finished. Next task starts after Actual.
+                        effectiveEndForChaining = parseLocal(ms.actual_completion_date);
+                    } else if (TODAY > newEnd) {
+                        // Case 2: Unfinished & Overdue.
+                        // It's dragging on... so effectively it "ends" Today (so next task is pushed).
+                        effectiveEndForChaining = new Date(TODAY);
+                    }
+
+                    // Update loop variables
+                    prevEffectiveEnd = effectiveEndForChaining;
+                    prevPlannedEnd = currentPlannedEnd; // Move the plan cursor forward
                 });
             });
         });
     }
     return revisedData;
 }
-
 // 2. Single Project Status Calculation (Fixed Logic)
 function calculateSingleProjectStatus(project) {
     if (!project.milestones || project.milestones.length === 0) {

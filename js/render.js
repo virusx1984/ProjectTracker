@@ -1,4 +1,22 @@
+
 // --- UI Rendering Logic ---
+
+// --- Helper: Parse 'YYYY-MM-DD' string to Local Date Object ---
+// (Prevents UTC conversion bugs. '2026-01-04' becomes Jan 4th 00:00 Local)
+function parseLocalYMD(dateStr) {
+    if (!dateStr) return null;
+    const parts = dateStr.split('-');
+    // new Date(year, monthIndex, day) constructs a Local Time object
+    return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+}
+
+// --- Helper: Format Date to 'YYYY-MM-DD' (Local Time) ---
+function formatLocalYMD(dateObj) {
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
 
 function createPopoverContent(ms, origStart, origEnd, revStart, revEnd, status) {
     let badgeClass = 'bg-secondary';
@@ -298,47 +316,45 @@ function _renderProjectRows($container, data, totalTimelineWidth) {
     const groupsToRender = data.data || [];
 
     // Text Visibility Thresholds
-    const THRESHOLD_TEXT_HIDE = 40; 
+    const THRESHOLD_TEXT_HIDE = 40;
     const THRESHOLD_TEXT_FULL = 70;
 
     groupsToRender.forEach((group, gIndex) => {
         const matchingProjects = group.projects.filter(p => currentFilter === 'ALL' || p._computedStatus.code === currentFilter);
         if (currentFilter !== 'ALL' && matchingProjects.length === 0) return;
 
-        // =========================================================
-        // 1. Calculate Group Statistics (Ghost Bar & Health Bar)
-        // =========================================================
+        // --- Calculate Group Stats ---
         let minStart = null, maxEnd = null, maxDemandEnd = null, minProgressDate = null;
         const groupStats = { 'CRITICAL': 0, 'PLAN_FAIL': 0, 'BUFFER_USED': 0, 'EXCELLENT': 0 };
         let totalProjects = 0;
-
+        
         group.projects.forEach(p => {
-             const pStart = new Date(p.start_date);
+             const pStart = parseLocalYMD(p.start_date); 
              if (!minStart || pStart < minStart) minStart = pStart;
              if (!maxEnd || pStart > maxEnd) maxEnd = pStart;
              if (!maxDemandEnd || pStart > maxDemandEnd) maxDemandEnd = pStart;
              
              p.milestones.forEach(ms => {
-                const msStart = new Date(ms.revised_start_date);
-                let msEnd = new Date(ms.revised_end_date);
+                const msStart = parseLocalYMD(ms.revised_start_date);
+                let msEnd = parseLocalYMD(ms.revised_end_date);
                 if (!ms.actual_completion_date && CONFIG.CURRENT_DATE > msEnd) { msEnd = new Date(CONFIG.CURRENT_DATE); }
+                
                 if (msStart < minStart) minStart = msStart;
                 if (msEnd > maxEnd) maxEnd = msEnd;
                 
-                const msDemand = new Date(ms.demand_due_date || ms.planned_end);
+                const msDemand = parseLocalYMD(ms.demand_due_date || ms.planned_end);
                 if (msDemand > maxDemandEnd) maxDemandEnd = msDemand;
             });
-
-            // Calculate Visual Progress Date for Ghost Bar
+            
+            // Group Ghost Bar Logic
             let pVisualDate = new Date(pStart);
             if (p.milestones.length > 0) {
                  for (let i = 0; i < p.milestones.length; i++) {
                     const ms = p.milestones[i];
-                    const msStart = new Date(ms.revised_start_date);
-                    let msEnd = new Date(ms.revised_end_date);
-                    
+                    const msStart = parseLocalYMD(ms.revised_start_date);
+                    let msEnd = parseLocalYMD(ms.revised_end_date);
                     if (ms.status_progress === 1.0) {
-                        let effectiveDoneDate = ms.actual_completion_date ? new Date(ms.actual_completion_date) : msEnd;
+                        let effectiveDoneDate = ms.actual_completion_date ? parseLocalYMD(ms.actual_completion_date) : msEnd;
                         if (effectiveDoneDate > pVisualDate) pVisualDate = effectiveDoneDate;
                     } else if (ms.status_progress > 0) {
                         const totalDays = getDaysDiff(msStart, msEnd) + 1;
@@ -346,20 +362,25 @@ function _renderProjectRows($container, data, totalTimelineWidth) {
                         const partialDate = new Date(msStart);
                         if (doneDays > 0) partialDate.setDate(partialDate.getDate() + (doneDays - 1));
                         else partialDate.setDate(partialDate.getDate() - 1);
-                        
                         if (partialDate > pVisualDate) pVisualDate = partialDate;
                         break;
                     } else { break; }
                 }
             }
             if (!minProgressDate || pVisualDate < minProgressDate) minProgressDate = pVisualDate;
-
-            const code = p._computedStatus.code;
-            if (groupStats.hasOwnProperty(code)) groupStats[code]++;
+            
+            if (groupStats.hasOwnProperty(p._computedStatus.code)) groupStats[p._computedStatus.code]++;
             totalProjects++;
         });
+
+        // Generate Group HTML (Stats/Header)
+        let demandStripHtml = '';
+        if (minStart && maxDemandEnd) {
+             const dLeft = getDaysDiff(CONFIG.TRACKER_START_DATE, minStart) * pixelsPerDay;
+             const dWidth = (getDaysDiff(minStart, maxDemandEnd) + 1) * pixelsPerDay;
+             demandStripHtml = `<div class="group-demand-strip" style="left: ${dLeft}px; width: ${dWidth}px;" title="Demand/Target Limit: ${formatLocalYMD(maxDemandEnd)}" data-bs-toggle="tooltip"></div>`;
+        }
         
-        // Generate Ghost Bar HTML
         let ghostBarHtml = '';
         if (minStart && maxEnd) {
              const gLeft = getDaysDiff(CONFIG.TRACKER_START_DATE, minStart) * pixelsPerDay;
@@ -373,15 +394,6 @@ function _renderProjectRows($container, data, totalTimelineWidth) {
              ghostBarHtml = `<div class="group-ghost-bar" style="left: ${gLeft}px; width: ${gWidth}px;"><div class="ghost-progress-fill" style="width: ${fillWidth}px;" title="Overall Progress to: ${dateLabel}" data-bs-toggle="tooltip"></div></div>`;
         }
 
-        // Generate Demand Strip HTML
-        let demandStripHtml = '';
-        if (minStart && maxDemandEnd) {
-             const dLeft = getDaysDiff(CONFIG.TRACKER_START_DATE, minStart) * pixelsPerDay;
-             const dWidth = (getDaysDiff(minStart, maxDemandEnd) + 1) * pixelsPerDay;
-             demandStripHtml = `<div class="group-demand-strip" style="left: ${dLeft}px; width: ${dWidth}px;" title="Demand/Target Limit: ${maxDemandEnd.toISOString().split('T')[0]}" data-bs-toggle="tooltip"></div>`;
-        }
-
-        // Generate Health Bar Segments
         let healthBarSegments = '';
         if (totalProjects > 0) {
              const colorMap = { 'CRITICAL': 'bg-critical', 'PLAN_FAIL': 'bg-danger', 'BUFFER_USED': 'bg-warning', 'EXCELLENT': 'bg-success' };
@@ -405,14 +417,7 @@ function _renderProjectRows($container, data, totalTimelineWidth) {
                     <span class="group-toggle-icon">${toggleIcon}</span>
                     <div class="d-flex flex-column justify-content-center w-100 pe-2" style="overflow: hidden;">
                         <div class="d-flex align-items-center" style="width: 100%;">
-                            <span class="fw-bold text-truncate me-auto" 
-                                  style="font-size: 13px; color: #333; cursor: help;" 
-                                  data-bs-toggle="popover" 
-                                  data-bs-trigger="hover"
-                                  data-bs-placement="top"
-                                  data-bs-content="${group.group_name}">
-                                ${group.group_name}
-                            </span>
+                            <span class="fw-bold text-truncate me-auto" title="${group.group_name}">${group.group_name}</span>
                             <span class="badge bg-secondary flex-shrink-0 ms-1" style="font-size:9px">${matchingProjects.length}</span>
                         </div>
                         <div class="group-health-bar mt-1">${healthBarSegments}</div>
@@ -435,12 +440,8 @@ function _renderProjectRows($container, data, totalTimelineWidth) {
                             ${statusStrip}
                             <div class="d-flex flex-column justify-content-center overflow-hidden flex-grow-1 ps-2">
                                 <div class="fw-bold text-dark text-truncate project-name-clickable" 
-                                     data-g-idx="${gIndex}" 
-                                     data-p-idx="${pIndex}" 
-                                     style="cursor: pointer; font-size: 12px;"
-                                     data-bs-toggle="popover"
-                                     data-bs-trigger="hover"
-                                     data-bs-placement="top" 
+                                     data-g-idx="${gIndex}" data-p-idx="${pIndex}" 
+                                     data-bs-toggle="popover" data-bs-trigger="hover" data-bs-placement="top" 
                                      data-bs-content="${project.project_name}">
                                     ${project.project_name}
                                 </div>
@@ -449,82 +450,89 @@ function _renderProjectRows($container, data, totalTimelineWidth) {
                         <div class="milestone-container" id="milestones-${project.project_id}" style="min-width: ${totalTimelineWidth}px">
                 `;
 
-                let currentDemandAnchor = new Date(project.start_date);
+                let currentDemandAnchor = parseLocalYMD(project.start_date);
                 
                 project.milestones.forEach((ms, mIndex) => {
-                    let origStart = project.start_date;
-                    if (mIndex > 0) {
-                        let prevPlanEnd = new Date(project.milestones[mIndex - 1].planned_end);
-                        prevPlanEnd.setDate(prevPlanEnd.getDate() + 1);
-                        origStart = prevPlanEnd.toISOString().split('T')[0];
-                    }
-
-                    // 1. Demand Bar
+                    // --- 1. Basic Data Parsing (No complex shifts here anymore!) ---
+                    // Core.js has already done the shifting for us!
+                    let visStart = parseLocalYMD(ms.revised_start_date);
+                    let visEnd = parseLocalYMD(ms.revised_end_date);
+                    
+                    // --- 2. Render Bars ---
+                    // Demand Bar
                     const demandEndDate = ms.demand_due_date || ms.planned_end;
+                    const demandDateObj = parseLocalYMD(demandEndDate);
                     const demandLeft = getDaysDiff(CONFIG.TRACKER_START_DATE, currentDemandAnchor) * pixelsPerDay;
-                    const demandWidth = (getDaysDiff(currentDemandAnchor, demandEndDate) + 1) * pixelsPerDay;
+                    const demandWidth = (getDaysDiff(currentDemandAnchor, demandDateObj) + 1) * pixelsPerDay;
                     htmlBuffer += `<div class="gantt-bar demand-bar clickable" style="left: ${demandLeft}px; width: ${demandWidth}px; background-color: ${ms.color};" data-g-idx="${gIndex}" data-p-idx="${pIndex}" data-m-idx="${mIndex}" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-placement="top" data-bs-content="Demand: ${ms.name}<br>Due: ${demandEndDate}"></div>`;
 
-                    // 2. Plan Bar
-                    const revisedStart = ms.revised_start_date;
-                    const revisedEnd = ms.revised_end_date;
-                    const actualDate = ms.actual_completion_date;
-                    let solidBarEnd = revisedEnd; 
+                    // Plan Bar (Visual)
+                    const actualDate = ms.actual_completion_date ? parseLocalYMD(ms.actual_completion_date) : null;
+                    let solidBarEnd = visEnd; 
                     let tailType = null, tailStart = null, tailEnd = null;
                     
                     if (actualDate) {
-                        if (new Date(actualDate) > new Date(revisedEnd)) { 
-                            solidBarEnd = revisedEnd; tailType = 'late'; tailStart = revisedEnd; tailEnd = actualDate; 
-                        } else if (new Date(actualDate) < new Date(revisedEnd)) { 
-                            solidBarEnd = actualDate; tailType = 'early'; tailStart = actualDate; tailEnd = revisedEnd; 
+                        if (actualDate > visEnd) { 
+                            solidBarEnd = visEnd; tailType = 'late'; tailStart = visEnd; tailEnd = actualDate; 
+                        } else if (actualDate < visEnd) { 
+                            solidBarEnd = actualDate; tailType = 'early'; tailStart = actualDate; tailEnd = visEnd; 
                         } else { solidBarEnd = actualDate; }
-                    } else if (CONFIG.CURRENT_DATE > new Date(revisedEnd)) {
-                        solidBarEnd = revisedEnd; tailType = 'late'; tailStart = revisedEnd; tailEnd = CONFIG.CURRENT_DATE.toISOString().split('T')[0];
+                    } else if (CONFIG.CURRENT_DATE > visEnd) {
+                        // Late / Overdue
+                        solidBarEnd = visEnd; tailType = 'late'; tailStart = visEnd; 
+                        tailEnd = new Date(CONFIG.CURRENT_DATE); // Use Local Today
                     }
 
-                    const planLeft = getDaysDiff(CONFIG.TRACKER_START_DATE, revisedStart) * pixelsPerDay;
-                    const planWidth = (getDaysDiff(revisedStart, solidBarEnd) + 1) * pixelsPerDay;
+                    const planLeft = getDaysDiff(CONFIG.TRACKER_START_DATE, visStart) * pixelsPerDay;
+                    const planWidth = (getDaysDiff(visStart, solidBarEnd) + 1) * pixelsPerDay;
 
-                    const totalPlanDays = getDaysDiff(revisedStart, solidBarEnd) + 1;
+                    // Progress
+                    const totalPlanDays = getDaysDiff(visStart, solidBarEnd) + 1;
                     const completedDays = Math.round(totalPlanDays * ms.status_progress);
                     const progressPixelWidth = completedDays * pixelsPerDay;
                     const progressStyleWidth = (ms.status_progress <= 0 || progressPixelWidth <= 0) ? '0px' : `${progressPixelWidth}px`;
-                    const progressPct = Math.round(ms.status_progress * 100);
-
-                    const statusInfo = { isOverdue: !actualDate && CONFIG.CURRENT_DATE > new Date(revisedEnd) };
-                    if (statusInfo.isOverdue) statusInfo.extraInfo = `🔥 Overdue: ${Math.floor(getDaysDiff(revisedEnd, CONFIG.CURRENT_DATE))} days`;
-                    else if (tailType === 'late') statusInfo.extraInfo = `⚠️ Late by ${Math.floor(getDaysDiff(revisedEnd, actualDate))} days`;
-                    else if (tailType === 'early') statusInfo.extraInfo = `✅ Early by ${Math.floor(getDaysDiff(actualDate, revisedEnd))} days`;
                     
-                    const popContent = createPopoverContent(ms, origStart, ms.planned_end, revisedStart, revisedEnd, statusInfo).replace(/"/g, '&quot;');
+                    // Popover Content
+                    let origStartStr = project.start_date;
+                    if (mIndex > 0) {
+                        let prevPlanObj = parseLocalYMD(project.milestones[mIndex - 1].planned_end);
+                        prevPlanObj.setDate(prevPlanObj.getDate() + 1);
+                        origStartStr = formatLocalYMD(prevPlanObj);
+                    }
                     
-                    // Text Visibility Logic
+                    const statusInfo = { isOverdue: !actualDate && CONFIG.CURRENT_DATE > visEnd };
+                    if (statusInfo.isOverdue) statusInfo.extraInfo = `🔥 Overdue: ${Math.floor(getDaysDiff(visEnd, CONFIG.CURRENT_DATE))} days`;
+                    else if (tailType === 'late') statusInfo.extraInfo = `⚠️ Late by ${Math.floor(getDaysDiff(visEnd, tailEnd))} days`;
+                    
+                    const popContent = createPopoverContent(ms, origStartStr, ms.planned_end, formatLocalYMD(visStart), formatLocalYMD(visEnd), statusInfo).replace(/"/g, '&quot;');
+                    
+                    // Text Visibility
                     let innerContent = '';
                     if (planWidth >= THRESHOLD_TEXT_HIDE) {
+                        const pct = Math.round(ms.status_progress * 100);
                         if (planWidth > THRESHOLD_TEXT_FULL) {
-                             innerContent = `<div class="plan-bar-content"><span class="plan-name">${ms.name}</span><span class="plan-pct">${progressPct}%</span></div>`;
+                             innerContent = `<div class="plan-bar-content"><span class="plan-name">${ms.name}</span><span class="plan-pct">${pct}%</span></div>`;
                         } else {
                              innerContent = `<div class="plan-bar-content"><span class="plan-name" style="font-size:10px;">${ms.name}</span></div>`;
                         }
                     } 
-
                     let animClass = (ms.status_progress > 0 && ms.status_progress < 1.0) ? 'active-anim' : '';
 
                     htmlBuffer += `<div class="gantt-bar plan-bar clickable" style="left: ${planLeft}px; width: ${planWidth}px; background-color: ${ms.color};" data-g-idx="${gIndex}" data-p-idx="${pIndex}" data-m-idx="${mIndex}" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-placement="top" data-bs-content="${popContent}"><div class="progress-overlay ${animClass}" style="width: ${progressStyleWidth}"></div>${innerContent}</div>`;
 
-                    // 3. Tail Bar
+                    // Tail Bar
                     if (tailType) {
                         const tailLeft = planLeft + planWidth; 
                         const tailDiffDays = Math.abs(getDaysDiff(tailStart, tailEnd));
                         const tailWidth = tailDiffDays * pixelsPerDay;
                         const tailClass = tailType === 'late' ? 'gantt-tail-delay' : 'gantt-tail-early';
-                        const isFinished = !!actualDate;
-                        const displayActual = isFinished ? actualDate : `<span class="text-danger">In Progress (Today)</span>`;
-                        const tailPopover = tailType === 'late' ? `<div class="popover-body-content"><div class="mb-1"><strong>⚠️ Delay: ${ms.name}</strong></div><div class="text-danger mb-2">${isFinished ? 'Finished' : 'Overdue by'} ${tailDiffDays} days late</div><div style="border-top:1px solid #eee; padding-top:4px; font-size:11px;"><div>Target End: <b>${revisedEnd}</b></div><div>Actual End: <b>${displayActual}</b></div></div></div>` : `<div class="popover-body-content"><div class="mb-1"><strong>✅ Saved: ${ms.name}</strong></div><div class="text-success mb-2">Finished ${tailDiffDays} days early</div><div style="border-top:1px solid #eee; padding-top:4px; font-size:11px;"><div>Target End: <b>${revisedEnd}</b></div><div>Actual End: <b>${displayActual}</b></div></div></div>`;
+                        const displayActual = actualDate ? formatLocalYMD(actualDate) : `<span class="text-danger">In Progress (Today)</span>`;
+                        const tailPopover = `<div class="popover-body-content"><div class="mb-1"><strong>${tailType==='late'?'⚠️ Delay':'✅ Saved'}: ${ms.name}</strong></div><div class="${tailType==='late'?'text-danger':'text-success'} mb-2">${tailDiffDays} days ${tailType}</div><div style="border-top:1px solid #eee; padding-top:4px; font-size:11px;"><div>Target End: <b>${formatLocalYMD(visEnd)}</b></div><div>Actual End: <b>${displayActual}</b></div></div></div>`;
                         htmlBuffer += `<div class="gantt-bar ${tailClass} clickable" style="left: ${tailLeft}px; width: ${tailWidth}px;" data-g-idx="${gIndex}" data-p-idx="${pIndex}" data-m-idx="${mIndex}" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-content="${tailPopover.replace(/"/g, '&quot;')}"></div>`;
                     }
                     
-                    let nextAnchorDate = new Date(demandEndDate);
+                    // Update Anchor for next demand bar
+                    let nextAnchorDate = new Date(demandDateObj);
                     nextAnchorDate.setDate(nextAnchorDate.getDate() + 1);
                     currentDemandAnchor = nextAnchorDate;
                 });
@@ -541,3 +549,4 @@ function _renderProjectRows($container, data, totalTimelineWidth) {
         $container.html(htmlBuffer);
     }
 }
+
