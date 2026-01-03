@@ -21,27 +21,27 @@ function runPipeline() {
 }
 
 // Global Controls
-// Global Controls
 function initGlobalControls() {
-    // Zoom Logic Update
+    // [MODIFIED] Smooth Zoom Logic (Multiplicative)
+    
+    // Zoom In: Increase by 25% each click
     $('#btn-zoom-in').click(function () { 
-        if (pixelsPerDay < 20) { 
-            pixelsPerDay += 2; 
+        if (pixelsPerDay < 50) { 
+            pixelsPerDay = pixelsPerDay * 1.25; 
             renderTracker(currentRevisedData); 
         } 
     });
 
-    // [MODIFIED] Allow zooming out further to trigger Quarter View
+    // Zoom Out: Decrease by 20% each click (Inverse of 1.25)
+    // Lower bound set to 0.25 to prevent it from becoming invisible
     $('#btn-zoom-out').click(function () { 
-        if (pixelsPerDay > 2) { 
-            pixelsPerDay -= 2; 
-        } else if (pixelsPerDay > 0.5) {
-            // Finer grain zoom when small to allow Quarter View (e.g. 1.0, 0.5)
-            pixelsPerDay -= 0.5; 
-        }
-        renderTracker(currentRevisedData); 
+        if (pixelsPerDay > 0.25) { 
+            pixelsPerDay = pixelsPerDay * 0.8; 
+            renderTracker(currentRevisedData); 
+        } 
     });
 
+    // Reset
     $('#btn-zoom-reset').click(function () { 
         pixelsPerDay = CONFIG.DEFAULT_PIXELS_PER_DAY; 
         renderTracker(currentRevisedData); 

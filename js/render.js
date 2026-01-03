@@ -138,30 +138,33 @@ function renderTracker(data) {
     $container.css('position', 'relative');
 
     // =========================================================================
-    // 1. Header Rendering (Quarter View vs Month View)
+    // 1. Header Rendering (Quarter vs Compact Month vs Detailed Month)
     // =========================================================================
     let totalTimelineWidth = 0;
-    const SHOW_DAYS_THRESHOLD = 4; // Pixels per day threshold to show day numbers
     
-    // [NEW] Quarter View Threshold
-    // If pixelsPerDay is less than 2, switch to Quarter View
-    const isQuarterView = pixelsPerDay < 2;
+    // [NEW] View Thresholds
+    const THRESHOLD_QUARTER = 1.0;      // Below 1.0 -> Quarter View
+    const THRESHOLD_COMPACT = 3.0;      // 1.0 to 3.0 -> Compact Month View (J, F, M)
+    const THRESHOLD_SHOW_DAYS = 4.0;    // Above 4.0 -> Show Day Numbers
+
+    const isQuarterView = pixelsPerDay < THRESHOLD_QUARTER;
+    const isCompactView = pixelsPerDay >= THRESHOLD_QUARTER && pixelsPerDay < THRESHOLD_COMPACT;
 
     for(let i=0; i < CONFIG.RENDER_MONTHS; i++) {
         let targetMonthDate = new Date(CONFIG.TRACKER_START_DATE);
         targetMonthDate.setMonth(targetMonthDate.getMonth() + i);
         
-        // Calculate position
         let daysFromStart = getDaysDiff(CONFIG.TRACKER_START_DATE, targetMonthDate);
         let leftPos = daysFromStart * pixelsPerDay;
         
         const currentYear = targetMonthDate.getFullYear();
         const currentMonthIdx = targetMonthDate.getMonth(); // 0-11
-        const shortMonth = targetMonthDate.toLocaleString('default', { month: 'short' });
+        const shortMonth = targetMonthDate.toLocaleString('default', { month: 'short' }); // Jan, Feb
+        const firstLetter = shortMonth.charAt(0); // J, F
         
         // --- RENDER LOGIC SWITCH ---
         if (isQuarterView) {
-            // [QUARTER VIEW LOGIC]
+            // [MODE A: QUARTER VIEW]
             // Only draw ticks at the start of a Quarter (Jan, Apr, Jul, Oct)
             if (currentMonthIdx % 3 === 0) {
                 const qNum = Math.floor(currentMonthIdx / 3) + 1; // 1, 2, 3, 4
@@ -173,29 +176,41 @@ function renderTracker(data) {
                     labelHtml = `<span class="year-label">${currentYear}</span> Q${qNum}`;
                     boundaryClass = "year-boundary";
                 }
-
-                // Add tick
                 $headerTicks.append(`<div class="time-mark ${boundaryClass}" style="left: ${leftPos}px">${labelHtml}</div>`);
             }
-            // In Quarter view, we skip drawing individual month lines to reduce clutter
         } else {
-            // [MONTH VIEW LOGIC] (Original)
+            // [MODE B & C: MONTH VIEWS]
+            // Draw every month, but style differs based on Compact vs Detailed
             const isJanuary = currentMonthIdx === 0;
-            let labelHtml = shortMonth;
+            let labelHtml = "";
             let boundaryClass = "";
             
-            if (i === 0 || isJanuary) {
-                labelHtml = `<span class="year-label">${currentYear}</span>${shortMonth}`;
-                if (isJanuary) boundaryClass = "year-boundary";
+            if (isCompactView) {
+                // Compact: Show "J", "F", "M"
+                // Only show Year on Jan or first block
+                if (i === 0 || isJanuary) {
+                    labelHtml = `<span class="year-label">${currentYear}</span> ${firstLetter}`;
+                    if (isJanuary) boundaryClass = "year-boundary";
+                } else {
+                    labelHtml = firstLetter; 
+                }
+            } else {
+                // Detailed: Show "Jan", "Feb"
+                if (i === 0 || isJanuary) {
+                    labelHtml = `<span class="year-label">${currentYear}</span>${shortMonth}`;
+                    if (isJanuary) boundaryClass = "year-boundary";
+                } else {
+                    labelHtml = shortMonth;
+                }
             }
 
             $headerTicks.append(`<div class="time-mark ${boundaryClass}" style="left: ${leftPos}px">${labelHtml}</div>`);
         }
 
-        // [DAYS RENDER] Only render days if zoomed in enough (Implicitly hidden in Quarter View)
+        // [DAYS RENDER] Only show days in Detailed Mode (Zoom > 4.0)
         let daysInMonth = new Date(targetMonthDate.getFullYear(), targetMonthDate.getMonth() + 1, 0).getDate();
         
-        if (pixelsPerDay >= SHOW_DAYS_THRESHOLD) {
+        if (pixelsPerDay >= THRESHOLD_SHOW_DAYS) {
             let step = (pixelsPerDay >= 18) ? 1 : ((pixelsPerDay >= 10) ? 5 : 15);
             for (let d = 1; d <= daysInMonth; d++) {
                 if (d % step === 0 && d !== 1) {
@@ -208,35 +223,21 @@ function renderTracker(data) {
             }
         }
         
-        // Accumulate width (We still need accurate total width)
         totalTimelineWidth = leftPos + (daysInMonth * pixelsPerDay); 
     }
     
-    // Set header width
     $headerTicks.css('min-width', totalTimelineWidth + 'px');
 
-    // "Today" Marker Line
+    // "Today" Marker Logic (Same as before)
     const todayOffsetDays = getDaysDiff(CONFIG.TRACKER_START_DATE, CONFIG.CURRENT_DATE) + 1;
     if (todayOffsetDays >= 0) {
         const todayLeft = todayOffsetDays * pixelsPerDay;
         const sidebarWidth = $('.header-corner-placeholder').outerWidth() || 220;
-        
-        // (Date formatting code remains the same...)
         const dateStr = CONFIG.CURRENT_DATE.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
-        const popupContent = `
-            <div class="text-center p-1">
-                <div class="text-primary fw-bold mb-1" style="font-size: 1.1em;">${dateStr}</div>
-                <div class="d-flex justify-content-center align-items-center gap-2 mt-2">
-                    <span class="badge bg-primary">Today</span>
-                </div>
-            </div>`; // Simplified for brevity
-            
+        const popupContent = `<div class="text-center p-1"><div class="text-primary fw-bold mb-1" style="font-size: 1.1em;">${dateStr}</div><div class="d-flex justify-content-center align-items-center gap-2 mt-2"><span class="badge bg-primary">Today</span></div></div>`;
         $headerTicks.append(`<div class="today-header-marker" style="left: ${todayLeft}px; cursor: help;"><span class="today-label">Today</span></div>`);
-        
-        // Init Popover
         const markerEl = $headerTicks.find('.today-header-marker')[0];
         if (markerEl) { new bootstrap.Popover(markerEl, { trigger: 'hover focus', html: true, placement: 'bottom', content: popupContent, title: '' }); }
-        
         $container.append(`<div class="past-time-zone" style="width: ${todayLeft + sidebarWidth}px;"></div>`);
     }
 
@@ -247,21 +248,23 @@ function renderTracker(data) {
     let visibleCount = 0;
     const groupsToRender = data.data || [];
 
-    // [NEW] Text Visibility Threshold
-    // If bar width is less than this (px), hide text completely
-    const TEXT_HIDE_THRESHOLD = 40; 
+    // [TEXT VISIBILITY THRESHOLD]
+    // < 40px: Hide Text
+    // 40px - 70px: Compact Text
+    // > 70px: Full Text
+    const THRESHOLD_TEXT_HIDE = 40; 
+    const THRESHOLD_TEXT_FULL = 70;
 
     groupsToRender.forEach((group, gIndex) => {
         const matchingProjects = group.projects.filter(p => currentFilter === 'ALL' || p._computedStatus.code === currentFilter);
         if (currentFilter !== 'ALL' && matchingProjects.length === 0) return;
 
-        // ... (Group Logic / Ghost Bar / Demand Strip / Health Segments logic remains SAME) ...
-        // START COPYING LOGIC (Simplified for context)
+        // ... (GROUP STATS LOGIC - COPY FROM PREVIOUS) ...
+        // START COPY GROUP STATS
         let minStart = null, maxEnd = null, maxDemandEnd = null, minProgressDate = null;
         const groupStats = { 'CRITICAL': 0, 'PLAN_FAIL': 0, 'BUFFER_USED': 0, 'EXCELLENT': 0 };
         let totalProjects = 0;
         group.projects.forEach(p => {
-             // ... (Logic to calc minStart/maxEnd remains same) ...
              const pStart = new Date(p.start_date);
              if (!minStart || pStart < minStart) minStart = pStart;
              if (!maxEnd || pStart > maxEnd) maxEnd = pStart;
@@ -275,10 +278,8 @@ function renderTracker(data) {
                 const msDemand = new Date(ms.demand_due_date || ms.planned_end);
                 if (msDemand > maxDemandEnd) maxDemandEnd = msDemand;
             });
-            // ... (Ghost bar calculation logic remains same) ...
             let pVisualDate = new Date(pStart);
             if (p.milestones.length > 0) {
-                 // ... (Ghost bar logic) ...
                  for (let i = 0; i < p.milestones.length; i++) {
                     const ms = p.milestones[i];
                     const msStart = new Date(ms.revised_start_date);
@@ -302,8 +303,7 @@ function renderTracker(data) {
             if (groupStats.hasOwnProperty(code)) groupStats[code]++;
             totalProjects++;
         });
-
-        // Re-construct Ghost HTML (No changes)
+        
         let ghostBarHtml = '';
         if (minStart && maxEnd) {
              const gLeft = getDaysDiff(CONFIG.TRACKER_START_DATE, minStart) * pixelsPerDay;
@@ -333,7 +333,7 @@ function renderTracker(data) {
                  }
              });
         }
-        // END COPYING GROUP LOGIC
+        // END COPY GROUP STATS
 
         const grpStatus = group._computedStatus;
         const isExpanded = (currentFilter !== 'ALL') ? true : group.is_expanded;
@@ -436,20 +436,18 @@ function renderTracker(data) {
                     
                     const popContent = createPopoverContent(ms, origStart, ms.planned_end, revisedStart, revisedEnd, statusInfo).replace(/"/g, '&quot;');
                     
-                    // [MODIFIED] Hide Text if width is too small (e.g. < 40px)
+                    // [SMOOTH TEXT HIDING LOGIC]
                     let innerContent = '';
-                    if (planWidth >= TEXT_HIDE_THRESHOLD) {
-                        // Original Logic: Show Name + Pct if space allows, otherwise just Name?
-                        // For now we keep your original logic but gated by threshold
-                        if (planWidth > 60) {
+                    if (planWidth >= THRESHOLD_TEXT_HIDE) {
+                        if (planWidth > THRESHOLD_TEXT_FULL) {
+                             // Full details
                              innerContent = `<div class="plan-bar-content"><span class="plan-name">${ms.name}</span><span class="plan-pct">${progressPct}%</span></div>`;
                         } else {
-                             // Minimalist: just name? or nothing?
-                             // Let's hide percentage if between 40-60, but show name
+                             // Compact details (No %, smaller text)
                              innerContent = `<div class="plan-bar-content"><span class="plan-name" style="font-size:10px;">${ms.name}</span></div>`;
                         }
                     } 
-                    // else { innerContent = '' } // Implicitly empty if < 40px
+                    // else: implicitly empty
 
                     let animClass = (ms.status_progress > 0 && ms.status_progress < 1.0) ? 'active-anim' : '';
 
