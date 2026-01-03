@@ -143,13 +143,15 @@ function renderTracker(data) {
     // =========================================================================
     let totalTimelineWidth = 0;
     
-    // [MODIFIED] Simplified View Thresholds
-    // Removed THRESHOLD_COMPACT.
-    // Raised THRESHOLD_QUARTER slightly (e.g. to 1.5) so it switches to Q earlier,
-    // avoiding the need for cramped single letters.
-    const THRESHOLD_QUARTER = 1.5;      
-    const THRESHOLD_SHOW_DAYS = 4.0;    
+    // [MODIFIED] View Thresholds
+    // 1. Half-Year View: Triggered when very zoomed out (e.g., < 0.8)
+    // 2. Quarter View: Triggered when zoomed out (e.g., < 1.8)
+    // 3. Month View: Default
+    const THRESHOLD_QUARTER = 1.8;      // Your setting
+    const THRESHOLD_HALFYEAR = 0.8;     // [NEW] New threshold for H1/H2
+    const THRESHOLD_SHOW_DAYS = 4.0;  
 
+    const isHalfYearView = pixelsPerDay < THRESHOLD_HALFYEAR;
     const isQuarterView = pixelsPerDay < THRESHOLD_QUARTER;
 
     for(let i=0; i < CONFIG.RENDER_MONTHS; i++) {
@@ -161,27 +163,43 @@ function renderTracker(data) {
         
         const currentYear = targetMonthDate.getFullYear();
         const currentMonthIdx = targetMonthDate.getMonth(); // 0-11
-        const shortMonth = targetMonthDate.toLocaleString('default', { month: 'short' }); // Jan, Feb
+        const shortMonth = targetMonthDate.toLocaleString('default', { month: 'short' }); 
         
         // --- RENDER LOGIC SWITCH ---
-        if (isQuarterView) {
-            // [MODE A: QUARTER VIEW]
-            // Draw ticks at the start of a Quarter (Jan, Apr, Jul, Oct)
+        if (isHalfYearView) {
+            // [MODE A: HALF-YEAR VIEW (H1/H2)]
+            // Only draw ticks at Jan (0) and Jul (6)
+            if (currentMonthIdx % 6 === 0) {
+                // Calculate 1 or 2
+                const hNum = Math.floor(currentMonthIdx / 6) + 1; 
+                let labelHtml = `H${hNum}`;
+                let boundaryClass = "";
+
+                // Show Year if H1 (Jan) or first rendered block
+                if (currentMonthIdx === 0 || i === 0) {
+                    labelHtml = `<span class="year-label">${currentYear}</span> H${hNum}`;
+                    boundaryClass = "year-boundary";
+                }
+                $headerTicks.append(`<div class="time-mark ${boundaryClass}" style="left: ${leftPos}px">${labelHtml}</div>`);
+            }
+        } 
+        else if (isQuarterView) {
+            // [MODE B: QUARTER VIEW (Q1-Q4)]
+            // Draw ticks at Jan, Apr, Jul, Oct
             if (currentMonthIdx % 3 === 0) {
-                const qNum = Math.floor(currentMonthIdx / 3) + 1; // 1, 2, 3, 4
+                const qNum = Math.floor(currentMonthIdx / 3) + 1; 
                 let labelHtml = `Q${qNum}`;
                 let boundaryClass = "";
 
-                // Show Year if Q1 (Jan) or first rendered block
                 if (currentMonthIdx === 0 || i === 0) {
                     labelHtml = `<span class="year-label">${currentYear}</span> Q${qNum}`;
                     boundaryClass = "year-boundary";
                 }
                 $headerTicks.append(`<div class="time-mark ${boundaryClass}" style="left: ${leftPos}px">${labelHtml}</div>`);
             }
-        } else {
-            // [MODE B: STANDARD MONTH VIEW]
-            // Directly show "Jan", "Feb" etc. No single letter mode.
+        } 
+        else {
+            // [MODE C: MONTH VIEW]
             const isJanuary = currentMonthIdx === 0;
             let labelHtml = "";
             let boundaryClass = "";
@@ -196,7 +214,7 @@ function renderTracker(data) {
             $headerTicks.append(`<div class="time-mark ${boundaryClass}" style="left: ${leftPos}px">${labelHtml}</div>`);
         }
 
-        // [DAYS RENDER] Only show days when zoomed in enough
+        // [DAYS RENDER] (Only show in detailed views, never in Q or H)
         let daysInMonth = new Date(targetMonthDate.getFullYear(), targetMonthDate.getMonth() + 1, 0).getDate();
         
         if (pixelsPerDay >= THRESHOLD_SHOW_DAYS) {
