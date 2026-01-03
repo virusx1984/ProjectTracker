@@ -129,30 +129,51 @@ function renderDashboardStats(counts) {
 
 // --- 2. Render Tracker with Sortable Wrappers ---
 // --- 2. Render Tracker with Sortable Wrappers ---
+// --- Main Entry Point ---
 function renderTracker(data) {
     const $container = $('#projects-container');
     const $headerTicks = $('#header-ticks-container');
     
-    // Clear previous content
+    // 1. Cleanup
     $container.empty();
     $headerTicks.empty();
     $container.css('position', 'relative');
 
-    // =========================================================================
-    // 1. Header Rendering (Direct Switch: Month <-> Quarter)
-    // =========================================================================
+    // 2. Render Header (Returns total width needed for rows)
+    const totalTimelineWidth = _renderTimelineHeader($headerTicks);
+
+    // 3. Render "Today" Marker
+    _renderTodayMarker($container, $headerTicks, totalTimelineWidth);
+
+    // 4. Render Rows (Groups & Projects)
+    _renderProjectRows($container, data, totalTimelineWidth);
+    
+    // 5. Global Event Listeners (Re-attach)
+    // Group Toggle
+    $('.group-row').off('click').on('click', function() { 
+        if (currentFilter === 'ALL') { 
+            const gIdx = $(this).data('g-idx');
+            if(currentRevisedData.data[gIdx]) {
+                currentRevisedData.data[gIdx].is_expanded = !currentRevisedData.data[gIdx].is_expanded; 
+                renderTracker(currentRevisedData); 
+            }
+        } 
+    });
+
+    // Popovers & Tooltips
+    $container.find('[data-bs-toggle="popover"]').popover();
+    $container.find('[data-bs-toggle="tooltip"]').tooltip();
+}
+
+function _renderTimelineHeader($headerTicks) {
     let totalTimelineWidth = 0;
     
-    // [MODIFIED] View Thresholds
-    // 1. Half-Year View: Triggered when very zoomed out (e.g., < 0.8)
-    // 2. Quarter View: Triggered when zoomed out (e.g., < 1.8)
-    // 3. Month View: Default
-    const THRESHOLD_QUARTER = 1.8;      // Your setting
-    const THRESHOLD_HALFYEAR = 0.8;     // [NEW] New threshold for H1/H2
-    const THRESHOLD_YEAR = 0.4;      // [NEW] Trigger Year View below 0.4 px/day
-    const THRESHOLD_SHOW_DAYS = 4.0;  
+    // View Thresholds
+    const THRESHOLD_QUARTER = 1.8;
+    const THRESHOLD_HALFYEAR = 0.8;
+    const THRESHOLD_YEAR = 0.4;     
+    const THRESHOLD_SHOW_DAYS = 4.0;    
 
-    // Determine current mode priority (Check from macro to micro)
     const isYearView = pixelsPerDay < THRESHOLD_YEAR;
     const isHalfYearView = !isYearView && pixelsPerDay < THRESHOLD_HALFYEAR;
     const isQuarterView = !isYearView && !isHalfYearView && pixelsPerDay < THRESHOLD_QUARTER;
@@ -165,70 +186,47 @@ function renderTracker(data) {
         let leftPos = daysFromStart * pixelsPerDay;
         
         const currentYear = targetMonthDate.getFullYear();
-        const currentMonthIdx = targetMonthDate.getMonth(); // 0-11
+        const currentMonthIdx = targetMonthDate.getMonth(); 
         const shortMonth = targetMonthDate.toLocaleString('default', { month: 'short' }); 
         
-        // --- RENDER LOGIC SWITCH ---
+        // --- Tick Rendering Logic ---
         if (isYearView) {
-            // [MODE A: YEAR VIEW]
-            // Draw ticks only at the start of the year (January / Month 0)
             if (currentMonthIdx % 12 === 0) {
-                // Label is just the Year number
                 let labelHtml = `<span class="year-label" style="font-size:14px; font-weight:800; opacity:1;">${currentYear}</span>`;
-                let boundaryClass = "year-boundary"; // Always a strong boundary
-                
-                $headerTicks.append(`<div class="time-mark ${boundaryClass}" style="left: ${leftPos}px">${labelHtml}</div>`);
+                $headerTicks.append(`<div class="time-mark year-boundary" style="left: ${leftPos}px">${labelHtml}</div>`);
             }
         }
         else if (isHalfYearView) {
-            // [MODE B: HALF-YEAR VIEW (H1/H2)]
             if (currentMonthIdx % 6 === 0) {
                 const hNum = Math.floor(currentMonthIdx / 6) + 1; 
-                let labelHtml = `H${hNum}`;
-                let boundaryClass = "";
-
-                if (currentMonthIdx === 0 || i === 0) {
-                    labelHtml = `<span class="year-label">${currentYear}</span> H${hNum}`;
-                    boundaryClass = "year-boundary";
-                }
+                let labelHtml = (currentMonthIdx === 0 || i === 0) 
+                    ? `<span class="year-label">${currentYear}</span> H${hNum}` 
+                    : `H${hNum}`;
+                let boundaryClass = (currentMonthIdx === 0) ? "year-boundary" : "";
                 $headerTicks.append(`<div class="time-mark ${boundaryClass}" style="left: ${leftPos}px">${labelHtml}</div>`);
             }
         } 
         else if (isQuarterView) {
-            // [MODE C: QUARTER VIEW (Q1-Q4)]
             if (currentMonthIdx % 3 === 0) {
                 const qNum = Math.floor(currentMonthIdx / 3) + 1; 
-                let labelHtml = `Q${qNum}`;
-                let boundaryClass = "";
-
-                if (currentMonthIdx === 0 || i === 0) {
-                    labelHtml = `<span class="year-label">${currentYear}</span> Q${qNum}`;
-                    boundaryClass = "year-boundary";
-                }
+                let labelHtml = (currentMonthIdx === 0 || i === 0) 
+                    ? `<span class="year-label">${currentYear}</span> Q${qNum}` 
+                    : `Q${qNum}`;
+                let boundaryClass = (currentMonthIdx === 0) ? "year-boundary" : "";
                 $headerTicks.append(`<div class="time-mark ${boundaryClass}" style="left: ${leftPos}px">${labelHtml}</div>`);
             }
         } 
         else {
-            // [MODE D: MONTH VIEW]
+            // Month View
             const isJanuary = currentMonthIdx === 0;
-            let labelHtml = "";
-            let boundaryClass = "";
-            
-            if (i === 0 || isJanuary) {
-                labelHtml = `<span class="year-label">${currentYear}</span>${shortMonth}`;
-                if (isJanuary) boundaryClass = "year-boundary";
-            } else {
-                labelHtml = shortMonth;
-            }
-
+            let labelHtml = (i === 0 || isJanuary) ? `<span class="year-label">${currentYear}</span>${shortMonth}` : shortMonth;
+            let boundaryClass = isJanuary ? "year-boundary" : "";
             $headerTicks.append(`<div class="time-mark ${boundaryClass}" style="left: ${leftPos}px">${labelHtml}</div>`);
         }
 
-        // [DAYS RENDER] (Only in detailed views)
+        // --- Day Ticks ---
         let daysInMonth = new Date(targetMonthDate.getFullYear(), targetMonthDate.getMonth() + 1, 0).getDate();
-        
         if (pixelsPerDay >= THRESHOLD_SHOW_DAYS) {
-            // ... (Days loop remains same) ...
              let step = (pixelsPerDay >= 18) ? 1 : ((pixelsPerDay >= 10) ? 5 : 15);
             for (let d = 1; d <= daysInMonth; d++) {
                 if (d % step === 0 && d !== 1) {
@@ -240,78 +238,66 @@ function renderTracker(data) {
                 }
             }
         }
-        
         totalTimelineWidth = leftPos + (daysInMonth * pixelsPerDay); 
     }
     
     $headerTicks.css('min-width', totalTimelineWidth + 'px');
+    return totalTimelineWidth; // Return for use in rows
+}
 
-    // "Today" Marker Logic (Same as before)
-    // =========================================================================
-    // [MODIFIED] "Today" Marker - Minimalist Faint Dashed Line
-    // =========================================================================
+function _renderTodayMarker($container, $headerTicks, totalTimelineWidth) {
     const todayOffsetDays = getDaysDiff(CONFIG.TRACKER_START_DATE, CONFIG.CURRENT_DATE) + 1;
     if (todayOffsetDays >= 0) {
         const todayLeft = todayOffsetDays * pixelsPerDay;
         const sidebarWidth = $('.header-corner-placeholder').outerWidth() || 220;
         
-        // --- 1. Header Trigger (Invisible) ---
-        // We create an invisible "hit box" in the header so you can still hover to see the date.
-        // It doesn't have any visual style (border/background), so it won't block text.
+        // 1. Header Trigger (Visual Gradient + Hit Box)
         const headerTriggerStyle = `
             position: absolute; 
-            left: ${todayLeft - 5}px; /* Center the 11px box on the specific pixel */
+            left: ${todayLeft - 5}px; 
             top: 0; 
             bottom: 0; 
             width: 11px; 
             z-index: 100;
             cursor: help;
-            /* The Magic: Draw a 1px dashed line in the center (5px transparent, 1px red, 5px transparent) */
             background-image: linear-gradient(to right, transparent 5px, rgba(220, 53, 69, 0.5) 5px, rgba(220, 53, 69, 0.5) 6px, transparent 6px);
-            background-size: 100% 4px; /* Controls the dash spacing (4px height repeats) */
+            background-size: 100% 4px; 
             background-repeat: repeat-y;
         `;
-        
         $headerTicks.append(`<div class="today-header-trigger" style="${headerTriggerStyle}"></div>`);
 
-        // Initialize Popover on the invisible trigger
+        // Popover
         const dateStr = CONFIG.CURRENT_DATE.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
         const popupContent = `<div class="text-center p-1"><div class="text-danger fw-bold mb-1">${dateStr}</div><div class="small text-muted">Today</div></div>`;
-        
         const triggerEl = $headerTicks.find('.today-header-trigger')[0];
         if (triggerEl) { 
             new bootstrap.Popover(triggerEl, { trigger: 'hover focus', html: true, placement: 'bottom', content: popupContent }); 
         }
 
-        // --- 2. The Faint Dashed Line (Overlay) ---
-        // This goes into the body container ($container).
-        // It sits on top of everything (z-index high) but lets clicks pass through (pointer-events: none).
+        // 2. Body Line (Overlay)
         const lineStyle = `
             position: absolute;
             left: ${todayLeft + sidebarWidth}px; 
             top: 0;
-            bottom: 0; /* Full height */
+            bottom: 0;
             width: 0;
-            border-left: 1px dashed rgba(220, 53, 69, 0.5); /* Faint Red Dashed Line */
-            z-index: 50; /* Above bars so you can see it cut through tasks */
-            pointer-events: none; /* Crucial: lets you click projects underneath */
+            border-left: 1px dashed rgba(220, 53, 69, 0.5);
+            z-index: 50; 
+            pointer-events: none;
         `;
-        
         $container.append(`<div class="today-dashed-line" style="${lineStyle}"></div>`);
 
-        // --- 3. Past Time Zone (Background) ---
-        // Just the grey background, no border.
+        // 3. Past Zone
         $container.append(`<div class="past-time-zone" style="width: ${todayLeft + sidebarWidth}px;"></div>`);
     }
+}
 
-    // =========================================================================
-    // 2. Render Groups & Projects
-    // =========================================================================
+function _renderProjectRows($container, data, totalTimelineWidth) {
     let htmlBuffer = ""; 
     let visibleCount = 0;
     const groupsToRender = data.data || [];
 
-    // [TEXT VISIBILITY THRESHOLD]
+    // Text Visibility Thresholds
     const THRESHOLD_TEXT_HIDE = 40; 
     const THRESHOLD_TEXT_FULL = 70;
 
@@ -319,31 +305,38 @@ function renderTracker(data) {
         const matchingProjects = group.projects.filter(p => currentFilter === 'ALL' || p._computedStatus.code === currentFilter);
         if (currentFilter !== 'ALL' && matchingProjects.length === 0) return;
 
-        // ... (GROUP STATS LOGIC - SAME AS BEFORE) ...
-        // START COPY GROUP STATS
+        // =========================================================
+        // 1. Calculate Group Statistics (Ghost Bar & Health Bar)
+        // =========================================================
         let minStart = null, maxEnd = null, maxDemandEnd = null, minProgressDate = null;
         const groupStats = { 'CRITICAL': 0, 'PLAN_FAIL': 0, 'BUFFER_USED': 0, 'EXCELLENT': 0 };
         let totalProjects = 0;
+
         group.projects.forEach(p => {
              const pStart = new Date(p.start_date);
              if (!minStart || pStart < minStart) minStart = pStart;
              if (!maxEnd || pStart > maxEnd) maxEnd = pStart;
              if (!maxDemandEnd || pStart > maxDemandEnd) maxDemandEnd = pStart;
+             
              p.milestones.forEach(ms => {
                 const msStart = new Date(ms.revised_start_date);
                 let msEnd = new Date(ms.revised_end_date);
                 if (!ms.actual_completion_date && CONFIG.CURRENT_DATE > msEnd) { msEnd = new Date(CONFIG.CURRENT_DATE); }
                 if (msStart < minStart) minStart = msStart;
                 if (msEnd > maxEnd) maxEnd = msEnd;
+                
                 const msDemand = new Date(ms.demand_due_date || ms.planned_end);
                 if (msDemand > maxDemandEnd) maxDemandEnd = msDemand;
             });
+
+            // Calculate Visual Progress Date for Ghost Bar
             let pVisualDate = new Date(pStart);
             if (p.milestones.length > 0) {
                  for (let i = 0; i < p.milestones.length; i++) {
                     const ms = p.milestones[i];
                     const msStart = new Date(ms.revised_start_date);
                     let msEnd = new Date(ms.revised_end_date);
+                    
                     if (ms.status_progress === 1.0) {
                         let effectiveDoneDate = ms.actual_completion_date ? new Date(ms.actual_completion_date) : msEnd;
                         if (effectiveDoneDate > pVisualDate) pVisualDate = effectiveDoneDate;
@@ -353,17 +346,20 @@ function renderTracker(data) {
                         const partialDate = new Date(msStart);
                         if (doneDays > 0) partialDate.setDate(partialDate.getDate() + (doneDays - 1));
                         else partialDate.setDate(partialDate.getDate() - 1);
+                        
                         if (partialDate > pVisualDate) pVisualDate = partialDate;
                         break;
                     } else { break; }
                 }
             }
             if (!minProgressDate || pVisualDate < minProgressDate) minProgressDate = pVisualDate;
+
             const code = p._computedStatus.code;
             if (groupStats.hasOwnProperty(code)) groupStats[code]++;
             totalProjects++;
         });
         
+        // Generate Ghost Bar HTML
         let ghostBarHtml = '';
         if (minStart && maxEnd) {
              const gLeft = getDaysDiff(CONFIG.TRACKER_START_DATE, minStart) * pixelsPerDay;
@@ -376,12 +372,16 @@ function renderTracker(data) {
              }
              ghostBarHtml = `<div class="group-ghost-bar" style="left: ${gLeft}px; width: ${gWidth}px;"><div class="ghost-progress-fill" style="width: ${fillWidth}px;" title="Overall Progress to: ${dateLabel}" data-bs-toggle="tooltip"></div></div>`;
         }
+
+        // Generate Demand Strip HTML
         let demandStripHtml = '';
         if (minStart && maxDemandEnd) {
              const dLeft = getDaysDiff(CONFIG.TRACKER_START_DATE, minStart) * pixelsPerDay;
              const dWidth = (getDaysDiff(minStart, maxDemandEnd) + 1) * pixelsPerDay;
              demandStripHtml = `<div class="group-demand-strip" style="left: ${dLeft}px; width: ${dWidth}px;" title="Demand/Target Limit: ${maxDemandEnd.toISOString().split('T')[0]}" data-bs-toggle="tooltip"></div>`;
         }
+
+        // Generate Health Bar Segments
         let healthBarSegments = '';
         if (totalProjects > 0) {
              const colorMap = { 'CRITICAL': 'bg-critical', 'PLAN_FAIL': 'bg-danger', 'BUFFER_USED': 'bg-warning', 'EXCELLENT': 'bg-success' };
@@ -393,7 +393,6 @@ function renderTracker(data) {
                  }
              });
         }
-        // END COPY GROUP STATS
 
         const grpStatus = group._computedStatus;
         const isExpanded = (currentFilter !== 'ALL') ? true : group.is_expanded;
@@ -472,10 +471,13 @@ function renderTracker(data) {
                     const actualDate = ms.actual_completion_date;
                     let solidBarEnd = revisedEnd; 
                     let tailType = null, tailStart = null, tailEnd = null;
+                    
                     if (actualDate) {
-                        if (new Date(actualDate) > new Date(revisedEnd)) { solidBarEnd = revisedEnd; tailType = 'late'; tailStart = revisedEnd; tailEnd = actualDate; } 
-                        else if (new Date(actualDate) < new Date(revisedEnd)) { solidBarEnd = actualDate; tailType = 'early'; tailStart = actualDate; tailEnd = revisedEnd; } 
-                        else { solidBarEnd = actualDate; }
+                        if (new Date(actualDate) > new Date(revisedEnd)) { 
+                            solidBarEnd = revisedEnd; tailType = 'late'; tailStart = revisedEnd; tailEnd = actualDate; 
+                        } else if (new Date(actualDate) < new Date(revisedEnd)) { 
+                            solidBarEnd = actualDate; tailType = 'early'; tailStart = actualDate; tailEnd = revisedEnd; 
+                        } else { solidBarEnd = actualDate; }
                     } else if (CONFIG.CURRENT_DATE > new Date(revisedEnd)) {
                         solidBarEnd = revisedEnd; tailType = 'late'; tailStart = revisedEnd; tailEnd = CONFIG.CURRENT_DATE.toISOString().split('T')[0];
                     }
@@ -496,7 +498,7 @@ function renderTracker(data) {
                     
                     const popContent = createPopoverContent(ms, origStart, ms.planned_end, revisedStart, revisedEnd, statusInfo).replace(/"/g, '&quot;');
                     
-                    // [TEXT VISIBILITY LOGIC]
+                    // Text Visibility Logic
                     let innerContent = '';
                     if (planWidth >= THRESHOLD_TEXT_HIDE) {
                         if (planWidth > THRESHOLD_TEXT_FULL) {
@@ -538,21 +540,4 @@ function renderTracker(data) {
     } else {
         $container.html(htmlBuffer);
     }
-
-    // 4. Attach Event Listeners
-    $('.group-row').click(function() { 
-        if (currentFilter === 'ALL') { 
-            currentRevisedData.data[$(this).data('g-idx')].is_expanded = !currentRevisedData.data[$(this).data('g-idx')].is_expanded; 
-            renderTracker(currentRevisedData); 
-        } 
-    });
-
-    $container.off('mouseenter', '[data-bs-toggle="popover"]').on('mouseenter', '[data-bs-toggle="popover"]', function() { 
-        if (!bootstrap.Popover.getInstance(this)) { new bootstrap.Popover(this).show(); }
-    });
-
-    $container.off('mouseenter', '[data-bs-toggle="tooltip"]').on('mouseenter', '[data-bs-toggle="tooltip"]', function() { 
-        if (!bootstrap.Tooltip.getInstance(this)) { new bootstrap.Tooltip(this).show(); }
-    });
 }
-
