@@ -46,25 +46,100 @@ function initEditHandlers() {
         $('#edit-actual-date').val(msData.actual_completion_date || '');
         $('#edit-demand-date').val(msData.demand_due_date || '');
         $('#edit-progress').val(msData.status_progress);
-        $('#edit-progress-val').text(Math.round(msData.status_progress * 100) + '%');
+        updateProgressDisplay();
+
         modal.show();
     });
 
-    $('#edit-progress').on('input', function () { $('#edit-progress-val').text(Math.round($(this).val() * 100) + '%'); });
+    // [NEW] Dynamic Progress Date Calculator
+    // [NEW] Bubble & Date Calculator
+    const updateProgressDisplay = () => {
+        const $input = $('#edit-progress');
+        const $bubble = $('#progress-bubble');
+        const $pctText = $('#edit-progress-val'); // The static text label
+
+        const progVal = parseFloat($input.val()); // 0.0 to 1.0
+        const pct = Math.round(progVal * 100);
+        
+        // 1. Update Static Percentage Label
+        $pctText.text(`${pct}%`);
+
+        // 2. Calculate Bubble Position
+        // Move bubble using CSS 'left' percentage. 
+        // transform: translateX(-50%) in CSS handles the centering alignment.
+        // We add a tiny offset logic if you want strict adherence to thumb width, 
+        // but for Bootstrap inputs, raw percentage is usually visually sufficient.
+        const positionPct = progVal * 100;
+        $bubble.css('left', `calc(${positionPct}% + (${8 - positionPct * 0.15}px))`); 
+        // (The calc formula slightly adjusts for the thumb width so it doesn't drift at edges)
+
+        // 3. Calculate Bubble Content (Date)
+        const startStr = $('#edit-revised-start').val();
+        const endStr = $('#edit-revised-end').val();
+        
+        // Helper: Local Date Parser
+        const parseLocal = (s) => {
+            if (!s) return null;
+            const p = s.split('-');
+            return new Date(parseInt(p[0]), parseInt(p[1]) - 1, parseInt(p[2]));
+        };
+
+        let bubbleHtml = "N/A";
+
+        if (startStr && endStr) {
+            const startDate = parseLocal(startStr);
+            const endDate = parseLocal(endStr);
+
+            if (endDate >= startDate) {
+                if (pct === 0) {
+                    // Start
+                    bubbleHtml = `Start: ${startStr}`;
+                    $bubble.removeClass('bg-success bg-primary').addClass('bg-dark');
+                } else if (pct === 100) {
+                    // Done
+                    bubbleHtml = `Done!`; // Or "Finished"
+                    $bubble.removeClass('bg-dark bg-primary').addClass('bg-success');
+                } else {
+                    // Middle - Calculate Date
+                    const totalDays = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+                    const daysDone = Math.round(totalDays * progVal);
+                    const offset = Math.max(0, daysDone - 1);
+                    
+                    const calcDate = new Date(startDate);
+                    calcDate.setDate(calcDate.getDate() + offset);
+
+                    // Format
+                    const y = calcDate.getFullYear();
+                    const m = String(calcDate.getMonth() + 1).padStart(2, '0');
+                    const d = String(calcDate.getDate()).padStart(2, '0');
+                    
+                    bubbleHtml = `${y}-${m}-${d}`;
+                    $bubble.removeClass('bg-dark bg-success').addClass('bg-primary');
+                }
+            }
+        }
+        
+        $bubble.html(bubbleHtml);
+        $bubble.css('opacity', '1'); // Ensure visible once calculated
+    };
+
+    // [MODIFIED] Bind events to both Progress Slider AND Revised End Date
+    // This ensures the date updates if the user drags the slider OR changes the end date
+    $('#edit-progress, #edit-revised-end').on('input', updateProgressDisplay);
     
     // 1. Set Today Button: Sets Date to Today AND Progress to 100%
     $('#btn-set-today').click(function() {
         const today = new Date().toISOString().split('T')[0];
         $('#edit-actual-date').val(today);
         $('#edit-progress').val(1.0);
-        $('#edit-progress-val').text('100%');
+        updateProgressDisplay(); // Force update
     });
 
     // 2. Clear Date Button
     $('#btn-clear-date').click(function() {
         $('#edit-actual-date').val('');
         $('#edit-progress').val(0);
-        $('#edit-progress-val').text('0%');
+        updateProgressDisplay(); // Force update
     });
 
     $('#btn-save-changes').click(function () {
@@ -387,6 +462,9 @@ function initCreateProjectHandler() {
 
     const modalEl = document.getElementById('createProjectModal');
     const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+    $(modalEl).on('hide.bs.modal', function () {
+        if (document.activeElement) document.activeElement.blur();
+    });
     const $errorMsg = $('#create-error-msg');
 
     $('#dashboard-stats-container').on('click', '#btn-open-create-project', function() {

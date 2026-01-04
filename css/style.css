@@ -783,3 +783,46 @@ div.status-strip.bg-critical {
     background-color: rgba(13, 110, 253, 0.1);
     transform: scale(1.02);
 }
+
+/* Range Slider Bubble Styling */
+.range-wrap {
+    position: relative;
+    margin-top: 25px; /* Give space for the bubble above */
+}
+
+.range-bubble {
+    background: #212529; /* Bootstrap dark */
+    color: #fff;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    position: absolute;
+    bottom: 100%; /* Position above the slider */
+    left: 50%;     /* Initial center, updated by JS */
+    transform: translateX(-50%); /* Perfectly center align relative to the thumb */
+    margin-bottom: 8px; /* Spacing from the thumb */
+    white-space: nowrap;
+    opacity: 0;    /* Hidden by default until initialized */
+    transition: opacity 0.2s;
+    pointer-events: none; /* Let clicks pass through */
+    z-index: 10;
+}
+
+/* The little triangle arrow at the bottom */
+.range-bubble::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -6px;
+    border-width: 6px;
+    border-style: solid;
+    border-color: #212529 transparent transparent transparent;
+}
+
+/* Show bubble when active (optional, we will make it always visible via JS) */
+.range-wrap:hover .range-bubble,
+.range-wrap:focus-within .range-bubble {
+    opacity: 1;
+}
