@@ -1,6 +1,11 @@
 
 // --- UI Rendering Logic ---
 
+// Add these with your other global variables
+let currentSearchTerm = "";
+let isRegexMode = false;
+
+
 // --- Helper: Parse 'YYYY-MM-DD' string to Local Date Object ---
 // (Prevents UTC conversion bugs. '2026-01-04' becomes Jan 4th 00:00 Local)
 function parseLocalYMD(dateStr) {
@@ -318,12 +323,41 @@ function _renderProjectRows($container, data, totalTimelineWidth) {
     const THRESHOLD_TEXT_FULL = 70;
 
     groupsToRender.forEach((group, gIndex) => {
-        const matchingProjects = group.projects.filter(p => currentFilter === 'ALL' || p._computedStatus.code === currentFilter);
+        // [MODIFIED] Filter logic now includes Search AND Status
+        const matchingProjects = group.projects.filter(p => {
+            // 1. Status Filter Check
+            const statusMatch = (currentFilter === 'ALL' || p._computedStatus.code === currentFilter);
+            if (!statusMatch) return false;
+
+            // 2. [NEW] Search Filter Check
+            if (!currentSearchTerm) return true; // No search = match all
+
+            const pName = p.project_name || "";
+            
+            if (isRegexMode) {
+                try {
+                    // Create RegEx (Case insensitive)
+                    const re = new RegExp(currentSearchTerm, 'i');
+                    return re.test(pName);
+                } catch (e) {
+                    return false; // If Regex is invalid, don't match anything (safer)
+                }
+            } else {
+                // Standard String Search (Case insensitive)
+                return pName.toLowerCase().includes(currentSearchTerm.toLowerCase());
+            }
+        });
+
         if (currentFilter !== 'ALL' && matchingProjects.length === 0) return;
+        
+        // Hide group if search is active but no projects match inside this group
+        if (currentSearchTerm && matchingProjects.length === 0) return;
 
         // --- Calculate Group Stats ---
         let minStart = null, maxEnd = null, maxDemandEnd = null, minProgressDate = null;
-        const groupStats = { 'CRITICAL': 0, 'PLAN_FAIL': 0, 'BUFFER_USED': 0, 'EXCELLENT': 0 };
+        
+        // [MODIFIED] Updated keys to match new Status Logic (Critical, Delay, On Track, Completed)
+        const groupStats = { 'CRITICAL': 0, 'DELAY': 0, 'ON_TRACK': 0, 'COMPLETED': 0 };
         let totalProjects = 0;
         
         group.projects.forEach(p => {
@@ -367,6 +401,7 @@ function _renderProjectRows($container, data, totalTimelineWidth) {
             }
             if (!minProgressDate || pVisualDate < minProgressDate) minProgressDate = pVisualDate;
             
+            // [MODIFIED] Update stats using new keys
             if (groupStats.hasOwnProperty(p._computedStatus.code)) groupStats[p._computedStatus.code]++;
             totalProjects++;
         });
@@ -394,8 +429,9 @@ function _renderProjectRows($container, data, totalTimelineWidth) {
 
         let healthBarSegments = '';
         if (totalProjects > 0) {
-             const colorMap = { 'CRITICAL': 'bg-critical', 'PLAN_FAIL': 'bg-danger', 'BUFFER_USED': 'bg-warning', 'EXCELLENT': 'bg-success' };
-             ['CRITICAL', 'PLAN_FAIL', 'BUFFER_USED', 'EXCELLENT'].forEach(code => {
+             // [MODIFIED] Color Map matching new logic
+             const colorMap = { 'CRITICAL': 'bg-critical', 'DELAY': 'bg-danger', 'ON_TRACK': 'bg-success', 'COMPLETED': 'bg-primary' };
+             ['CRITICAL', 'DELAY', 'ON_TRACK', 'COMPLETED'].forEach(code => {
                  const count = groupStats[code];
                  if (count > 0) {
                      const pct = (count / totalProjects) * 100;
@@ -405,7 +441,8 @@ function _renderProjectRows($container, data, totalTimelineWidth) {
         }
 
         const grpStatus = group._computedStatus;
-        const isExpanded = (currentFilter !== 'ALL') ? true : group.is_expanded;
+        // Expand automatically if searching
+        const isExpanded = (currentFilter !== 'ALL' || currentSearchTerm.length > 0) ? true : group.is_expanded;
         const toggleIcon = isExpanded ? '<i class="bi bi-chevron-down"></i>' : '<i class="bi bi-chevron-right"></i>';
 
         htmlBuffer += `
@@ -433,9 +470,12 @@ function _renderProjectRows($container, data, totalTimelineWidth) {
         `;
 
         if (isExpanded) {
-            group.projects.forEach((project, pIndex) => {
+            // [MODIFIED] Loop through matchingProjects instead of group.projects to respect filter
+            matchingProjects.forEach((project) => {
+                // Find original index for data attributes (since we are iterating a filtered array)
+                const pIndex = group.projects.findIndex(p => p.project_id === project.project_id);
+                
                 const status = project._computedStatus;
-                if (currentFilter !== 'ALL' && status.code !== currentFilter) return;
                 visibleCount++;
                 const statusStrip = `<div class="status-strip ${status.class}" data-bs-toggle="tooltip" data-bs-placement="right" title="Status: ${status.label}"></div>`;
                 
@@ -458,8 +498,6 @@ function _renderProjectRows($container, data, totalTimelineWidth) {
                 let currentDemandAnchor = parseLocalYMD(project.start_date);
                 
                 project.milestones.forEach((ms, mIndex) => {
-                    // --- 1. Basic Data Parsing (No complex shifts here anymore!) ---
-                    // Core.js has already done the shifting for us!
                     let visStart = parseLocalYMD(ms.revised_start_date);
                     let visEnd = parseLocalYMD(ms.revised_end_date);
                     
@@ -483,9 +521,8 @@ function _renderProjectRows($container, data, totalTimelineWidth) {
                             solidBarEnd = actualDate; tailType = 'early'; tailStart = actualDate; tailEnd = visEnd; 
                         } else { solidBarEnd = actualDate; }
                     } else if (CONFIG.CURRENT_DATE > visEnd) {
-                        // Late / Overdue
                         solidBarEnd = visEnd; tailType = 'late'; tailStart = visEnd; 
-                        tailEnd = new Date(CONFIG.CURRENT_DATE); // Use Local Today
+                        tailEnd = new Date(CONFIG.CURRENT_DATE); 
                     }
 
                     const planLeft = getDaysDiff(CONFIG.TRACKER_START_DATE, visStart) * pixelsPerDay;
@@ -536,7 +573,6 @@ function _renderProjectRows($container, data, totalTimelineWidth) {
                         htmlBuffer += `<div class="gantt-bar ${tailClass} clickable" style="left: ${tailLeft}px; width: ${tailWidth}px;" data-g-idx="${gIndex}" data-p-idx="${pIndex}" data-m-idx="${mIndex}" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-content="${tailPopover.replace(/"/g, '&quot;')}"></div>`;
                     }
                     
-                    // Update Anchor for next demand bar
                     let nextAnchorDate = new Date(demandDateObj);
                     nextAnchorDate.setDate(nextAnchorDate.getDate() + 1);
                     currentDemandAnchor = nextAnchorDate;
@@ -555,3 +591,75 @@ function _renderProjectRows($container, data, totalTimelineWidth) {
     }
 }
 
+
+// --- [NEW] Search Event Listeners (Paste this at the bottom of render.js) ---
+
+function initSearchHandler() {
+    const $input = $('#project-search-input');
+    const $clearBtn = $('#btn-search-clear');
+    const $regexBtn = $('#btn-search-regex');
+
+    // Debounce Helper: Prevents rendering on every single keystroke (performance)
+    const debounce = (func, wait) => {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), wait);
+        };
+    };
+
+    // Main Trigger Logic
+    const triggerSearch = () => {
+        const rawVal = $input.val();
+        currentSearchTerm = rawVal.trim(); // Update the global variable
+        
+        // 1. Toggle Clear Button Visibility
+        if (currentSearchTerm.length > 0) $clearBtn.removeClass('d-none');
+        else $clearBtn.addClass('d-none');
+
+        // 2. Validate Regex (if mode is active)
+        if (isRegexMode && currentSearchTerm.length > 0) {
+            try {
+                new RegExp(currentSearchTerm); // Try to compile it
+                $input.removeClass('is-invalid');
+            } catch (e) {
+                $input.addClass('is-invalid'); // Turn border red
+                return; // Stop rendering if regex is broken
+            }
+        } else {
+            $input.removeClass('is-invalid');
+        }
+
+        // 3. Re-render the Dashboard
+        renderTracker(currentRevisedData);
+    };
+
+    // Event 1: Typing (Debounced 300ms)
+    $input.on('input', debounce(triggerSearch, 300));
+
+    // Event 2: Clear Button Click
+    $clearBtn.on('click', function() {
+        $input.val('').removeClass('is-invalid').focus();
+        triggerSearch();
+    });
+
+    // Event 3: Regex Toggle Click
+    $regexBtn.on('click', function() {
+        isRegexMode = !isRegexMode; // Toggle global flag
+        $(this).toggleClass('active', isRegexMode);
+        
+        // Update placeholder to guide user
+        if (isRegexMode) $input.attr('placeholder', 'Regex Mode (e.g. ^Alpha.*)');
+        else $input.attr('placeholder', 'Filter projects...');
+
+        // Re-run search immediately
+        triggerSearch();
+    });
+}
+
+// Auto-initialize when document is ready
+$(document).ready(function() {
+    initSearchHandler();
+    // Re-initialize tooltips for the new regex button
+    $('[data-bs-toggle="tooltip"]').tooltip();
+});
