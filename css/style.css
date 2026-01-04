@@ -819,10 +819,21 @@ div.status-strip.bg-critical {
     border-width: 6px;
     border-style: solid;
     border-color: #212529 transparent transparent transparent;
+    border-top-color: #212529;
 }
 
 /* Show bubble when active (optional, we will make it always visible via JS) */
 .range-wrap:hover .range-bubble,
 .range-wrap:focus-within .range-bubble {
     opacity: 1;
+}
+
+/* 1. When bubble is Blue (In Progress) -> Make arrow Blue */
+.range-bubble.bg-primary::after {
+    border-top-color: #0d6efd; /* Matches Bootstrap 'bg-primary' */
+}
+
+/* 2. When bubble is Green (Done) -> Make arrow Green */
+.range-bubble.bg-success::after {
+    border-top-color: #198754; /* Matches Bootstrap 'bg-success' */
 }
