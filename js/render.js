@@ -417,7 +417,14 @@ function _renderProjectRows($container, data, totalTimelineWidth) {
                     <span class="group-toggle-icon">${toggleIcon}</span>
                     <div class="d-flex flex-column justify-content-center w-100 pe-2" style="overflow: hidden;">
                         <div class="d-flex align-items-center" style="width: 100%;">
-                            <span class="fw-bold text-truncate me-auto" title="${group.group_name}">${group.group_name}</span>
+                            <span class="fw-bold text-truncate me-auto" 
+                                  style="cursor: pointer;" 
+                                  data-bs-toggle="popover" 
+                                  data-bs-trigger="hover" 
+                                  data-bs-placement="top" 
+                                  data-bs-content="${group.group_name}">
+                                ${group.group_name}
+                            </span>
                             <span class="badge bg-secondary flex-shrink-0 ms-1" style="font-size:9px">${matchingProjects.length}</span>
                         </div>
                         <div class="group-health-bar mt-1">${healthBarSegments}</div>
