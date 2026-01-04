@@ -93,17 +93,15 @@ function createPopoverContent(ms, origStart, origEnd, revStart, revEnd, status) 
 function renderDashboardStats(counts) {
     const $container = $('#dashboard-stats-container');
     $container.empty();
-    
-    // Set container to Flexbox for "Split View" (Stats Left | Actions Right)
     $container.addClass('d-flex justify-content-between align-items-center mb-3');
 
-    // A. Left Side: Stats Cards
+    // [MODIFIED] New Cards Configuration matching the new logic
     const cardsConfig = [
-        { code: 'ALL', label: 'All Projects', colorClass: 'bg-primary' }, 
-        { code: 'EXCELLENT', label: 'Excellent', colorClass: 'bg-success' },
-        { code: 'BUFFER_USED', label: 'Buffer Used', colorClass: 'bg-warning' },
-        { code: 'PLAN_FAIL', label: 'Plan Fail', colorClass: 'bg-danger' },
-        { code: 'CRITICAL', label: 'Critical', colorClass: 'bg-critical' }
+        { code: 'ALL', label: 'All Projects', colorClass: 'bg-dark' }, 
+        { code: 'CRITICAL', label: 'Critical', colorClass: 'bg-critical' }, // 红色
+        { code: 'DELAY', label: 'Delay', colorClass: 'bg-danger' },        // 橙红
+        { code: 'ON_TRACK', label: 'On Track', colorClass: 'bg-success' }, // 绿色 (新设计)
+        { code: 'COMPLETED', label: 'Completed', colorClass: 'bg-primary' }// 蓝色 (新设计)
     ];
 
     let statsHtml = '<div class="d-flex gap-2">';

@@ -1,4 +1,26 @@
 // --- Core Logic: Calculation & Processing ---
+// --- 1. Helper: Calculate Visual Progress Date for a Project ---
+function getVisualProgressDate(project) {
+    if (!project.milestones || project.milestones.length === 0) return null;
+    
+    // Find the first milestone that is not 100% complete
+    for (let ms of project.milestones) {
+        if (ms.status_progress < 1.0) {
+            const start = parseLocalYMD(ms.revised_start_date);
+            const end = parseLocalYMD(ms.revised_end_date);
+            const totalDays = getDaysDiff(start, end) + 1;
+            const doneDays = Math.round(totalDays * ms.status_progress);
+            
+            let progDate = new Date(start);
+            if (doneDays > 0) progDate.setDate(progDate.getDate() + (doneDays - 1));
+            return progDate;
+        }
+    }
+    // If all milestones are 100%, progress date is the end of the last milestone
+    const lastMs = project.milestones[project.milestones.length - 1];
+    return parseLocalYMD(lastMs.actual_completion_date || lastMs.revised_end_date);
+}
+
 // 1. Dynamic Schedule Revision (Waterfall Calculation)
 function reviseProjectData(originalData) {
     // Deep copy to avoid mutating the original data
@@ -90,77 +112,73 @@ function reviseProjectData(originalData) {
     }
     return revisedData;
 }
-// 2. Single Project Status Calculation (Fixed Logic)
+
+// --- 2. New Project Status Calculation Logic ---
 function calculateSingleProjectStatus(project) {
     if (!project.milestones || project.milestones.length === 0) {
         return { code: 'NO_DATA', label: "No Data", class: "bg-secondary", priority: 0 };
     }
 
     const lastMs = project.milestones[project.milestones.length - 1];
-    
-    // Original Planned End & Demand Date
-    const originalPlan = new Date(lastMs.planned_end);
-    const demandDate = new Date(lastMs.demand_due_date || lastMs.planned_end);
+    const demandDate = parseLocalYMD(lastMs.demand_due_date || lastMs.planned_end);
+    const revisedEnd = parseLocalYMD(lastMs.revised_end_date);
+    const TODAY = new Date(CONFIG.CURRENT_DATE);
+    TODAY.setHours(0,0,0,0);
 
-    // Determine the "Effective" End Date
-    // Start with the revised schedule
-    let effectiveEnd = new Date(lastMs.revised_end_date);
-
-    // FIX: If the last task is NOT finished, and Today is later than the scheduled end,
-    // the project is effectively delayed until at least Today.
-    if (lastMs.status_progress < 1.0 && CONFIG.CURRENT_DATE > effectiveEnd) {
-        effectiveEnd = new Date(CONFIG.CURRENT_DATE);
+    // [PRIORITY 1] CRITICAL: Final delivery exceeds Demand Due Date
+    if (revisedEnd > demandDate) {
+        return { code: 'CRITICAL', label: "Critical", class: "bg-critical", priority: 4 };
     }
 
-    // Now compare the Effective End against targets
-    const isInternalDelayed = effectiveEnd > originalPlan;
-    const isExternalRisk = effectiveEnd > demandDate;
-
-    if (isExternalRisk) {
-        if (isInternalDelayed) {
-            // Late vs Plan AND Late vs Demand = Critical
-            return { code: 'CRITICAL', label: "Critical", class: "bg-critical", priority: 4 }; 
-        } else {
-            // On time vs Plan, but Late vs Demand (Plan was bad)
-            return { code: 'PLAN_FAIL', label: "Plan Fail", class: "bg-danger", priority: 3 };
-        }
-    } else {
-        if (isInternalDelayed) {
-            // Late vs Plan, but OK vs Demand
-            return { code: 'BUFFER_USED', label: "Buffer Used", class: "bg-warning", priority: 2 };
-        } else {
-            // All Good
-            return { code: 'EXCELLENT', label: "Excellent", class: "bg-success", priority: 1 };
-        }
+    // [PRIORITY 2] COMPLETED: Changed to Blue (bg-primary)
+    if (lastMs.status_progress === 1.0) {
+        return { code: 'COMPLETED', label: "Completed", class: "bg-primary", priority: 1 };
     }
+
+    // [PRIORITY 3] DELAY: Behind Today
+    const progressDate = getVisualProgressDate(project);
+    if (progressDate && progressDate < TODAY) {
+        return { code: 'DELAY', label: "Delay", class: "bg-danger", priority: 3 };
+    }
+
+    // [PRIORITY 4] ON TRACK: Changed to Green (bg-success)
+    return { code: 'ON_TRACK', label: "On Track", class: "bg-success", priority: 2 };
 }
 
 // 3. Group Status Aggregation (Worst Case)
 function calculateGroupStatus(group) {
-    let maxPriority = 0;
-    let worstStatus = { class: 'bg-secondary' }; 
+    const priorityMap = {
+        'CRITICAL': 4,
+        'DELAY': 3,
+        'ON_TRACK': 2,
+        'COMPLETED': 1,
+        'NO_DATA': 0
+    };
+
+    let maxPriority = -1;
+    let worstStatus = { code: 'NO_DATA', label: "No Data", class: "bg-secondary" }; 
 
     group.projects.forEach(p => {
         const s = p._computedStatus;
-        if (s.priority > maxPriority) {
-            maxPriority = s.priority;
+        const currentP = priorityMap[s.code] || 0;
+        if (currentP > maxPriority) {
+            maxPriority = currentP;
             worstStatus = s;
         }
     });
     return worstStatus;
 }
 
-// 4. Main Preprocessing Pipeline
+// --- 3. Update Preprocessing Pipeline (Stats Mapping) ---
 function preprocessData(data) {
     const counts = {
         ALL: 0,
-        EXCELLENT: 0,
-        BUFFER_USED: 0,
-        PLAN_FAIL: 0,
-        CRITICAL: 0
+        CRITICAL: 0,
+        DELAY: 0,
+        ON_TRACK: 0,
+        COMPLETED: 0
     };
 
-    // [UPDATED] Access .data instead of .groups
     if (data.data) {
         data.data.forEach(group => {
             group.projects.forEach(project => {
