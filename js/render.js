@@ -98,10 +98,10 @@ function renderDashboardStats(counts) {
     // [MODIFIED] New Cards Configuration matching the new logic
     const cardsConfig = [
         { code: 'ALL', label: 'All Projects', colorClass: 'bg-dark' }, 
-        { code: 'CRITICAL', label: 'Critical', colorClass: 'bg-critical' }, // 红色
-        { code: 'DELAY', label: 'Delay', colorClass: 'bg-danger' },        // 橙红
-        { code: 'ON_TRACK', label: 'On Track', colorClass: 'bg-success' }, // 绿色 (新设计)
-        { code: 'COMPLETED', label: 'Completed', colorClass: 'bg-primary' }// 蓝色 (新设计)
+        { code: 'CRITICAL', label: 'Critical', colorClass: 'bg-critical' }, 
+        { code: 'DELAY', label: 'Delay', colorClass: 'bg-danger' },        
+        { code: 'ON_TRACK', label: 'On Track', colorClass: 'bg-success' }, 
+        { code: 'COMPLETED', label: 'Completed', colorClass: 'bg-primary' }
     ];
 
     let statsHtml = '<div class="d-flex gap-2">';
