@@ -8,6 +8,12 @@ function initEditHandlers() {
 
     $(modalEl).on('hidden.bs.modal', function () { $errorMsg.addClass('d-none').text(''); });
 
+    $(modalEl).on('hide.bs.modal', function () {
+        if (document.activeElement) {
+            document.activeElement.blur();
+        }
+    });
+
     $('#projects-container').on('click', '.clickable', function (e) {
         e.stopPropagation(); 
         if (bootstrap.Popover.getInstance(this)) bootstrap.Popover.getInstance(this).hide();
@@ -124,6 +130,12 @@ function initEditHandlers() {
 function initProjectStructureHandlers() {
     const modalEl = document.getElementById('editProjectStructureModal');
     const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+
+    // [NEW FIX] Prevent aria-hidden warning
+    $(modalEl).on('hide.bs.modal', function () {
+        if (document.activeElement) document.activeElement.blur();
+    });
+
     const listContainer = document.getElementById('milestone-list-container');
     let tempMilestones = []; 
     let sortableInstance = null;
@@ -339,7 +351,7 @@ function initProjectStructureHandlers() {
 function initCreateProjectHandler() {
     if ($('#createProjectModal').length === 0) {
         const modalHtml = `
-            <div class="modal fade" id="createProjectModal" tabindex="-1" aria-hidden="true">
+            <div class="modal fade" id="createProjectModal" tabindex="-1">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header">
