@@ -867,3 +867,13 @@ div.status-strip.bg-critical {
     box-shadow: none;      /* Remove the blue glow */
     z-index: auto;         /* Prevent it from popping above the icons */
 }
+
+#btn-search-clear {
+    border-color: #ced4da; /* Keep standard gray border */
+    background: transparent !important;
+    color: #6c757d; /* Standard secondary gray icon color */
+    padding-left: 5px;
+    padding-right: 5px;
+    margin-left: -1px; /* Overlap to maintain seamless line with input */
+    z-index: 4; /* Ensure it stays clickable over input borders */
+}
