@@ -79,6 +79,7 @@ $(document).ready(function () {
     initDataManager();
     initCreateProjectHandler();
     initMetaHandler();
+    initDataSyncHandlers();
     
     // 4. Enable Dragging
     makeModalDraggable('#editMilestoneModal');

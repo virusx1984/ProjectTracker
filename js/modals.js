@@ -576,3 +576,190 @@ function initMetaHandler() {
         // console.log("Meta updated:", rawTrackerData.meta);
     });
 }
+
+// --- [NEW] Cloud / Mock API Handlers (Append to js/modals.js) ---
+
+function initDataSyncHandlers() {
+    const modalEl = document.getElementById('dataSettingsModal');
+    // Note: We don't create a new bootstrap.Modal instance here if it's already managed by data-bs-toggle buttons,
+    // but we can use getOrCreateInstance to be safe.
+    
+    const $historyList = $('#cloud-history-list');
+    const $projNameDisplay = $('#cloud-current-project-name');
+
+    // Helper: Get Current Project Name
+    const getProjectName = () => {
+        // Use meta title if available, otherwise default
+        if (rawTrackerData && rawTrackerData.meta && rawTrackerData.meta.title) {
+            return rawTrackerData.meta.title;
+        }
+        return "My_Project_Schedule";
+    };
+
+    // 1. Render History Table
+    const loadHistory = () => {
+        const projName = getProjectName();
+        $historyList.html('<tr><td colspan="4" class="text-center text-muted"><div class="spinner-border spinner-border-sm text-primary"></div> Loading...</td></tr>');
+        
+        MockAPI.getHistory(projName).then(res => {
+            $historyList.empty();
+            if (!res.history || res.history.length === 0) {
+                $historyList.html('<tr><td colspan="4" class="text-center text-muted fst-italic py-3">No history found for this project. Save a version to start!</td></tr>');
+                return;
+            }
+
+            res.history.forEach(item => {
+                const dateObj = new Date(item.createdAt);
+                const dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString();
+                const remark = item.remark || '<span class="text-muted">-</span>';
+                
+                const row = `
+                    <tr>
+                        <td class="small">${dateStr}</td>
+                        <td class="small fw-bold text-secondary">${item.createdBy}</td>
+                        <td class="small text-truncate" style="max-width: 150px;" title="${item.remark}">${remark}</td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-primary btn-restore-version" data-vid="${item.versionId}">
+                                <i class="bi bi-box-arrow-in-down-left"></i> Restore
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                $historyList.append(row);
+            });
+        }).catch(err => {
+            $historyList.html(`<tr><td colspan="4" class="text-center text-danger">Error: ${err.message}</td></tr>`);
+        });
+    };
+
+    // 2. Event: Modal Open -> Init Data
+    $(modalEl).on('show.bs.modal', function () {
+        $projNameDisplay.text(getProjectName());
+        loadHistory();
+        
+        // Reset Local File Inputs
+        $('#import-file-input').val('');
+        $('#btn-import-json').prop('disabled', true);
+    });
+
+    // 3. Action: Save to Cloud
+    $('#btn-cloud-save').click(function() {
+        const projName = getProjectName();
+        const remark = prompt("Enter a remark for this version (optional):", "Regular Update");
+        
+        if (remark === null) return; // User cancelled
+
+        const $btn = $(this);
+        const originalHtml = $btn.html();
+        $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Saving...');
+
+        MockAPI.saveProject({
+            projectName: projName,
+            user: "Admin_User", // In real app, get from session
+            remark: remark,
+            data: currentRevisedData // Save the full global object
+        }).then(res => {
+            alert("✅ Version Saved Successfully!\nID: " + res.versionId);
+            loadHistory(); // Refresh table
+        }).catch(err => {
+            alert("❌ Save Failed: " + err.message);
+        }).finally(() => {
+            $btn.prop('disabled', false).html(originalHtml);
+        });
+    });
+
+    // 4. Action: Refresh Latest
+    $('#btn-cloud-load-latest').click(function() {
+        if(!confirm("⚠️ This will overwrite your current unsaved changes with the latest Server version. Continue?")) return;
+        
+        const projName = getProjectName();
+        const $btn = $(this);
+        $btn.prop('disabled', true);
+
+        MockAPI.getLatest(projName).then(res => {
+            if (res.code === 200) {
+                // Update Global Data
+                currentRevisedData = res.data; 
+                rawTrackerData = res.data; // Sync raw data too
+                
+                // Re-render
+                renderTracker(currentRevisedData);
+                
+                // Update Meta modal inputs if they exist
+                if(res.data.meta) {
+                    $('#tracker-main-title').text(res.data.meta.title || "ProjectTracker Pro");
+                }
+                
+                // Close Modal
+                bootstrap.Modal.getInstance(modalEl).hide();
+                alert("✅ Loaded latest version successfully.");
+            }
+        }).catch(err => {
+            alert("❌ Load Failed: " + err.message);
+        }).finally(() => {
+            $btn.prop('disabled', false);
+        });
+    });
+
+    // 5. Action: Restore Specific Version (Delegated Event)
+    $historyList.on('click', '.btn-restore-version', function() {
+        const vId = $(this).data('vid');
+        if(!confirm(`⚠️ Restore version [${vId}]?\nCurrent unsaved changes will be lost.`)) return;
+
+        const $btn = $(this);
+        $btn.prop('disabled', true).html('Loading...');
+
+        MockAPI.getVersion(vId).then(res => {
+             // Update Global Data
+             currentRevisedData = res.data; 
+             rawTrackerData = res.data; 
+
+             renderTracker(currentRevisedData);
+             
+             if(res.data.meta) {
+                 $('#tracker-main-title').text(res.data.meta.title || "ProjectTracker Pro");
+             }
+
+             bootstrap.Modal.getInstance(modalEl).hide();
+             alert(`✅ Restored version from ${new Date(res.timestamp).toLocaleString()}`);
+        }).catch(err => {
+            alert("❌ Restore Failed: " + err.message);
+            $btn.prop('disabled', false).html('<i class="bi bi-box-arrow-in-down-left"></i> Restore');
+        });
+    });
+
+    // --- Legacy Local File Handlers (Keep existing logic) ---
+    $('#btn-download-json').click(function() {
+        const filename = $('#export-filename').val() || 'tracker_data.json';
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentRevisedData, null, 2));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", filename);
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+    });
+
+    $('#import-file-input').change(function(e) {
+        $('#btn-import-json').prop('disabled', !e.target.files.length);
+    });
+
+    $('#btn-import-json').click(function() {
+        const file = $('#import-file-input')[0].files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const json = JSON.parse(e.target.result);
+                currentRevisedData = json;
+                rawTrackerData = json; // Update raw ref
+                renderTracker(currentRevisedData);
+                bootstrap.Modal.getInstance(modalEl).hide();
+                alert("File imported successfully!");
+            } catch (err) {
+                alert("Invalid JSON file.");
+            }
+        };
+        reader.readAsText(file);
+    });
+}
