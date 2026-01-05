@@ -611,13 +611,29 @@ function initDataSyncHandlers() {
             res.history.forEach(item => {
                 const dateObj = new Date(item.createdAt);
                 const dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString();
+                
+                // 1. Remark Logic
                 const remark = item.remark || '<span class="text-muted">-</span>';
                 
+                // 2. IP Logic (Badge style)
+                const ipDisplay = item.sourceIP 
+                    ? `<span class="badge bg-light text-secondary border" style="font-family:monospace;">${item.sourceIP}</span>` 
+                    : '<span class="text-muted">-</span>';
+
+                // 3. User Logic (Show name or Empty)
+                // If user is 'Anonymous' or empty, we leave it blank string as requested
+                let userDisplay = '';
+                if (item.createdBy && item.createdBy !== 'Anonymous') {
+                    userDisplay = `<span class="fw-bold text-dark small">${item.createdBy}</span>`;
+                } else {
+                    userDisplay = ''; // Leave empty
+                }
+
                 const row = `
                     <tr>
-                        <td class="small">${dateStr}</td>
-                        <td class="small fw-bold text-secondary">${item.createdBy}</td>
-                        <td class="small text-truncate" style="max-width: 150px;" title="${item.remark}">${remark}</td>
+                        <td class="small text-nowrap">${dateStr}</td>
+                        <td class="small">${ipDisplay}</td>
+                        <td class="small">${userDisplay}</td> <td class="small text-truncate" style="max-width: 150px;" title="${item.remark}">${remark}</td>
                         <td class="text-end">
                             <button class="btn btn-sm btn-outline-primary btn-restore-version" data-vid="${item.versionId}">
                                 <i class="bi bi-box-arrow-in-down-left"></i> Restore
@@ -626,6 +642,7 @@ function initDataSyncHandlers() {
                     </tr>
                 `;
                 $historyList.append(row);
+                
             });
         }).catch(err => {
             $historyList.html(`<tr><td colspan="4" class="text-center text-danger">Error: ${err.message}</td></tr>`);

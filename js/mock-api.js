@@ -12,6 +12,14 @@ const MockAPI = {
     /**
      * Helper: Generate a fake UUID (v4 style)
      */
+    // [NEW] Helper: Generate Fake IP
+    _getRandomIP: function() {
+        return Math.floor(Math.random() * 255) + "." + 
+               Math.floor(Math.random() * 255) + "." + 
+               Math.floor(Math.random() * 255) + "." + 
+               Math.floor(Math.random() * 255);
+    },
+
     _generateUUID: function() {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
             var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
@@ -69,6 +77,7 @@ const MockAPI = {
                 user: user || 'Anonymous',
                 remark: remark || '',
                 createdAt: new Date().toISOString(), // Server timestamp
+                sourceIP: this._getRandomIP(),
                 data: data // Storing raw JSON instead of BLOB for Mock
             };
 
@@ -136,6 +145,7 @@ const MockAPI = {
                 versionId: v.versionId,
                 createdAt: v.createdAt,
                 createdBy: v.user,
+                sourceIP: v.sourceIP,
                 remark: v.remark
             }));
 
