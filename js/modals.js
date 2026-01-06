@@ -630,18 +630,21 @@ function initDataSyncHandlers() {
                 }
 
                 const row = `
-                    <tr>
-                        <td class="small text-nowrap">${dateStr}</td>
-                        <td class="small">${ipDisplay}</td>
-                        <td class="small">${userDisplay}</td> <td class="small text-truncate" style="max-width: 150px;" title="${item.remark}">${remark}</td>
-                        <td class="text-end">
-                            <button class="btn btn-sm btn-outline-primary btn-restore-version" data-vid="${item.versionId}">
-                                <i class="bi bi-box-arrow-in-down-left"></i> Restore
-                            </button>
-                        </td>
-                    </tr>
-                `;
-                $historyList.append(row);
+                <tr>
+                    <td class="small text-nowrap align-middle">${dateStr}</td>
+                    <td class="small align-middle">${ipDisplay}</td>
+                    <td class="small align-middle">${userDisplay}</td>
+                    <td class="small text-truncate align-middle" style="max-width: 150px;" title="${item.remark}">${remark}</td>
+                    <td class="text-end align-middle">
+                        <button class="btn btn-sm btn-outline-primary btn-restore-version py-0 text-nowrap" 
+                                style="font-size: 11px; line-height: 1.8;" 
+                                data-vid="${item.versionId}">
+                            <i class="bi bi-box-arrow-in-down-left me-1"></i>Restore
+                        </button>
+                    </td>
+                </tr>
+            `;
+            $historyList.append(row);
                 
             });
         }).catch(err => {
