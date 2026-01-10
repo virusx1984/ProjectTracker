@@ -596,60 +596,6 @@ function initDataSyncHandlers() {
         return "My_Project_Schedule";
     };
 
-    // --- Helper: Recalculate Status for Imported Data ---
-    // (Copy this function inside initDataSyncHandlers or outside, but accessible to the import click handler)
-    function hydrateImportedData(data) {
-        if (!data || !data.data) return data;
-
-        // Use the current date from config or system
-        const currentDate = new Date();
-
-        data.data.forEach(group => {
-            let groupWorstStatus = 0; // 0:Completed, 1:OnTrack, 2:Delay, 3:Critical
-
-            group.projects.forEach(project => {
-                let pStatus = 'ON_TRACK';
-                let isCritical = false;
-                let hasDelay = false;
-                let allDone = true;
-
-                // Simple logic to reconstruct status based on milestones
-                if (project.milestones && project.milestones.length > 0) {
-                    project.milestones.forEach(ms => {
-                        const isDone = ms.status_progress >= 1;
-                        if (!isDone) allDone = false;
-                        
-                        // Check Overdue
-                        let endDate = ms.revised_end_date ? new Date(ms.revised_end_date) : new Date(ms.planned_end);
-                        if (!isDone && endDate < currentDate) {
-                            hasDelay = true;
-                        }
-                    });
-                }
-
-                // Determine Project Code
-                if (allDone) {
-                    pStatus = 'COMPLETED';
-                    project._computedStatus = { code: 'COMPLETED', label: 'Completed', class: 'bg-primary' };
-                } else if (hasDelay) {
-                    pStatus = 'DELAY';
-                    project._computedStatus = { code: 'DELAY', label: 'Delay', class: 'bg-danger' };
-                    groupWorstStatus = Math.max(groupWorstStatus, 2);
-                } else {
-                    pStatus = 'ON_TRACK';
-                    project._computedStatus = { code: 'ON_TRACK', label: 'On Track', class: 'bg-success' };
-                    groupWorstStatus = Math.max(groupWorstStatus, 1);
-                }
-            });
-
-            // Determine Group Status based on worst project
-            if (groupWorstStatus === 2) group._computedStatus = { code: 'DELAY', label: 'Delay', class: 'bg-danger' };
-            else if (groupWorstStatus === 1) group._computedStatus = { code: 'ON_TRACK', label: 'On Track', class: 'bg-success' };
-            else group._computedStatus = { code: 'COMPLETED', label: 'Completed', class: 'bg-primary' };
-        });
-
-        return data;
-    }
 
     // 1. Render History Table
     const loadHistory = () => {
@@ -824,40 +770,5 @@ function initDataSyncHandlers() {
         downloadAnchorNode.remove();
     });
 
-    $('#import-file-input').change(function(e) {
-        $('#btn-import-json').prop('disabled', !e.target.files.length);
-    });
-
     
-
-    // --- Update the Import Click Handler ---
-    $('#btn-import-json').click(function() {
-        const file = $('#import-file-input')[0].files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const json = JSON.parse(e.target.result);
-                
-                // 🟢 [FIX] Hydrate the data (Calculate Statuses) before rendering
-                const processedData = hydrateImportedData(json);
-                
-                currentRevisedData = processedData;
-                rawTrackerData = processedData; // Update raw ref
-                
-                renderTracker(currentRevisedData);
-                
-                // Close Modal
-                const modalEl = document.getElementById('dataSettingsModal');
-                const modalInstance = bootstrap.Modal.getInstance(modalEl);
-                if (modalInstance) modalInstance.hide();
-                
-                alert("File imported and processed successfully!");
-            } catch (err) {
-                console.error(err);
-                alert("Invalid JSON file or Processing Error: " + err.message);
-            }
-        };
-        reader.readAsText(file);
-    });
 }

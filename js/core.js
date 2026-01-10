@@ -263,3 +263,84 @@ function calculateAutoBounds(data) {
     // Optional: Log for debugging
     // console.log("Auto-Scale:", newStart.toISOString().split('T')[0], "to", newEnd.toISOString().split('T')[0], "Months:", CONFIG.RENDER_MONTHS);
 }
+
+// --- 6. Global Helper: Data Hydration & Sanitization ---
+// Moved here so both js/data.js (Local Import) and js/modals.js (Cloud) can use it.
+function hydrateImportedData(data) {
+    if (!data || !data.data) return data;
+
+    const currentDate = new Date();
+    const defaultDateStr = currentDate.toISOString().split('T')[0];
+
+    data.data.forEach(group => {
+        let groupWorstStatus = 0; // 0:Completed, 1:OnTrack, 2:Delay, 3:Critical
+
+        if (group.projects) {
+            group.projects.forEach(project => {
+                
+                // 1. Sanitize Project Dates
+                if (!project.start_date) {
+                    project.start_date = defaultDateStr; 
+                }
+
+                let pStatus = 'ON_TRACK';
+                let isCritical = false;
+                let hasDelay = false;
+                let allDone = true;
+
+                if (project.milestones && project.milestones.length > 0) {
+                    project.milestones.forEach(ms => {
+                        
+                        // 2. Sanitize Mandatory Milestone Fields
+                        if (!ms.planned_end) {
+                            ms.planned_end = project.start_date || defaultDateStr;
+                        }
+
+                        // 3. Sanitize Optional Fields (Delete if null)
+                        if (ms.actual_completion_date === null) delete ms.actual_completion_date;
+                        if (ms.revised_end_date === null) delete ms.revised_end_date;
+                        if (ms.revised_start_date === null) delete ms.revised_start_date;
+                        if (ms.demand_due_date === null) delete ms.demand_due_date;
+
+                        // 4. Ensure Progress is valid
+                        if (ms.status_progress === null || ms.status_progress === undefined) {
+                            ms.status_progress = 0;
+                        }
+
+                        const isDone = ms.status_progress >= 1;
+                        if (!isDone) allDone = false;
+                        
+                        // Check Overdue
+                        let endDate = ms.revised_end_date ? new Date(ms.revised_end_date) : new Date(ms.planned_end);
+                        
+                        // Safety Check
+                        if (!isNaN(endDate.getTime()) && !isDone && endDate < currentDate) {
+                            hasDelay = true;
+                        }
+                    });
+                }
+
+                // Determine Status
+                if (allDone) {
+                    pStatus = 'COMPLETED';
+                    project._computedStatus = { code: 'COMPLETED', label: 'Completed', class: 'bg-primary' };
+                } else if (hasDelay) {
+                    pStatus = 'DELAY';
+                    project._computedStatus = { code: 'DELAY', label: 'Delay', class: 'bg-danger' };
+                    groupWorstStatus = Math.max(groupWorstStatus, 2);
+                } else {
+                    pStatus = 'ON_TRACK';
+                    project._computedStatus = { code: 'ON_TRACK', label: 'On Track', class: 'bg-success' };
+                    groupWorstStatus = Math.max(groupWorstStatus, 1);
+                }
+            });
+        }
+
+        // Determine Group Status
+        if (groupWorstStatus === 2) group._computedStatus = { code: 'DELAY', label: 'Delay', class: 'bg-danger' };
+        else if (groupWorstStatus === 1) group._computedStatus = { code: 'ON_TRACK', label: 'On Track', class: 'bg-success' };
+        else group._computedStatus = { code: 'COMPLETED', label: 'Completed', class: 'bg-primary' };
+    });
+
+    return data;
+}

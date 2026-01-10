@@ -17,6 +17,9 @@ function parseLocalYMD(dateStr) {
 
 // --- Helper: Format Date to 'YYYY-MM-DD' (Local Time) ---
 function formatLocalYMD(dateObj) {
+    // 🟢 [SAFETY FIX] If dateObj is null/undefined (e.g. from bad data), return empty string
+    if (!dateObj || isNaN(dateObj.getTime())) return ""; 
+    
     const y = dateObj.getFullYear();
     const m = String(dateObj.getMonth() + 1).padStart(2, '0');
     const d = String(dateObj.getDate()).padStart(2, '0');

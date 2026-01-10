@@ -135,13 +135,10 @@ function initDataManager() {
         reader.onload = function(e) {
             try {
                 // 1. Parse JSON
-                const jsonContent = JSON.parse(e.target.result);
+                let jsonContent = JSON.parse(e.target.result); // Changed const to let
 
-                // [UPDATED] 2. Validate Structure (Check for 'data' array)
-                // We check if jsonContent.data exists and is an array (Standard format)
+                // 2. Validate Structure
                 if (!jsonContent.data || !Array.isArray(jsonContent.data)) {
-                    // Fallback check: maybe user uploaded old format (where root was data)
-                    // But for now, we enforce new structure or throw error
                     throw new Error("Invalid file format: Missing 'data' array.");
                 }
 
@@ -150,32 +147,31 @@ function initDataManager() {
                     return;
                 }
 
-                // [UPDATED] 4. Hydrate Data (Overwrite Globals)
-                // Reconstruct the global object
+                // 🟢 [CRITICAL FIX] Hydrate/Sanitize BEFORE assigning to global state
+                // This removes 'null' dates that cause getFullYear() crashes
+                jsonContent = hydrateImportedData(jsonContent);
+
+                // 4. Update Global Data
                 rawTrackerData = {
-                    meta: jsonContent.meta || { title: "Imported Project" }, // Fallback if meta missing
+                    meta: jsonContent.meta || { title: "Imported Project" },
                     data: jsonContent.data
                 };
 
-                // [NEW] Update Title UI immediately
+                // Update Title UI
                 if (rawTrackerData.meta.title) {
                     $('#tracker-main-title').text(rawTrackerData.meta.title);
                 }
                 
-                // Restore Config if available
+                // Restore Config
                 if (jsonContent.config) {
-                    if (jsonContent.config.pixelsPerDay) {
-                        pixelsPerDay = jsonContent.config.pixelsPerDay;
-                    }
-                    if (jsonContent.config.filter) {
-                        currentFilter = jsonContent.config.filter;
-                    }
+                    if (jsonContent.config.pixelsPerDay) pixelsPerDay = jsonContent.config.pixelsPerDay;
+                    if (jsonContent.config.filter) currentFilter = jsonContent.config.filter;
                 }
 
                 // 5. Re-Render Application
                 runPipeline();
-                
-                // 6. Cleanup & Close
+
+                // 6. Cleanup
                 modal.hide();
                 alert("Data loaded successfully!");
                 
