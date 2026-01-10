@@ -596,6 +596,61 @@ function initDataSyncHandlers() {
         return "My_Project_Schedule";
     };
 
+    // --- Helper: Recalculate Status for Imported Data ---
+    // (Copy this function inside initDataSyncHandlers or outside, but accessible to the import click handler)
+    function hydrateImportedData(data) {
+        if (!data || !data.data) return data;
+
+        // Use the current date from config or system
+        const currentDate = new Date();
+
+        data.data.forEach(group => {
+            let groupWorstStatus = 0; // 0:Completed, 1:OnTrack, 2:Delay, 3:Critical
+
+            group.projects.forEach(project => {
+                let pStatus = 'ON_TRACK';
+                let isCritical = false;
+                let hasDelay = false;
+                let allDone = true;
+
+                // Simple logic to reconstruct status based on milestones
+                if (project.milestones && project.milestones.length > 0) {
+                    project.milestones.forEach(ms => {
+                        const isDone = ms.status_progress >= 1;
+                        if (!isDone) allDone = false;
+                        
+                        // Check Overdue
+                        let endDate = ms.revised_end_date ? new Date(ms.revised_end_date) : new Date(ms.planned_end);
+                        if (!isDone && endDate < currentDate) {
+                            hasDelay = true;
+                        }
+                    });
+                }
+
+                // Determine Project Code
+                if (allDone) {
+                    pStatus = 'COMPLETED';
+                    project._computedStatus = { code: 'COMPLETED', label: 'Completed', class: 'bg-primary' };
+                } else if (hasDelay) {
+                    pStatus = 'DELAY';
+                    project._computedStatus = { code: 'DELAY', label: 'Delay', class: 'bg-danger' };
+                    groupWorstStatus = Math.max(groupWorstStatus, 2);
+                } else {
+                    pStatus = 'ON_TRACK';
+                    project._computedStatus = { code: 'ON_TRACK', label: 'On Track', class: 'bg-success' };
+                    groupWorstStatus = Math.max(groupWorstStatus, 1);
+                }
+            });
+
+            // Determine Group Status based on worst project
+            if (groupWorstStatus === 2) group._computedStatus = { code: 'DELAY', label: 'Delay', class: 'bg-danger' };
+            else if (groupWorstStatus === 1) group._computedStatus = { code: 'ON_TRACK', label: 'On Track', class: 'bg-success' };
+            else group._computedStatus = { code: 'COMPLETED', label: 'Completed', class: 'bg-primary' };
+        });
+
+        return data;
+    }
+
     // 1. Render History Table
     const loadHistory = () => {
         const projName = getProjectName();
@@ -698,9 +753,13 @@ function initDataSyncHandlers() {
 
         MockAPI.getLatest(projName).then(res => {
             if (res.code === 200) {
+                // 🟢 [FIX] Hydrate data from Cloud before using it
+                // This ensures colors/statuses are recalculated for TODAY
+                const processedData = hydrateImportedData(res.data);
+
                 // Update Global Data
-                currentRevisedData = res.data; 
-                rawTrackerData = res.data; // Sync raw data too
+                currentRevisedData = processedData; 
+                rawTrackerData = processedData;
                 
                 // Re-render
                 renderTracker(currentRevisedData);
@@ -730,9 +789,14 @@ function initDataSyncHandlers() {
         $btn.prop('disabled', true).html('Loading...');
 
         MockAPI.getVersion(vId).then(res => {
+            // 🟢 [FIX] Hydrate historical data
+            // Even if the old version was "Green" back then, 
+            // we want to see what strict status it represents TODAY.
+            const processedData = hydrateImportedData(res.data);
+
              // Update Global Data
-             currentRevisedData = res.data; 
-             rawTrackerData = res.data; 
+             currentRevisedData = processedData; 
+             rawTrackerData = processedData; 
 
              renderTracker(currentRevisedData);
              
@@ -764,6 +828,9 @@ function initDataSyncHandlers() {
         $('#btn-import-json').prop('disabled', !e.target.files.length);
     });
 
+    
+
+    // --- Update the Import Click Handler ---
     $('#btn-import-json').click(function() {
         const file = $('#import-file-input')[0].files[0];
         if (!file) return;
@@ -771,13 +838,24 @@ function initDataSyncHandlers() {
         reader.onload = function(e) {
             try {
                 const json = JSON.parse(e.target.result);
-                currentRevisedData = json;
-                rawTrackerData = json; // Update raw ref
+                
+                // 🟢 [FIX] Hydrate the data (Calculate Statuses) before rendering
+                const processedData = hydrateImportedData(json);
+                
+                currentRevisedData = processedData;
+                rawTrackerData = processedData; // Update raw ref
+                
                 renderTracker(currentRevisedData);
-                bootstrap.Modal.getInstance(modalEl).hide();
-                alert("File imported successfully!");
+                
+                // Close Modal
+                const modalEl = document.getElementById('dataSettingsModal');
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if (modalInstance) modalInstance.hide();
+                
+                alert("File imported and processed successfully!");
             } catch (err) {
-                alert("Invalid JSON file.");
+                console.error(err);
+                alert("Invalid JSON file or Processing Error: " + err.message);
             }
         };
         reader.readAsText(file);
