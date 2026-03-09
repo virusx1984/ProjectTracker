@@ -602,7 +602,7 @@ function initDataSyncHandlers() {
         const projName = getProjectName();
         $historyList.html('<tr><td colspan="4" class="text-center text-muted"><div class="spinner-border spinner-border-sm text-primary"></div> Loading...</td></tr>');
         
-        MockAPI.getHistory(projName).then(res => {
+        TrackerAPI.getHistory(projName).then(res => {
             $historyList.empty();
             if (!res.history || res.history.length === 0) {
                 $historyList.html('<tr><td colspan="4" class="text-center text-muted fst-italic py-3">No history found for this project. Save a version to start!</td></tr>');
@@ -674,7 +674,7 @@ function initDataSyncHandlers() {
         const originalHtml = $btn.html();
         $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Saving...');
 
-        MockAPI.saveProject({
+        TrackerAPI.saveProject({
             projectName: projName,
             user: "Admin_User", // In real app, get from session
             remark: remark,
@@ -697,7 +697,7 @@ function initDataSyncHandlers() {
         const $btn = $(this);
         $btn.prop('disabled', true);
 
-        MockAPI.getLatest(projName).then(res => {
+        TrackerAPI.getLatest(projName).then(res => {
             if (res.code === 200) {
                 // 🟢 [FIX] Hydrate data from Cloud before using it
                 // This ensures colors/statuses are recalculated for TODAY
@@ -734,7 +734,7 @@ function initDataSyncHandlers() {
         const $btn = $(this);
         $btn.prop('disabled', true).html('Loading...');
 
-        MockAPI.getVersion(vId).then(res => {
+        TrackerAPI.getVersion(vId).then(res => {
             // 🟢 [FIX] Hydrate historical data
             // Even if the old version was "Green" back then, 
             // we want to see what strict status it represents TODAY.
