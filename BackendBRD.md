@@ -1,7 +1,7 @@
 # ProjectTracker Pro - Backend API Specifications
 
-**Version:** 1.1.0 (Updated with Audit Logging)
-**Date:** 2026-01-04
+**Version:** 1.2.0 (Added Project List API for Cloud Workspace)
+**Date:** 2026-03-10
 **Status:** Approved
 
 ---
@@ -40,7 +40,7 @@ The backend must create a single table to store project versions.
 | **`DATA_BLOB`** | **`BLOB`** | Not Null | **Gzipped** binary content of the JSON data. |
 | **`CREATED_BY`** | `VARCHAR2(50)` | Nullable | User who performed the save action. |
 | **`CREATED_AT`** | `TIMESTAMP` | Default `SYSDATE` | Server-side timestamp. |
-| **`SOURCE_IP`** | **`VARCHAR2(45)`** | Nullable | **[New]** Client IPv4/IPv6 address (Audit Log). |
+| **`SOURCE_IP`** | **`VARCHAR2(45)`** | Nullable | Client IPv4/IPv6 address (Audit Log). |
 | **`REMARK`** | `VARCHAR2(500)` | Nullable | Optional commit message or note. |
 
 ### Indices
@@ -87,7 +87,7 @@ Creates a new version record in the database.
       "code": 200,
       "message": "Saved successfully",
       "versionId": "550e8400-e29b-41d4-a716-446655440000",
-      "timestamp": "2026-01-04 14:30:00"
+      "timestamp": "2026-03-10 14:30:00"
     }
     ```
 
@@ -124,7 +124,7 @@ Retrieves a list of historical versions. **Do NOT return the BLOB data here.**
     * `projectName` (Required)
     * `limit` (Optional, default 20)
 * **Backend Logic:**
-    * `SELECT VERSION_ID, CREATED_AT, CREATED_BY, REMARK, SOURCE_IP FROM PROJECT_VERSIONS WHERE ... ORDER BY CREATED_AT DESC`
+    * `SELECT VERSION_ID, CREATED_AT, CREATED_BY, REMARK, SOURCE_IP FROM PROJECT_VERSIONS WHERE PROJECT_NAME = :projectName ORDER BY CREATED_AT DESC`
 * **Success Response (200 OK):**
     ```json
     {
@@ -132,9 +132,9 @@ Retrieves a list of historical versions. **Do NOT return the BLOB data here.**
       "history": [
         {
           "versionId": "uuid-1",
-          "createdAt": "2026-01-04 14:30:00",
+          "createdAt": "2026-03-10 14:30:00",
           "createdBy": "Admin",
-          "sourceIP": "202.106.0.5",  // [New] Audit info
+          "sourceIP": "202.106.0.5",
           "remark": "Updated phase 1 milestones"
         }
       ]
@@ -150,6 +150,25 @@ Retrieves the full data for a specific historical version.
 * **Backend Logic:**
     1.  Select `DATA_BLOB` by `VERSION_ID`.
     2.  **Decompress** and return JSON.
+
+### 4.5. Get Project List (New)
+Retrieves a distinct list of all project names currently stored in the database. Used to populate the cloud workspace sidebar.
+
+* **Endpoint:** `GET /project/list`
+* **Query Parameters:** None
+* **Backend Logic:**
+    * `SELECT DISTINCT PROJECT_NAME FROM PROJECT_VERSIONS ORDER BY PROJECT_NAME ASC`
+* **Success Response (200 OK):**
+    ```json
+    {
+      "code": 200,
+      "projects": [
+        "Alpha Launch",
+        "Fab2_Schedule",
+        "My_Project_Schedule"
+      ]
+    }
+    ```
 
 ---
 

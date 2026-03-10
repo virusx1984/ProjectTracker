@@ -69,5 +69,18 @@ const TrackerAPI = {
             throw new Error(result.message || 'Failed to load specific version');
         }
         return result;
+    },
+
+    // ============================================================
+    // 5. API: Get Project List (GET /api/v1/project/list)
+    // ============================================================
+    getProjectList: async function() {
+        const response = await fetch(`${BASE_URL}/project/list`);
+        
+        const result = await response.json();
+        if (!response.ok || result.code !== 200) {
+            throw new Error(result.message || 'Failed to load project list');
+        }
+        return result;
     }
 };

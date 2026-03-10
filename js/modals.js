@@ -4,7 +4,7 @@
 function initEditHandlers() {
     const modalEl = document.getElementById('editMilestoneModal');
     const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
-    const $errorMsg = $('#edit-error-msg'); 
+    const $errorMsg = $('#edit-error-msg');
 
     $(modalEl).on('hidden.bs.modal', function () { $errorMsg.addClass('d-none').text(''); });
 
@@ -15,12 +15,12 @@ function initEditHandlers() {
     });
 
     $('#projects-container').on('click', '.clickable', function (e) {
-        e.stopPropagation(); 
+        e.stopPropagation();
         if (bootstrap.Popover.getInstance(this)) bootstrap.Popover.getInstance(this).hide();
         $errorMsg.addClass('d-none').text('');
 
         const gIdx = $(this).data('g-idx'), pIdx = $(this).data('p-idx'), mIdx = $(this).data('m-idx');
-        
+
         // [UPDATED] Access .data instead of .groups
         const group = currentRevisedData.data[gIdx];
         const project = group.projects[pIdx];
@@ -60,7 +60,7 @@ function initEditHandlers() {
 
         const progVal = parseFloat($input.val()); // 0.0 to 1.0
         const pct = Math.round(progVal * 100);
-        
+
         // 1. Update Static Percentage Label
         $pctText.text(`${pct}%`);
 
@@ -70,13 +70,13 @@ function initEditHandlers() {
         // We add a tiny offset logic if you want strict adherence to thumb width, 
         // but for Bootstrap inputs, raw percentage is usually visually sufficient.
         const positionPct = progVal * 100;
-        $bubble.css('left', `calc(${positionPct}% + (${8 - positionPct * 0.15}px))`); 
+        $bubble.css('left', `calc(${positionPct}% + (${8 - positionPct * 0.15}px))`);
         // (The calc formula slightly adjusts for the thumb width so it doesn't drift at edges)
 
         // 3. Calculate Bubble Content (Date)
         const startStr = $('#edit-revised-start').val();
         const endStr = $('#edit-revised-end').val();
-        
+
         // Helper: Local Date Parser
         const parseLocal = (s) => {
             if (!s) return null;
@@ -104,7 +104,7 @@ function initEditHandlers() {
                     const totalDays = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
                     const daysDone = Math.round(totalDays * progVal);
                     const offset = Math.max(0, daysDone - 1);
-                    
+
                     const calcDate = new Date(startDate);
                     calcDate.setDate(calcDate.getDate() + offset);
 
@@ -112,13 +112,13 @@ function initEditHandlers() {
                     const y = calcDate.getFullYear();
                     const m = String(calcDate.getMonth() + 1).padStart(2, '0');
                     const d = String(calcDate.getDate()).padStart(2, '0');
-                    
+
                     bubbleHtml = `${y}-${m}-${d}`;
                     $bubble.removeClass('bg-dark bg-success').addClass('bg-primary');
                 }
             }
         }
-        
+
         $bubble.html(bubbleHtml);
         $bubble.css('opacity', '1'); // Ensure visible once calculated
     };
@@ -126,9 +126,9 @@ function initEditHandlers() {
     // [MODIFIED] Bind events to both Progress Slider AND Revised End Date
     // This ensures the date updates if the user drags the slider OR changes the end date
     $('#edit-progress, #edit-revised-end').on('input', updateProgressDisplay);
-    
+
     // 1. Set Today Button: Sets Date to Today AND Progress to 100%
-    $('#btn-set-today').click(function() {
+    $('#btn-set-today').click(function () {
         const today = new Date().toISOString().split('T')[0];
         $('#edit-actual-date').val(today);
         $('#edit-progress').val(1.0);
@@ -136,7 +136,7 @@ function initEditHandlers() {
     });
 
     // 2. Clear Date Button
-    $('#btn-clear-date').click(function() {
+    $('#btn-clear-date').click(function () {
         $('#edit-actual-date').val('');
         $('#edit-progress').val(0);
         updateProgressDisplay(); // Force update
@@ -154,7 +154,7 @@ function initEditHandlers() {
         const inputProgress = parseFloat($('#edit-progress').val());
 
         if (!inputRevisedEnd) { $errorMsg.text("Revised End Date cannot be empty.").removeClass('d-none'); return; }
-        
+
         const newDurationDays = Math.max(1, getDaysDiff(inputRevisedStart, inputRevisedEnd));
         const origStartRef = $('#read-orig-start').val();
         const inputPlannedEnd = addDays(origStartRef, newDurationDays).toISOString().split('T')[0];
@@ -212,7 +212,7 @@ function initProjectStructureHandlers() {
     });
 
     const listContainer = document.getElementById('milestone-list-container');
-    let tempMilestones = []; 
+    let tempMilestones = [];
     let sortableInstance = null;
 
     // Inject "Delete" button if missing
@@ -243,7 +243,7 @@ function initProjectStructureHandlers() {
     function updateOrderSelect(targetGroupIdx, currentPIdx = -1) {
         const $orderSelect = $('#struct-order-select');
         $orderSelect.empty();
-        
+
         let count = 0;
         if (targetGroupIdx === '__NEW__') {
             count = 0; // New group has 0 existing projects, so we will become #1
@@ -253,12 +253,12 @@ function initProjectStructureHandlers() {
         }
 
         const originalGIdx = parseInt($('#struct-g-idx').val());
-        const isSameGroup = (targetGroupIdx == originalGIdx); 
-        
+        const isSameGroup = (targetGroupIdx == originalGIdx);
+
         const maxPos = isSameGroup ? count : count + 1;
-        
+
         for (let i = 1; i <= maxPos; i++) {
-            $orderSelect.append(`<option value="${i - 1}">Position ${i}${i===maxPos ? ' (Last)' : ''}</option>`);
+            $orderSelect.append(`<option value="${i - 1}">Position ${i}${i === maxPos ? ' (Last)' : ''}</option>`);
         }
 
         if (isSameGroup && currentPIdx !== -1) {
@@ -269,7 +269,7 @@ function initProjectStructureHandlers() {
     }
 
     // Event: Toggle New Group Input & Update Order
-    $('#struct-group-select').change(function() {
+    $('#struct-group-select').change(function () {
         const val = $(this).val();
         if (val === '__NEW__') {
             $('#struct-new-group-name').removeClass('d-none').focus();
@@ -282,7 +282,7 @@ function initProjectStructureHandlers() {
     $('#projects-container').on('click', '.project-name-clickable', function (e) {
         e.stopPropagation();
         const gIdx = $(this).data('g-idx'), pIdx = $(this).data('p-idx');
-        
+
         // [UPDATED] Access .data
         const project = rawTrackerData.data[gIdx].projects[pIdx];
 
@@ -295,7 +295,7 @@ function initProjectStructureHandlers() {
         // Populate Group Select
         const $grpSelect = $('#struct-group-select');
         $grpSelect.empty();
-        
+
         // [UPDATED] Access .data
         rawTrackerData.data.forEach((g, i) => {
             const selected = (i === gIdx) ? 'selected' : '';
@@ -309,7 +309,7 @@ function initProjectStructureHandlers() {
         tempMilestones = JSON.parse(JSON.stringify(project.milestones));
         let cursorDate = new Date(project.start_date);
         tempMilestones.forEach((ms, index) => {
-            let prevDate = index === 0 ? cursorDate : new Date(tempMilestones[index-1].planned_end);
+            let prevDate = index === 0 ? cursorDate : new Date(tempMilestones[index - 1].planned_end);
             ms._temp_duration = Math.max(1, getDaysDiff(prevDate, ms.planned_end));
             ms._is_locked = (ms.status_progress === 1.0);
             if (!ms.color) ms.color = "#0d6efd";
@@ -317,7 +317,7 @@ function initProjectStructureHandlers() {
         });
 
         renderMilestoneList();
-        recalculateSchedule(); 
+        recalculateSchedule();
         modal.show();
     });
 
@@ -333,43 +333,43 @@ function initProjectStructureHandlers() {
             listContainer.insertAdjacentHTML('beforeend', html);
         });
         if (sortableInstance) sortableInstance.destroy();
-        sortableInstance = new Sortable(listContainer, { handle: '.drag-handle', animation: 150, filter: '.locked', onMove: function (evt) { return !evt.related.classList.contains('locked'); }, onEnd: function (evt) { const newOrder = []; $(listContainer).find('.milestone-item').each(function() { newOrder.push(tempMilestones[$(this).data('idx')]); }); tempMilestones = newOrder; renderMilestoneList(); recalculateSchedule(); } });
+        sortableInstance = new Sortable(listContainer, { handle: '.drag-handle', animation: 150, filter: '.locked', onMove: function (evt) { return !evt.related.classList.contains('locked'); }, onEnd: function (evt) { const newOrder = []; $(listContainer).find('.milestone-item').each(function () { newOrder.push(tempMilestones[$(this).data('idx')]); }); tempMilestones = newOrder; renderMilestoneList(); recalculateSchedule(); } });
         bindInputs();
     }
     function bindInputs() {
-        $('.ms-duration-input').on('change input', function() { let val = parseInt($(this).val()); if(isNaN(val) || val < 1) val = 1; tempMilestones[$(this).data('idx')]._temp_duration = val; recalculateSchedule(); });
-        $('.ms-name-input').on('change input', function() { tempMilestones[$(this).data('idx')].name = $(this).val(); });
-        $('.ms-desc-input').on('change input', function() { tempMilestones[$(this).data('idx')].description = $(this).val(); });
-        $('.ms-color-input').on('change', function() { tempMilestones[$(this).data('idx')].color = $(this).val(); $(this).css('background-color', $(this).val()); });
-        $('.btn-delete-ms').on('click', function() { tempMilestones.splice($(this).data('idx'), 1); renderMilestoneList(); recalculateSchedule(); });
+        $('.ms-duration-input').on('change input', function () { let val = parseInt($(this).val()); if (isNaN(val) || val < 1) val = 1; tempMilestones[$(this).data('idx')]._temp_duration = val; recalculateSchedule(); });
+        $('.ms-name-input').on('change input', function () { tempMilestones[$(this).data('idx')].name = $(this).val(); });
+        $('.ms-desc-input').on('change input', function () { tempMilestones[$(this).data('idx')].description = $(this).val(); });
+        $('.ms-color-input').on('change', function () { tempMilestones[$(this).data('idx')].color = $(this).val(); $(this).css('background-color', $(this).val()); });
+        $('.btn-delete-ms').on('click', function () { tempMilestones.splice($(this).data('idx'), 1); renderMilestoneList(); recalculateSchedule(); });
     }
     function recalculateSchedule() {
-        const startVal = $('#struct-proj-start').val(); if(!startVal) return; let cursor = new Date(startVal), totalDays = 0; const dateInputs = $('.ms-calc-date');
+        const startVal = $('#struct-proj-start').val(); if (!startVal) return; let cursor = new Date(startVal), totalDays = 0; const dateInputs = $('.ms-calc-date');
         tempMilestones.forEach((ms, i) => { const dur = ms._temp_duration || 1; const endDate = addDays(cursor, dur); $(dateInputs[i]).val(`${endDate.toISOString().split('T')[0]} (End)`); cursor = endDate; totalDays += dur; ms._calc_planned_end = endDate.toISOString().split('T')[0]; });
         $('#struct-total-days').text(totalDays); $('#struct-final-date').text(cursor.toISOString().split('T')[0]);
     }
-    $('#btn-add-milestone').click(function() { tempMilestones.push({ name: "New Milestone", description: "", status_progress: 0.0, _temp_duration: 10, _is_locked: false, color: "#0d6efd", demand_due_date: "" }); renderMilestoneList(); recalculateSchedule(); });
-    $('#struct-proj-start').on('change', function() { recalculateSchedule(); });
-    
+    $('#btn-add-milestone').click(function () { tempMilestones.push({ name: "New Milestone", description: "", status_progress: 0.0, _temp_duration: 10, _is_locked: false, color: "#0d6efd", demand_due_date: "" }); renderMilestoneList(); recalculateSchedule(); });
+    $('#struct-proj-start').on('change', function () { recalculateSchedule(); });
+
     // [UPDATED] Delete Logic (.data)
-    $('#btn-delete-project').off('click').on('click', function() { 
-        const gIdx = parseInt($('#struct-g-idx').val()); 
-        const pIdx = parseInt($('#struct-p-idx').val()); 
-        const projName = $('#struct-proj-name').val(); 
-        if (confirm(`⚠️ Are you sure you want to delete project: "${projName}"?\n\nThis action CANNOT be undone.`)) { 
-            rawTrackerData.data[gIdx].projects.splice(pIdx, 1); 
-            runPipeline(); 
-            modal.hide(); 
-        } 
+    $('#btn-delete-project').off('click').on('click', function () {
+        const gIdx = parseInt($('#struct-g-idx').val());
+        const pIdx = parseInt($('#struct-p-idx').val());
+        const projName = $('#struct-proj-name').val();
+        if (confirm(`⚠️ Are you sure you want to delete project: "${projName}"?\n\nThis action CANNOT be undone.`)) {
+            rawTrackerData.data[gIdx].projects.splice(pIdx, 1);
+            runPipeline();
+            modal.hide();
+        }
     });
 
     // [MODIFIED] Save Logic with Position Order Handling
-    $('#btn-save-structure').click(function() {
+    $('#btn-save-structure').click(function () {
         const currentGIdx = parseInt($('#struct-g-idx').val());
         const currentPIdx = parseInt($('#struct-p-idx').val());
-        
+
         if (tempMilestones.length === 0) { alert("Project must have at least one milestone."); return; }
-        
+
         const targetGroupVal = $('#struct-group-select').val();
         let finalGroupIndex = currentGIdx;
         let isMoveGroup = false;
@@ -378,7 +378,7 @@ function initProjectStructureHandlers() {
             const newName = $('#struct-new-group-name').val().trim();
             if (!newName) { alert("Please enter a name for the new group."); return; }
             const newGroup = { group_name: newName, is_expanded: true, projects: [] };
-            
+
             // [UPDATED] Access .data
             rawTrackerData.data.push(newGroup);
             finalGroupIndex = rawTrackerData.data.length - 1;
@@ -392,7 +392,7 @@ function initProjectStructureHandlers() {
 
         // [UPDATED] Access .data
         const updatedProject = {
-            project_id: rawTrackerData.data[currentGIdx].projects[currentPIdx].project_id, 
+            project_id: rawTrackerData.data[currentGIdx].projects[currentPIdx].project_id,
             project_name: $('#struct-proj-name').val(),
             description: $('#struct-proj-desc').val(),
             start_date: $('#struct-proj-start').val(),
@@ -467,7 +467,7 @@ function initCreateProjectHandler() {
     });
     const $errorMsg = $('#create-error-msg');
 
-    $('#dashboard-stats-container').on('click', '#btn-open-create-project', function() {
+    $('#dashboard-stats-container').on('click', '#btn-open-create-project', function () {
         $('#create-proj-name').val('');
         $('#create-new-group-name').val('').addClass('d-none');
         $errorMsg.addClass('d-none').text('');
@@ -476,7 +476,7 @@ function initCreateProjectHandler() {
 
         const $select = $('#create-group-select');
         $select.empty();
-        
+
         // [UPDATED] Access .data
         if (rawTrackerData.data && rawTrackerData.data.length > 0) {
             rawTrackerData.data.forEach((g, index) => {
@@ -487,7 +487,7 @@ function initCreateProjectHandler() {
         modal.show();
     });
 
-    $('#create-group-select').change(function() {
+    $('#create-group-select').change(function () {
         if ($(this).val() === '__NEW__') {
             $('#create-new-group-name').removeClass('d-none').focus();
         } else {
@@ -495,12 +495,12 @@ function initCreateProjectHandler() {
         }
     });
 
-    $('#btn-confirm-create-project').click(function() {
+    $('#btn-confirm-create-project').click(function () {
         const name = $('#create-proj-name').val().trim();
         const start = $('#create-proj-start').val();
         const groupVal = $('#create-group-select').val();
         const newGroupName = $('#create-new-group-name').val().trim();
-        
+
         if (!name) { $errorMsg.text("Project Name is required.").removeClass('d-none'); return; }
         if (!start) { $errorMsg.text("Start Date is required.").removeClass('d-none'); return; }
         if (groupVal === '__NEW__' && !newGroupName) { $errorMsg.text("New Group Name is required.").removeClass('d-none'); return; }
@@ -508,7 +508,7 @@ function initCreateProjectHandler() {
         let targetGroupIndex = -1;
         if (groupVal === '__NEW__') {
             const newGroup = { group_name: newGroupName, is_expanded: true, projects: [] };
-            
+
             // [UPDATED] Access .data
             rawTrackerData.data.push(newGroup);
             targetGroupIndex = rawTrackerData.data.length - 1;
@@ -533,25 +533,25 @@ function initCreateProjectHandler() {
 function initMetaHandler() {
     const modalEl = document.getElementById('projectSettingsModal');
     const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
-    
+
     // Open Modal: Load data from rawTrackerData.meta
-    $('#btn-edit-meta').click(function() {
+    $('#btn-edit-meta').click(function () {
         // Ensure meta object exists
         if (!rawTrackerData.meta) rawTrackerData.meta = {};
-        
+
         // Fill inputs
         $('#meta-title-input').val(rawTrackerData.meta.title || '');
         $('#meta-version-input').val(rawTrackerData.meta.version || '1.0');
-        
+
         // Handle date: use meta.last_updated or today
         const dateVal = rawTrackerData.meta.last_updated || new Date().toISOString().split('T')[0];
         $('#meta-date-input').val(dateVal);
-        
+
         modal.show();
     });
 
     // Save Changes
-    $('#btn-save-meta').click(function() {
+    $('#btn-save-meta').click(function () {
         const newTitle = $('#meta-title-input').val().trim();
         const newVersion = $('#meta-version-input').val().trim();
         const newDate = $('#meta-date-input').val();
@@ -568,10 +568,10 @@ function initMetaHandler() {
 
         // Update UI Immediately
         $('#tracker-main-title').text(newTitle);
-        
+
         // Close Modal
         modal.hide();
-        
+
         // Optional: Show a quick toast or log
         // console.log("Meta updated:", rawTrackerData.meta);
     });
@@ -581,54 +581,41 @@ function initMetaHandler() {
 
 function initDataSyncHandlers() {
     const modalEl = document.getElementById('dataSettingsModal');
-    // Note: We don't create a new bootstrap.Modal instance here if it's already managed by data-bs-toggle buttons,
-    // but we can use getOrCreateInstance to be safe.
-    
     const $historyList = $('#cloud-history-list');
     const $projNameDisplay = $('#cloud-current-project-name');
+    const $projectList = $('#cloud-project-list'); // 🟢 NEW
 
-    // Helper: Get Current Project Name
-    const getProjectName = () => {
-        // Use meta title if available, otherwise default
+    // Store the currently selected project in the UI
+    let selectedCloudProject = "";
+
+    // Helper: Get Current Active Project Name from Meta
+    const getActiveLocalProjectName = () => {
         if (rawTrackerData && rawTrackerData.meta && rawTrackerData.meta.title) {
             return rawTrackerData.meta.title;
         }
         return "My_Project_Schedule";
     };
 
+    // --- 1. Load History Table (Right Panel) ---
+    // 🟢 MODIFIED: Now takes a specific project name as an argument
+    const loadHistory = (projName) => {
+        selectedCloudProject = projName;
+        $projNameDisplay.text(projName);
+        $historyList.html('<tr><td colspan="5" class="text-center text-muted"><div class="spinner-border spinner-border-sm text-primary"></div> Loading...</td></tr>');
 
-    // 1. Render History Table
-    const loadHistory = () => {
-        const projName = getProjectName();
-        $historyList.html('<tr><td colspan="4" class="text-center text-muted"><div class="spinner-border spinner-border-sm text-primary"></div> Loading...</td></tr>');
-        
         TrackerAPI.getHistory(projName).then(res => {
             $historyList.empty();
             if (!res.history || res.history.length === 0) {
-                $historyList.html('<tr><td colspan="4" class="text-center text-muted fst-italic py-3">No history found for this project. Save a version to start!</td></tr>');
+                $historyList.html('<tr><td colspan="5" class="text-center text-muted fst-italic py-3">No history found.</td></tr>');
                 return;
             }
 
             res.history.forEach(item => {
                 const dateObj = new Date(item.createdAt);
                 const dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString();
-                
-                // 1. Remark Logic
                 const remark = item.remark || '<span class="text-muted">-</span>';
-                
-                // 2. IP Logic (Badge style)
-                const ipDisplay = item.sourceIP 
-                    ? `<span class="badge bg-light text-secondary border" style="font-family:monospace;">${item.sourceIP}</span>` 
-                    : '<span class="text-muted">-</span>';
-
-                // 3. User Logic (Show name or Empty)
-                // If user is 'Anonymous' or empty, we leave it blank string as requested
-                let userDisplay = '';
-                if (item.createdBy && item.createdBy !== 'Anonymous') {
-                    userDisplay = `<span class="fw-bold text-dark small">${item.createdBy}</span>`;
-                } else {
-                    userDisplay = ''; // Leave empty
-                }
+                const ipDisplay = item.sourceIP ? `<span class="badge bg-light text-secondary border" style="font-family:monospace;">${item.sourceIP}</span>` : '<span class="text-muted">-</span>';
+                let userDisplay = (item.createdBy && item.createdBy !== 'Anonymous') ? `<span class="fw-bold text-dark small">${item.createdBy}</span>` : '';
 
                 const row = `
                 <tr>
@@ -640,35 +627,87 @@ function initDataSyncHandlers() {
                         <button class="btn btn-sm btn-outline-primary btn-restore-version py-0 text-nowrap" 
                                 style="font-size: 11px; line-height: 1.8;" 
                                 data-vid="${item.versionId}">
-                            <i class="bi bi-box-arrow-in-down-left me-1"></i>Restore
+                            <i class="bi bi-box-arrow-in-down-left me-1"></i>Load
                         </button>
                     </td>
                 </tr>
-            `;
-            $historyList.append(row);
-                
+                `;
+                $historyList.append(row);
             });
         }).catch(err => {
-            $historyList.html(`<tr><td colspan="4" class="text-center text-danger">Error: ${err.message}</td></tr>`);
+            $historyList.html(`<tr><td colspan="5" class="text-center text-danger">Error: ${err.message}</td></tr>`);
         });
     };
 
-    // 2. Event: Modal Open -> Init Data
+    // --- 2. Load Project List (Left Panel) ---
+    // 🟢 NEW logic for Master-Detail view
+    const loadProjectList = () => {
+        $projectList.html('<div class="text-center p-3 text-muted small"><div class="spinner-border spinner-border-sm"></div></div>');
+
+        TrackerAPI.getProjectList().then(res => {
+            $projectList.empty();
+            const projects = res.projects || [];
+
+            // Ensure the currently active local project is in the list, even if it hasn't been saved yet
+            const activeLocal = getActiveLocalProjectName();
+            if (!projects.includes(activeLocal)) {
+                projects.unshift(activeLocal); // Add to top
+            }
+
+            projects.forEach(pName => {
+                // Highlight the one matching the current local workspace
+                const isCurrentLocal = (pName === activeLocal);
+                const badge = isCurrentLocal ? `<span class="badge bg-success rounded-pill" style="font-size:0.6rem;">Current</span>` : '';
+
+                const itemHtml = `
+                    <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center cloud-project-item" data-pname="${pName}">
+                        <span class="small text-truncate" title="${pName}">${pName}</span>
+                        ${badge}
+                    </button>
+                `;
+                $projectList.append(itemHtml);
+            });
+
+            // Auto-select the currently active local project
+            $projectList.find(`[data-pname="${activeLocal}"]`).click();
+
+        }).catch(err => {
+            $projectList.html(`<div class="p-3 text-danger small">Failed to load projects.</div>`);
+        });
+    };
+
+    // --- 3. Events ---
+
+    // On Modal Open
     $(modalEl).on('show.bs.modal', function () {
-        $projNameDisplay.text(getProjectName());
-        loadHistory();
-        
+        loadProjectList();
         // Reset Local File Inputs
         $('#import-file-input').val('');
         $('#btn-import-json').prop('disabled', true);
     });
 
-    // 3. Action: Save to Cloud
-    $('#btn-cloud-save').click(function() {
-        const projName = getProjectName();
-        const remark = prompt("Enter a remark for this version (optional):", "Regular Update");
-        
-        if (remark === null) return; // User cancelled
+    // Refresh Project List Button
+    $('#btn-refresh-project-list').click(function () {
+        loadProjectList();
+    });
+
+    // Select Project from Left Panel
+    $projectList.on('click', '.cloud-project-item', function () {
+        // Handle UI Active state
+        $('.cloud-project-item').removeClass('active fw-bold');
+        $(this).addClass('active fw-bold');
+
+        // Load history for selected project
+        const selectedName = $(this).data('pname');
+        loadHistory(selectedName);
+    });
+
+    // Save to Cloud (Always saves the CURRENT LOCAL workspace)
+    $('#btn-cloud-save').click(function () {
+        const projName = getActiveLocalProjectName();
+        const remark = prompt(`Saving "${projName}"\nEnter a remark (optional):`, "Regular Update");
+
+        if (remark === null) return;
 
         const $btn = $(this);
         const originalHtml = $btn.html();
@@ -676,12 +715,13 @@ function initDataSyncHandlers() {
 
         TrackerAPI.saveProject({
             projectName: projName,
-            user: "Admin_User", // In real app, get from session
+            user: "Admin_User",
             remark: remark,
-            data: currentRevisedData // Save the full global object
+            data: currentRevisedData
         }).then(res => {
-            alert("✅ Version Saved Successfully!\nID: " + res.versionId);
-            loadHistory(); // Refresh table
+            alert("✅ Version Saved Successfully!");
+            // Refresh list and history
+            loadProjectList();
         }).catch(err => {
             alert("❌ Save Failed: " + err.message);
         }).finally(() => {
@@ -689,77 +729,35 @@ function initDataSyncHandlers() {
         });
     });
 
-    // 4. Action: Refresh Latest
-    $('#btn-cloud-load-latest').click(function() {
-        if(!confirm("⚠️ This will overwrite your current unsaved changes with the latest Server version. Continue?")) return;
-        
-        const projName = getProjectName();
-        const $btn = $(this);
-        $btn.prop('disabled', true);
-
-        TrackerAPI.getLatest(projName).then(res => {
-            if (res.code === 200) {
-                // 🟢 [FIX] Hydrate data from Cloud before using it
-                // This ensures colors/statuses are recalculated for TODAY
-                const processedData = hydrateImportedData(res.data);
-
-                // Update Global Data
-                currentRevisedData = processedData; 
-                rawTrackerData = processedData;
-                
-                // Re-render
-                renderTracker(currentRevisedData);
-                
-                // Update Meta modal inputs if they exist
-                if(res.data.meta) {
-                    $('#tracker-main-title').text(res.data.meta.title || "ProjectTracker Pro");
-                }
-                
-                // Close Modal
-                bootstrap.Modal.getInstance(modalEl).hide();
-                alert("✅ Loaded latest version successfully.");
-            }
-        }).catch(err => {
-            alert("❌ Load Failed: " + err.message);
-        }).finally(() => {
-            $btn.prop('disabled', false);
-        });
-    });
-
-    // 5. Action: Restore Specific Version (Delegated Event)
-    $historyList.on('click', '.btn-restore-version', function() {
+    // Restore Specific Version (Loads into Local Workspace)
+    $historyList.on('click', '.btn-restore-version', function () {
         const vId = $(this).data('vid');
-        if(!confirm(`⚠️ Restore version [${vId}]?\nCurrent unsaved changes will be lost.`)) return;
+        // 🟢 MODIFIED message to clarify what is happening
+        if (!confirm(`⚠️ Load this version of "${selectedCloudProject}"?\nCurrent unsaved changes in your workspace will be lost.`)) return;
 
         const $btn = $(this);
-        $btn.prop('disabled', true).html('Loading...');
+        $btn.prop('disabled', true).html('...');
 
         TrackerAPI.getVersion(vId).then(res => {
-            // 🟢 [FIX] Hydrate historical data
-            // Even if the old version was "Green" back then, 
-            // we want to see what strict status it represents TODAY.
             const processedData = hydrateImportedData(res.data);
+            currentRevisedData = processedData;
+            rawTrackerData = processedData;
 
-             // Update Global Data
-             currentRevisedData = processedData; 
-             rawTrackerData = processedData; 
+            renderTracker(currentRevisedData);
 
-             renderTracker(currentRevisedData);
-             
-             if(res.data.meta) {
-                 $('#tracker-main-title').text(res.data.meta.title || "ProjectTracker Pro");
-             }
+            if (res.data.meta) {
+                $('#tracker-main-title').text(res.data.meta.title || "ProjectTracker Pro");
+            }
 
-             bootstrap.Modal.getInstance(modalEl).hide();
-             alert(`✅ Restored version from ${new Date(res.timestamp).toLocaleString()}`);
+            bootstrap.Modal.getInstance(modalEl).hide();
         }).catch(err => {
-            alert("❌ Restore Failed: " + err.message);
-            $btn.prop('disabled', false).html('<i class="bi bi-box-arrow-in-down-left"></i> Restore');
+            alert("❌ Load Failed: " + err.message);
+            $btn.prop('disabled', false).html('<i class="bi bi-box-arrow-in-down-left me-1"></i>Load');
         });
     });
 
     // --- Legacy Local File Handlers (Keep existing logic) ---
-    $('#btn-download-json').click(function() {
+    $('#btn-download-json').click(function () {
         const filename = $('#export-filename').val() || 'tracker_data.json';
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentRevisedData, null, 2));
         const downloadAnchorNode = document.createElement('a');
@@ -770,5 +768,5 @@ function initDataSyncHandlers() {
         downloadAnchorNode.remove();
     });
 
-    
+
 }
