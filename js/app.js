@@ -85,7 +85,7 @@ function initGlobalControls() {
 // Initialize
 $(document).ready(function () {
     // Remove the old Title loading logic here, it's now handled in toggleWorkspaceState()
-    
+
 
     // 2. Initialize Controls
     initGlobalControls();
@@ -100,7 +100,12 @@ $(document).ready(function () {
     
     // 4. Enable Dragging
     makeModalDraggable('#editMilestoneModal');
-    makeModalDraggable('#editProjectStructureModal'); // Optional for table view
+    makeModalDraggable('#editProjectStructureModal'); 
+    
+    // 🟢 [FIX] Register the new modals for dragging
+    makeModalDraggable('#dataSettingsModal');
+    makeModalDraggable('#projectSettingsModal');
+    makeModalDraggable('#createProjectModal');
 
     // 5. Initial Run
     runPipeline();

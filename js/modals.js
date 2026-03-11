@@ -470,7 +470,10 @@ function initCreateProjectHandler() {
     // 🟢 [FIX] Allow both the Workspace toolbar AND the Welcome Canvas button to open this modal
     $(document).on('click', '#btn-open-create-project, #btn-welcome-create', function() {
         $('#create-proj-name').val('');
-        $('#create-new-group-name').val('').addClass('d-none');
+        
+        // 🔴 REMOVE: .addClass('d-none') here, let the change event handle it
+        $('#create-new-group-name').val(''); 
+        
         $errorMsg.addClass('d-none').text('');
         const todayStr = new Date().toISOString().split('T')[0];
         $('#create-proj-start').val(todayStr);
@@ -479,12 +482,16 @@ function initCreateProjectHandler() {
         $select.empty();
 
         // [UPDATED] Access .data
-        if (rawTrackerData.data && rawTrackerData.data.length > 0) {
+        if (rawTrackerData && rawTrackerData.data && rawTrackerData.data.length > 0) {
             rawTrackerData.data.forEach((g, index) => {
                 $select.append(new Option(g.group_name, index));
             });
         }
         $select.append(new Option('+ Create New Group...', '__NEW__'));
+        
+        // 🟢 [FIX] Manually trigger change event to sync UI state based on default selection
+        $select.trigger('change');
+        
         modal.show();
     });
 
@@ -505,6 +512,18 @@ function initCreateProjectHandler() {
         if (!name) { $errorMsg.text("Project Name is required.").removeClass('d-none'); return; }
         if (!start) { $errorMsg.text("Start Date is required.").removeClass('d-none'); return; }
         if (groupVal === '__NEW__' && !newGroupName) { $errorMsg.text("New Group Name is required.").removeClass('d-none'); return; }
+
+        // 🟢 [FIX] 如果系统当前是“零状态”(null)，则初始化基础数据结构
+        if (!rawTrackerData) {
+            rawTrackerData = {
+                meta: { 
+                    title: "My Workspace", 
+                    version: "1.0", 
+                    last_updated: new Date().toISOString().split('T')[0] 
+                },
+                data: []
+            };
+        }
 
         let targetGroupIndex = -1;
         if (groupVal === '__NEW__') {
@@ -741,15 +760,16 @@ function initDataSyncHandlers() {
 
         TrackerAPI.getVersion(vId).then(res => {
             const processedData = hydrateImportedData(res.data);
-            currentRevisedData = processedData;
+            
+            // 1. Update global data source
             rawTrackerData = processedData;
 
-            renderTracker(currentRevisedData);
+            // 2. 🟢 [FIX] Call the global pipeline instead of just renderTracker.
+            // This will automatically handle hiding the welcome canvas, updating the title,
+            // calculating status cards, and rendering the Gantt chart.
+            runPipeline();
 
-            if (res.data.meta) {
-                $('#tracker-main-title').text(res.data.meta.title || "ProjectTracker Pro");
-            }
-
+            // 3. Close the modal
             bootstrap.Modal.getInstance(modalEl).hide();
         }).catch(err => {
             alert("❌ Load Failed: " + err.message);
