@@ -467,7 +467,8 @@ function initCreateProjectHandler() {
     });
     const $errorMsg = $('#create-error-msg');
 
-    $('#dashboard-stats-container').on('click', '#btn-open-create-project', function () {
+    // 🟢 [FIX] Allow both the Workspace toolbar AND the Welcome Canvas button to open this modal
+    $(document).on('click', '#btn-open-create-project, #btn-welcome-create', function() {
         $('#create-proj-name').val('');
         $('#create-new-group-name').val('').addClass('d-none');
         $errorMsg.addClass('d-none').text('');

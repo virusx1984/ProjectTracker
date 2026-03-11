@@ -1,21 +1,41 @@
 // --- Application Entry Point ---
 
-// Main Pipeline Runner
-// Exposed globally so moduls.js can access it
-function runPipeline() {
-    // 1. Calculate Revised Dates (Logic derivation)
-    // rawTrackerData now follows the new structure { meta: ..., data: ... }
-    currentRevisedData = reviseProjectData(rawTrackerData);
+// [NEW] Helper: Toggle between Welcome Canvas and Main Workspace
+function toggleWorkspaceState() {
+    const hasData = rawTrackerData && rawTrackerData.data && rawTrackerData.data.length > 0;
     
-    // 2. NEW: Auto-Scale Timeline based on revised dates
-    // This updates CONFIG.TRACKER_START_DATE and CONFIG.RENDER_MONTHS dynamically
-    calculateAutoBounds(currentRevisedData);
+    if (hasData) {
+        $('#welcome-canvas').addClass('d-none');
+        $('#main-workspace').removeClass('d-none').addClass('d-flex');
+        
+        // Update Main Title
+        if (rawTrackerData.meta && rawTrackerData.meta.title) {
+            $('#tracker-main-title').text(rawTrackerData.meta.title);
+        }
+    } else {
+        $('#welcome-canvas').removeClass('d-none');
+        $('#main-workspace').addClass('d-none').removeClass('d-flex');
+        $('#tracker-main-title').text("ProjectTracker Pro");
+    }
+}
 
-    // 3. Preprocess for Stats
+// Main Pipeline Runner
+function runPipeline() {
+    // 1. Check State First
+    toggleWorkspaceState();
+
+    // 2. Abort rendering if no data exists (stay on Welcome Canvas)
+    if (!rawTrackerData || !rawTrackerData.data || rawTrackerData.data.length === 0) {
+        return; 
+    }
+
+    // 3. Normal Rendering Pipeline
+    currentRevisedData = reviseProjectData(rawTrackerData);
+    calculateAutoBounds(currentRevisedData);
+    
     const result = preprocessData(currentRevisedData);
     currentProcessedStats = result.counts;
     
-    // 4. Render
     renderDashboardStats(currentProcessedStats);
     renderTracker(currentRevisedData);
 }
@@ -64,11 +84,8 @@ function initGlobalControls() {
 
 // Initialize
 $(document).ready(function () {
-    // 1. Load Title from Meta (NEW Logic)
-    // If the new structure exists, update the page header
-    if (rawTrackerData.meta && rawTrackerData.meta.title) {
-        $('#tracker-main-title').text(rawTrackerData.meta.title);
-    }
+    // Remove the old Title loading logic here, it's now handled in toggleWorkspaceState()
+    
 
     // 2. Initialize Controls
     initGlobalControls();
