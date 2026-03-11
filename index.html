@@ -369,55 +369,83 @@
 
                         <div class="tab-pane fade show active" id="cloud-pane">
 
-                            <div class="row g-0 h-100">
-                                <div class="col-4 border-end bg-light" style="max-height: 60vh; overflow-y: auto;">
-                                    <div
-                                        class="p-2 border-bottom bg-white sticky-top d-flex justify-content-between align-items-center">
-                                        <span class="fw-bold small text-muted"><i class="bi bi-cloud-check me-1"></i>
-                                            Cloud Projects</span>
-                                        <button class="btn btn-sm btn-link text-decoration-none py-0"
-                                            id="btn-refresh-project-list" title="Refresh List">
-                                            <i class="bi bi-arrow-clockwise"></i>
-                                        </button>
-                                    </div>
-                                    <div class="list-group list-group-flush rounded-0" id="cloud-project-list">
-                                        <div class="text-center p-3 text-muted small spinner-container">Loading...</div>
+                            <div class="d-flex flex-column h-100">
+
+                                <div class="card bg-primary-subtle border-primary mb-4 shadow-sm"
+                                    style="border-radius: 10px;">
+                                    <div class="card-body py-3">
+                                        <div class="row align-items-center">
+                                            <div class="col-md-4 border-end border-primary border-opacity-25">
+                                                <span class="text-primary fw-bold small text-uppercase d-block mb-1"
+                                                    style="letter-spacing: 0.5px;">Current Workspace</span>
+                                                <h5 class="mb-0 fw-bold text-dark text-truncate"
+                                                    id="cloud-save-project-name">Project_Name</h5>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <input type="text" class="form-control border-primary"
+                                                    id="cloud-save-remark"
+                                                    placeholder="Enter version remark (e.g., Fixed Phase 1 bugs)..."
+                                                    autocomplete="off">
+                                            </div>
+                                            <div class="col-md-2 text-end">
+                                                <button class="btn btn-primary w-100 fw-bold shadow-sm"
+                                                    id="btn-cloud-save">
+                                                    <i class="bi bi-cloud-arrow-up me-1"></i> Save
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div class="col-8 d-flex flex-column" style="max-height: 60vh;">
-                                    <div
-                                        class="p-2 border-bottom sticky-top bg-white d-flex justify-content-between align-items-center">
-                                        <h6 class="fw-bold text-dark mb-0 fs-6">
-                                            History: <span id="cloud-current-project-name"
-                                                class="text-primary ms-1">Select a project</span>
-                                        </h6>
-                                        <button class="btn btn-sm btn-primary" id="btn-cloud-save">
-                                            <i class="bi bi-cloud-arrow-up"></i> Save Current to Cloud
-                                        </button>
-                                    </div>
-
-                                    <div class="table-responsive flex-grow-1" style="overflow-y: auto;">
-                                        <table class="table table-hover table-sm mb-0 align-middle">
-                                            <thead class="table-light sticky-top">
-                                                <tr>
-                                                    <th style="width: 20%">Time</th>
-                                                    <th style="width: 20%">IP Address</th>
-                                                    <th style="width: 15%">User</th>
-                                                    <th style="width: 30%">Remark</th>
-                                                    <th style="width: 15%" class="text-end">Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="cloud-history-list">
-                                                <tr>
-                                                    <td colspan="5" class="text-center text-muted fst-italic py-4">
-                                                        Please select a project from the left panel.</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                <div class="d-flex justify-content-between align-items-center mb-2 px-1">
+                                    <h6 class="fw-bold text-dark mb-0"><i class="bi bi-search text-muted me-2"></i>Cloud
+                                        Archive</h6>
                                 </div>
+
+                                <div class="input-group mb-3 shadow-sm">
+                                    <span class="input-group-text bg-white border-end-0"><i
+                                            class="bi bi-cloud-check text-primary"></i></span>
+                                    <input class="form-control border-start-0 fw-bold text-primary"
+                                        list="cloud-project-datalist" id="cloud-search-input"
+                                        placeholder="Search or select a project name from the cloud..."
+                                        autocomplete="off">
+                                    <datalist id="cloud-project-datalist">
+                                    </datalist>
+                                    <button class="btn btn-dark px-4" type="button" id="btn-cloud-search">
+                                        Search
+                                    </button>
+                                    <button class="btn btn-outline-secondary px-3" type="button"
+                                        id="btn-refresh-project-list" title="Refresh Cloud Index">
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                    </button>
+                                </div>
+
+                                <div class="table-responsive border rounded bg-white shadow-sm flex-grow-1"
+                                    style="max-height: 45vh; overflow-y: auto;">
+                                    <table class="table table-hover table-sm mb-0 align-middle">
+                                        <thead class="table-light sticky-top shadow-sm" style="z-index: 10;">
+                                            <tr>
+                                                <th style="width: 20%" class="ps-3 py-2 text-muted">Time</th>
+                                                <th style="width: 15%" class="py-2 text-muted">IP Address</th>
+                                                <th style="width: 15%" class="py-2 text-muted">User</th>
+                                                <th style="width: 35%" class="py-2 text-muted">Remark</th>
+                                                <th style="width: 15%" class="text-end pe-3 py-2 text-muted">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="cloud-history-list">
+                                            <tr>
+                                                <td colspan="5" class="text-center text-muted fst-italic py-5">
+                                                    <i
+                                                        class="bi bi-inbox fs-1 d-block mb-3 text-secondary opacity-25"></i>
+                                                    Please search or select a project to view its history.
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
                             </div>
+
                         </div>
 
                         <div class="tab-pane fade" id="local-pane">

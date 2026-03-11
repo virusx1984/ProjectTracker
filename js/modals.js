@@ -597,36 +597,43 @@ function initMetaHandler() {
     });
 }
 
-// --- [NEW] Cloud / Mock API Handlers (Append to js/modals.js) ---
-
+// --- [MODIFIED] Cloud / Mock API Handlers ---
 function initDataSyncHandlers() {
     const modalEl = document.getElementById('dataSettingsModal');
     const $historyList = $('#cloud-history-list');
-    const $projNameDisplay = $('#cloud-current-project-name');
-    const $projectList = $('#cloud-project-list'); // 🟢 NEW
+    
+    // UI Elements for Save Zone
+    const $saveProjNameDisplay = $('#cloud-save-project-name');
+    const $saveRemarkInput = $('#cloud-save-remark');
+    
+    // UI Elements for Search Zone
+    const $searchInput = $('#cloud-search-input');
+    const $datalist = $('#cloud-project-datalist');
 
-    // Store the currently selected project in the UI
     let selectedCloudProject = "";
 
-    // Helper: Get Current Active Project Name from Meta
+    // Helper: Get Current Active Project Name
     const getActiveLocalProjectName = () => {
         if (rawTrackerData && rawTrackerData.meta && rawTrackerData.meta.title) {
             return rawTrackerData.meta.title;
         }
-        return "My_Project_Schedule";
+        return "Untitled_Workspace"; // Zero-state fallback
     };
 
-    // --- 1. Load History Table (Right Panel) ---
-    // 🟢 MODIFIED: Now takes a specific project name as an argument
+    // --- 1. Load History Table (Bottom Zone) ---
     const loadHistory = (projName) => {
+        if (!projName) {
+            $historyList.html('<tr><td colspan="5" class="text-center text-muted fst-italic py-5">Please enter a project name to search.</td></tr>');
+            return;
+        }
+        
         selectedCloudProject = projName;
-        $projNameDisplay.text(projName);
-        $historyList.html('<tr><td colspan="5" class="text-center text-muted"><div class="spinner-border spinner-border-sm text-primary"></div> Loading...</td></tr>');
+        $historyList.html('<tr><td colspan="5" class="text-center text-muted py-5"><div class="spinner-border text-primary"></div><div class="mt-2 small">Searching Cloud Archive...</div></td></tr>');
 
         TrackerAPI.getHistory(projName).then(res => {
             $historyList.empty();
             if (!res.history || res.history.length === 0) {
-                $historyList.html('<tr><td colspan="5" class="text-center text-muted fst-italic py-3">No history found.</td></tr>');
+                $historyList.html(`<tr><td colspan="5" class="text-center text-muted fst-italic py-5"><i class="bi bi-cloud-slash fs-1 d-block mb-3 text-secondary opacity-25"></i>No cloud history found for "<strong>${projName}</strong>".</td></tr>`);
                 return;
             }
 
@@ -639,15 +646,13 @@ function initDataSyncHandlers() {
 
                 const row = `
                 <tr>
-                    <td class="small text-nowrap align-middle">${dateStr}</td>
+                    <td class="small text-nowrap align-middle ps-3 fw-bold">${dateStr}</td>
                     <td class="small align-middle">${ipDisplay}</td>
                     <td class="small align-middle">${userDisplay}</td>
-                    <td class="small text-truncate align-middle" style="max-width: 150px;" title="${item.remark}">${remark}</td>
-                    <td class="text-end align-middle">
-                        <button class="btn btn-sm btn-outline-primary btn-restore-version py-0 text-nowrap" 
-                                style="font-size: 11px; line-height: 1.8;" 
-                                data-vid="${item.versionId}">
-                            <i class="bi bi-box-arrow-in-down-left me-1"></i>Load
+                    <td class="small text-truncate align-middle" style="max-width: 300px;" title="${item.remark}">${remark}</td>
+                    <td class="text-end align-middle pe-3">
+                        <button class="btn btn-sm btn-outline-primary btn-restore-version py-1 px-3 text-nowrap fw-bold shadow-sm" data-vid="${item.versionId}">
+                            <i class="bi bi-download me-1"></i>Load
                         </button>
                     </td>
                 </tr>
@@ -655,79 +660,95 @@ function initDataSyncHandlers() {
                 $historyList.append(row);
             });
         }).catch(err => {
-            $historyList.html(`<tr><td colspan="5" class="text-center text-danger">Error: ${err.message}</td></tr>`);
+            $historyList.html(`<tr><td colspan="5" class="text-center text-danger py-5"><i class="bi bi-exclamation-triangle fs-2 d-block mb-2"></i>Error: ${err.message}</td></tr>`);
         });
     };
 
-    // --- 2. Load Project List (Left Panel) ---
-    // 🟢 NEW logic for Master-Detail view
+    // --- 2. Load Datalist for Search Autocomplete ---
     const loadProjectList = () => {
-        $projectList.html('<div class="text-center p-3 text-muted small"><div class="spinner-border spinner-border-sm"></div></div>');
-
         TrackerAPI.getProjectList().then(res => {
-            $projectList.empty();
+            $datalist.empty();
             const projects = res.projects || [];
-
-            // Ensure the currently active local project is in the list, even if it hasn't been saved yet
-            const activeLocal = getActiveLocalProjectName();
-            if (!projects.includes(activeLocal)) {
-                projects.unshift(activeLocal); // Add to top
-            }
-
             projects.forEach(pName => {
-                // Highlight the one matching the current local workspace
-                const isCurrentLocal = (pName === activeLocal);
-                const badge = isCurrentLocal ? `<span class="badge bg-success rounded-pill" style="font-size:0.6rem;">Current</span>` : '';
-
-                const itemHtml = `
-                    <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center cloud-project-item" data-pname="${pName}">
-                        <span class="small text-truncate" title="${pName}">${pName}</span>
-                        ${badge}
-                    </button>
-                `;
-                $projectList.append(itemHtml);
+                // Populate HTML5 datalist
+                $datalist.append(`<option value="${pName}">`);
             });
-
-            // Auto-select the currently active local project
-            $projectList.find(`[data-pname="${activeLocal}"]`).click();
-
         }).catch(err => {
-            $projectList.html(`<div class="p-3 text-danger small">Failed to load projects.</div>`);
+            console.error("Failed to load project list for autocomplete", err);
         });
     };
 
     // --- 3. Events ---
 
-    // On Modal Open
+    // On Modal Open: Initialize Zones
     $(modalEl).on('show.bs.modal', function () {
+        const currentProj = getActiveLocalProjectName();
+        
+        // 1. Setup Save Zone
+        $saveProjNameDisplay.text(currentProj);
+        $saveRemarkInput.val('');
+        
+        // Disable save button if zero-state
+        if (!rawTrackerData) {
+            $('#btn-cloud-save').prop('disabled', true).attr('title', 'Workspace is empty');
+        } else {
+            $('#btn-cloud-save').prop('disabled', false).removeAttr('title');
+        }
+
+        // 2. Setup Search Zone
         loadProjectList();
-        // Reset Local File Inputs
+        
+        // Only auto-search if not zero-state
+        if (currentProj !== "Untitled_Workspace") {
+            $searchInput.val(currentProj); 
+            loadHistory(currentProj);
+        } else {
+            $searchInput.val('');
+            $historyList.html('<tr><td colspan="5" class="text-center text-muted fst-italic py-5"><i class="bi bi-inbox fs-1 d-block mb-3 text-secondary opacity-25"></i>Please search or select a project to view its history.</td></tr>');
+        }
+
+        // 3. Reset Local File Inputs
         $('#import-file-input').val('');
         $('#btn-import-json').prop('disabled', true);
     });
 
-    // Refresh Project List Button
+    // Cloud Search Actions
+    $('#btn-cloud-search').click(function() {
+        loadHistory($searchInput.val().trim());
+    });
+    
+    // Trigger search on Enter key
+    $searchInput.on('keypress', function(e) {
+        if (e.which === 13) {
+            loadHistory($(this).val().trim());
+        }
+    });
+
+    // Trigger search when user selects an item from the datalist
+    $searchInput.on('input', function() {
+        const val = $(this).val();
+        // Check if the current value exists in the datalist options
+        const isSelectedFromList = $(`#cloud-project-datalist option`).filter(function() {
+            return this.value === val;
+        }).length > 0;
+        
+        if (isSelectedFromList) {
+            loadHistory(val);
+        }
+    });
+
     $('#btn-refresh-project-list').click(function () {
         loadProjectList();
+        const currentVal = $searchInput.val().trim();
+        if (currentVal) loadHistory(currentVal);
     });
 
-    // Select Project from Left Panel
-    $projectList.on('click', '.cloud-project-item', function () {
-        // Handle UI Active state
-        $('.cloud-project-item').removeClass('active fw-bold');
-        $(this).addClass('active fw-bold');
-
-        // Load history for selected project
-        const selectedName = $(this).data('pname');
-        loadHistory(selectedName);
-    });
-
-    // Save to Cloud (Always saves the CURRENT LOCAL workspace)
+    // Save to Cloud Zone Action
     $('#btn-cloud-save').click(function () {
-        const projName = getActiveLocalProjectName();
-        const remark = prompt(`Saving "${projName}"\nEnter a remark (optional):`, "Regular Update");
+        if (!rawTrackerData) return;
 
-        if (remark === null) return;
+        const projName = getActiveLocalProjectName();
+        const remark = $saveRemarkInput.val().trim() || "Regular Update";
 
         const $btn = $(this);
         const originalHtml = $btn.html();
@@ -739,9 +760,11 @@ function initDataSyncHandlers() {
             remark: remark,
             data: currentRevisedData
         }).then(res => {
-            alert("✅ Version Saved Successfully!");
-            // Refresh list and history
-            loadProjectList();
+            // Success Feedback
+            $saveRemarkInput.val(''); // Clear input
+            $searchInput.val(projName); // Sync search bar to saved project
+            loadProjectList(); // Refresh autocomplete
+            loadHistory(projName); // Refresh table to show new save
         }).catch(err => {
             alert("❌ Save Failed: " + err.message);
         }).finally(() => {
@@ -752,32 +775,23 @@ function initDataSyncHandlers() {
     // Restore Specific Version (Loads into Local Workspace)
     $historyList.on('click', '.btn-restore-version', function () {
         const vId = $(this).data('vid');
-        // 🟢 MODIFIED message to clarify what is happening
         if (!confirm(`⚠️ Load this version of "${selectedCloudProject}"?\nCurrent unsaved changes in your workspace will be lost.`)) return;
 
         const $btn = $(this);
-        $btn.prop('disabled', true).html('...');
+        $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
 
         TrackerAPI.getVersion(vId).then(res => {
             const processedData = hydrateImportedData(res.data);
-            
-            // 1. Update global data source
             rawTrackerData = processedData;
-
-            // 2. 🟢 [FIX] Call the global pipeline instead of just renderTracker.
-            // This will automatically handle hiding the welcome canvas, updating the title,
-            // calculating status cards, and rendering the Gantt chart.
             runPipeline();
-
-            // 3. Close the modal
             bootstrap.Modal.getInstance(modalEl).hide();
         }).catch(err => {
             alert("❌ Load Failed: " + err.message);
-            $btn.prop('disabled', false).html('<i class="bi bi-box-arrow-in-down-left me-1"></i>Load');
+            $btn.prop('disabled', false).html('<i class="bi bi-download me-1"></i>Load');
         });
     });
 
-    // --- Legacy Local File Handlers (Keep existing logic) ---
+    // --- Legacy Local File Handlers ---
     $('#btn-download-json').click(function () {
         const filename = $('#export-filename').val() || 'tracker_data.json';
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentRevisedData, null, 2));
@@ -788,6 +802,4 @@ function initDataSyncHandlers() {
         downloadAnchorNode.click();
         downloadAnchorNode.remove();
     });
-
-
 }
