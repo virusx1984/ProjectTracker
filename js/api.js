@@ -46,14 +46,20 @@ const TrackerAPI = {
     },
 
     // ============================================================
-    // 3. API: Get History List (GET /api/v1/project/history)
+    // 3. API: Get Version History (Metadata Only - Supports Fuzzy Search)
     // ============================================================
-    getHistory: async function(projectName) {
-        const response = await fetch(`${BASE_URL}/project/history?projectName=${encodeURIComponent(projectName)}`);
+    getHistory: async function(keyword = "") {
+        // Use URLSearchParams to handle optional keyword safely
+        const params = new URLSearchParams();
+        if (keyword) {
+            params.append('keyword', keyword);
+        }
+        
+        const response = await fetch(`${BASE_URL}/project/history?${params.toString()}`);
         
         const result = await response.json();
         if (!response.ok || result.code !== 200) {
-            throw new Error(result.message || 'Failed to load history list');
+            throw new Error(result.message || 'Failed to load history');
         }
         return result;
     },

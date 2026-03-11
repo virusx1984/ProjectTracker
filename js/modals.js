@@ -620,20 +620,15 @@ function initDataSyncHandlers() {
         return "Untitled_Workspace"; // Zero-state fallback
     };
 
-    // --- 1. Load History Table (Bottom Zone) ---
-    const loadHistory = (projName) => {
-        if (!projName) {
-            $historyList.html('<tr><td colspan="5" class="text-center text-muted fst-italic py-5">Please enter a project name to search.</td></tr>');
-            return;
-        }
-        
-        selectedCloudProject = projName;
+    // --- 1. Load History Table (Bottom Zone - Fuzzy Search) ---
+    const loadHistory = (keyword = "") => {
         $historyList.html('<tr><td colspan="5" class="text-center text-muted py-5"><div class="spinner-border text-primary"></div><div class="mt-2 small">Searching Cloud Archive...</div></td></tr>');
 
-        TrackerAPI.getHistory(projName).then(res => {
+        TrackerAPI.getHistory(keyword).then(res => {
             $historyList.empty();
             if (!res.history || res.history.length === 0) {
-                $historyList.html(`<tr><td colspan="5" class="text-center text-muted fst-italic py-5"><i class="bi bi-cloud-slash fs-1 d-block mb-3 text-secondary opacity-25"></i>No cloud history found for "<strong>${projName}</strong>".</td></tr>`);
+                const searchTxt = keyword ? `"<strong>${keyword}</strong>"` : "all projects";
+                $historyList.html(`<tr><td colspan="5" class="text-center text-muted fst-italic py-5"><i class="bi bi-cloud-slash fs-1 d-block mb-3 text-secondary opacity-25"></i>No cloud history found for ${searchTxt}.</td></tr>`);
                 return;
             }
 
@@ -641,17 +636,22 @@ function initDataSyncHandlers() {
                 const dateObj = new Date(item.createdAt);
                 const dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString();
                 const remark = item.remark || '<span class="text-muted">-</span>';
-                const ipDisplay = item.sourceIP ? `<span class="badge bg-light text-secondary border" style="font-family:monospace;">${item.sourceIP}</span>` : '<span class="text-muted">-</span>';
-                let userDisplay = (item.createdBy && item.createdBy !== 'Anonymous') ? `<span class="fw-bold text-dark small">${item.createdBy}</span>` : '';
+                
+                // IP badge styled smaller to save space
+                const ipDisplay = item.sourceIP ? `<span class="badge bg-light text-secondary border" style="font-family:monospace; font-size:10px;">${item.sourceIP}</span>` : '<span class="text-muted">-</span>';
+                
+                // 🌟 [NEW] Render Project Name with icon
+                const projName = item.projectName || "Unknown_Project";
+                const projNameDisplay = `<span class="fw-bold text-dark text-truncate d-inline-block align-middle" style="max-width: 200px;" title="${projName}"><i class="bi bi-folder2 text-primary me-2"></i>${projName}</span>`;
 
                 const row = `
                 <tr>
-                    <td class="small text-nowrap align-middle ps-3 fw-bold">${dateStr}</td>
+                    <td class="small text-nowrap align-middle ps-3 text-muted">${dateStr}</td>
+                    <td class="small align-middle">${projNameDisplay}</td>
+                    <td class="small text-truncate align-middle" style="max-width: 250px;" title="${item.remark}">${remark}</td>
                     <td class="small align-middle">${ipDisplay}</td>
-                    <td class="small align-middle">${userDisplay}</td>
-                    <td class="small text-truncate align-middle" style="max-width: 300px;" title="${item.remark}">${remark}</td>
                     <td class="text-end align-middle pe-3">
-                        <button class="btn btn-sm btn-outline-primary btn-restore-version py-1 px-3 text-nowrap fw-bold shadow-sm" data-vid="${item.versionId}">
+                        <button class="btn btn-sm btn-outline-primary btn-restore-version py-1 px-3 text-nowrap fw-bold shadow-sm" data-vid="${item.versionId}" data-pname="${projName}">
                             <i class="bi bi-download me-1"></i>Load
                         </button>
                     </td>
@@ -775,7 +775,10 @@ function initDataSyncHandlers() {
     // Restore Specific Version (Loads into Local Workspace)
     $historyList.on('click', '.btn-restore-version', function () {
         const vId = $(this).data('vid');
-        if (!confirm(`⚠️ Load this version of "${selectedCloudProject}"?\nCurrent unsaved changes in your workspace will be lost.`)) return;
+        // 🌟 [FIX] Read the specific project name from the clicked button
+        const pName = $(this).data('pname'); 
+        
+        if (!confirm(`⚠️ Load version of "${pName}"?\nCurrent unsaved changes in your workspace will be lost.`)) return;
 
         const $btn = $(this);
         $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');

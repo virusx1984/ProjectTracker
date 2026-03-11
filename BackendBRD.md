@@ -1,7 +1,7 @@
 # ProjectTracker Pro - Backend API Specifications
 
-**Version:** 1.2.0 (Added Project List API for Cloud Workspace)
-**Date:** 2026-03-10
+**Version:** 1.3.0 (Upgraded Cloud Archive to Global Fuzzy Search Engine)
+**Date:** 2026-03-11
 **Status:** Approved
 
 ---
@@ -38,7 +38,7 @@ The backend must create a single table to store project versions.
 | **`VERSION_ID`** | `VARCHAR2(36)` | PK, Not Null | Unique UUID (v4) for this specific version. |
 | **`PROJECT_NAME`** | `VARCHAR2(200)` | Not Null | The unique identifier for the project. |
 | **`DATA_BLOB`** | **`BLOB`** | Not Null | **Gzipped** binary content of the JSON data. |
-| **`CREATED_BY`** | `VARCHAR2(50)` | Nullable | User who performed the save action. |
+| **`CREATED_BY`** | `VARCHAR2(50)` | Nullable | User who performed the save action. (Kept for DB audit, removed from UI). |
 | **`CREATED_AT`** | `TIMESTAMP` | Default `SYSDATE` | Server-side timestamp. |
 | **`SOURCE_IP`** | **`VARCHAR2(45)`** | Nullable | Client IPv4/IPv6 address (Audit Log). |
 | **`REMARK`** | `VARCHAR2(500)` | Nullable | Optional commit message or note. |
@@ -87,7 +87,7 @@ Creates a new version record in the database.
       "code": 200,
       "message": "Saved successfully",
       "versionId": "550e8400-e29b-41d4-a716-446655440000",
-      "timestamp": "2026-03-10 14:30:00"
+      "timestamp": "2026-03-11 14:30:00"
     }
     ```
 
@@ -116,15 +116,15 @@ Retrieves the most recent data for a specific project.
     }
     ```
 
-### 4.3. Get Version History (Metadata Only)
-Retrieves a list of historical versions. **Do NOT return the BLOB data here.**
+### 4.3. Get Version History (Global Fuzzy Search)
+Retrieves a list of historical versions across all projects based on a fuzzy search keyword. **Do NOT return the BLOB data here.**
 
 * **Endpoint:** `GET /project/history`
 * **Query Parameters:**
-    * `projectName` (Required)
-    * `limit` (Optional, default 20)
+    * `keyword` (Optional): A string to fuzzy match against `PROJECT_NAME`. If empty, return the most recent versions across all projects.
+    * `limit` (Optional, default 50)
 * **Backend Logic:**
-    * `SELECT VERSION_ID, CREATED_AT, CREATED_BY, REMARK, SOURCE_IP FROM PROJECT_VERSIONS WHERE PROJECT_NAME = :projectName ORDER BY CREATED_AT DESC`
+    * `SELECT VERSION_ID, PROJECT_NAME, CREATED_AT, REMARK, SOURCE_IP FROM PROJECT_VERSIONS WHERE PROJECT_NAME LIKE '%' || :keyword || '%' ORDER BY CREATED_AT DESC`
 * **Success Response (200 OK):**
     ```json
     {
@@ -132,10 +132,17 @@ Retrieves a list of historical versions. **Do NOT return the BLOB data here.**
       "history": [
         {
           "versionId": "uuid-1",
-          "createdAt": "2026-03-10 14:30:00",
-          "createdBy": "Admin",
+          "projectName": "Fab2_Schedule",
+          "createdAt": "2026-03-11 14:30:00",
           "sourceIP": "202.106.0.5",
           "remark": "Updated phase 1 milestones"
+        },
+        {
+          "versionId": "uuid-2",
+          "projectName": "Fab1_Alpha_Plan",
+          "createdAt": "2026-03-10 09:15:00",
+          "sourceIP": "192.168.1.10",
+          "remark": "Initial commit"
         }
       ]
     }
@@ -151,8 +158,8 @@ Retrieves the full data for a specific historical version.
     1.  Select `DATA_BLOB` by `VERSION_ID`.
     2.  **Decompress** and return JSON.
 
-### 4.5. Get Project List (New)
-Retrieves a distinct list of all project names currently stored in the database. Used to populate the cloud workspace sidebar.
+### 4.5. Get Project List
+Retrieves a distinct list of all project names currently stored in the database. Used to populate the cloud workspace search datalist.
 
 * **Endpoint:** `GET /project/list`
 * **Query Parameters:** None
