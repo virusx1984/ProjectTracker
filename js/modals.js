@@ -733,10 +733,12 @@ function initDataSyncHandlers() {
 
     // Trigger search when user selects an item from the datalist
     $searchInput.on('input', function() {
-        const val = $(this).val();
-        // Check if the current value exists in the datalist options
+        const val = $(this).val().trim();
+        if (!val) return;
+
+        // 🟢 [FIX] Case-insensitive matching for datalist selection
         const isSelectedFromList = $(`#cloud-project-datalist option`).filter(function() {
-            return this.value === val;
+            return this.value.toLowerCase() === val.toLowerCase();
         }).length > 0;
         
         if (isSelectedFromList) {

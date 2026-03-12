@@ -1,7 +1,7 @@
 # ProjectTracker Pro - Backend API Specifications
 
-**Version:** 1.3.0 (Upgraded Cloud Archive to Global Fuzzy Search Engine)
-**Date:** 2026-03-11
+**Version:** 1.3.1 (Case-insensitive Search & Enhanced UI Support)
+**Date:** 2026-03-12
 **Status:** Approved
 
 ---
@@ -116,7 +116,7 @@ Retrieves the most recent data for a specific project.
     }
     ```
 
-### 4.3. Get Version History (Global Fuzzy Search)
+### 4.3. Get Version History (Global Fuzzy & Case-insensitive Search)
 Retrieves a list of historical versions across all projects based on a fuzzy search keyword. **Do NOT return the BLOB data here.**
 
 * **Endpoint:** `GET /project/history`
@@ -124,7 +124,8 @@ Retrieves a list of historical versions across all projects based on a fuzzy sea
     * `keyword` (Optional): A string to fuzzy match against `PROJECT_NAME`. If empty, return the most recent versions across all projects.
     * `limit` (Optional, default 50)
 * **Backend Logic:**
-    * `SELECT VERSION_ID, PROJECT_NAME, CREATED_AT, REMARK, SOURCE_IP FROM PROJECT_VERSIONS WHERE PROJECT_NAME LIKE '%' || :keyword || '%' ORDER BY CREATED_AT DESC`
+    * Must support **case-insensitive** matching. Use `UPPER()` or `LOWER()` function to ensure accurate results.
+    * `SELECT VERSION_ID, PROJECT_NAME, CREATED_AT, REMARK, SOURCE_IP FROM PROJECT_VERSIONS WHERE UPPER(PROJECT_NAME) LIKE '%' || UPPER(:keyword) || '%' ORDER BY CREATED_AT DESC`
 * **Success Response (200 OK):**
     ```json
     {
@@ -133,7 +134,7 @@ Retrieves a list of historical versions across all projects based on a fuzzy sea
         {
           "versionId": "uuid-1",
           "projectName": "Fab2_Schedule",
-          "createdAt": "2026-03-11 14:30:00",
+          "createdAt": "2026-03-12 14:30:00",
           "sourceIP": "202.106.0.5",
           "remark": "Updated phase 1 milestones"
         },
