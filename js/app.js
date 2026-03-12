@@ -105,10 +105,10 @@ function initGlobalControls() {
             // If already on welcome screen (rawTrackerData is null), do nothing
             if (!rawTrackerData) return;
 
-            if (confirm("⚠️ Return to Welcome Screen?\nAny unsaved changes in your current workspace will be lost.")) {
-                rawTrackerData = null; // Clear data
-                runPipeline();         // Trigger re-render to show Welcome Canvas
-            }
+            showConfirm("⚠️ Return to Welcome Screen?\nAny unsaved changes in your current workspace will be lost.", function() {
+                rawTrackerData = null; 
+                runPipeline();         
+            });
         });
 }
 

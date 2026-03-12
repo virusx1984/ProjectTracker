@@ -61,3 +61,61 @@ function makeModalDraggable(modalId) {
         $dialog.css({ 'left': '', 'top': '', 'margin': '', 'position': '', 'width': '' }); 
     });
 }
+
+// ==========================================
+// --- [NEW] Global UI Feedback Utilities ---
+// ==========================================
+
+// 1. Show Toast Notification (Tier 1)
+function showToast(message, type = 'success') {
+    const container = document.getElementById('global-toast-container');
+    if (!container) return;
+
+    // Map types to Bootstrap semantic classes
+    const bgClass = `bg-${type}`;
+    const icon = type === 'success' ? 'check-circle' : (type === 'danger' ? 'x-circle' : 'info-circle');
+    
+    const toastId = 'toast-' + Date.now();
+    const toastHtml = `
+        <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0 mb-2 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body fw-bold">
+                    <i class="bi bi-${icon} me-2"></i>${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', toastHtml);
+    const toastEl = document.getElementById(toastId);
+    
+    // Initialize and show
+    const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+    toast.show();
+    
+    // Auto-remove from DOM after hidden to keep HTML clean
+    toastEl.addEventListener('hidden.bs.toast', () => {
+        toastEl.remove();
+    });
+}
+
+// 2. Show Custom Confirm Modal (Tier 3)
+// Replaces the synchronous confirm() with an asynchronous callback
+function showConfirm(message, onConfirmCallback) {
+    // Replace newlines with <br> for HTML rendering
+    $('#custom-confirm-msg').html(message.replace(/\n/g, '<br>'));
+    
+    const modalEl = document.getElementById('customConfirmModal');
+    const modal = new bootstrap.Modal(modalEl);
+    
+    // Unbind previous clicks to prevent multiple firing, then bind new callback
+    $('#btn-custom-confirm-yes').off('click').on('click', function() {
+        modal.hide();
+        if (typeof onConfirmCallback === 'function') {
+            onConfirmCallback();
+        }
+    });
+    
+    modal.show();
+}

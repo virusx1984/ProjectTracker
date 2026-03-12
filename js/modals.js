@@ -356,11 +356,12 @@ function initProjectStructureHandlers() {
         const gIdx = parseInt($('#struct-g-idx').val());
         const pIdx = parseInt($('#struct-p-idx').val());
         const projName = $('#struct-proj-name').val();
-        if (confirm(`⚠️ Are you sure you want to delete project: "${projName}"?\n\nThis action CANNOT be undone.`)) {
+        
+        showConfirm(`⚠️ Are you sure you want to delete project: "${projName}"?\nThis action CANNOT be undone.`, function() {
             rawTrackerData.data[gIdx].projects.splice(pIdx, 1);
             runPipeline();
-            modal.hide();
-        }
+            bootstrap.Modal.getInstance(document.getElementById('editProjectStructureModal')).hide();
+        });
     });
 
     // [MODIFIED] Save Logic with Position Order Handling
@@ -368,7 +369,10 @@ function initProjectStructureHandlers() {
         const currentGIdx = parseInt($('#struct-g-idx').val());
         const currentPIdx = parseInt($('#struct-p-idx').val());
 
-        if (tempMilestones.length === 0) { alert("Project must have at least one milestone."); return; }
+        if (tempMilestones.length === 0) { 
+            $('#struct-error-msg').text("Project must have at least one milestone.").removeClass('d-none'); 
+            return;
+         }
 
         const targetGroupVal = $('#struct-group-select').val();
         let finalGroupIndex = currentGIdx;
@@ -376,7 +380,10 @@ function initProjectStructureHandlers() {
 
         if (targetGroupVal === '__NEW__') {
             const newName = $('#struct-new-group-name').val().trim();
-            if (!newName) { alert("Please enter a name for the new group."); return; }
+            if (!newName) { 
+                $('#struct-error-msg').text("Please enter a name for the new group.").removeClass('d-none'); 
+                return;
+             }
             const newGroup = { group_name: newName, is_expanded: true, projects: [] };
 
             // [UPDATED] Access .data
@@ -760,13 +767,15 @@ function initDataSyncHandlers() {
             remark: remark,
             data: currentRevisedData
         }).then(res => {
-            // Success Feedback
+            // 🟢 [FIX] Use Toast for success
+            showToast("Version Saved Successfully!", "success");
             $saveRemarkInput.val(''); // Clear input
             $searchInput.val(projName); // Sync search bar to saved project
             loadProjectList(); // Refresh autocomplete
             loadHistory(projName); // Refresh table to show new save
         }).catch(err => {
-            alert("❌ Save Failed: " + err.message);
+            // 🟢 [FIX] Use Toast for error
+            showToast("Save Failed: " + err.message, "danger");
         }).finally(() => {
             $btn.prop('disabled', false).html(originalHtml);
         });
@@ -775,22 +784,31 @@ function initDataSyncHandlers() {
     // Restore Specific Version (Loads into Local Workspace)
     $historyList.on('click', '.btn-restore-version', function () {
         const vId = $(this).data('vid');
-        // 🌟 [FIX] Read the specific project name from the clicked button
         const pName = $(this).data('pname'); 
         
-        if (!confirm(`⚠️ Load version of "${pName}"?\nCurrent unsaved changes in your workspace will be lost.`)) return;
+        // 🟢 [CRITICAL FIX] Capture $(this) BEFORE entering the callback!
+        // This ensures the button reference is preserved in the closure.
+        const $btn = $(this); 
+        
+        showConfirm(`⚠️ Load version of "${pName}"?\nCurrent unsaved changes in your workspace will be lost.`, function() {
+            
+            // Now $btn can be safely accessed here
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
 
-        const $btn = $(this);
-        $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
-
-        TrackerAPI.getVersion(vId).then(res => {
-            const processedData = hydrateImportedData(res.data);
-            rawTrackerData = processedData;
-            runPipeline();
-            bootstrap.Modal.getInstance(modalEl).hide();
-        }).catch(err => {
-            alert("❌ Load Failed: " + err.message);
-            $btn.prop('disabled', false).html('<i class="bi bi-download me-1"></i>Load');
+            TrackerAPI.getVersion(vId).then(res => {
+                const processedData = hydrateImportedData(res.data);
+                rawTrackerData = processedData;
+                runPipeline();
+                
+                // Close the modal (ensure 'dataSettingsModal' is used if modalEl is out of scope)
+                bootstrap.Modal.getInstance(document.getElementById('dataSettingsModal')).hide();
+                
+                showToast(`Successfully loaded version of ${pName}`, "success"); 
+            }).catch(err => {
+                showToast("Load Failed: " + err.message, "danger"); 
+                // Restore button state on failure
+                $btn.prop('disabled', false).html('<i class="bi bi-download me-1"></i>Load');
+            });
         });
     });
 
