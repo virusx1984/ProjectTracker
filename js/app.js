@@ -23,14 +23,18 @@ function toggleWorkspaceState() {
     if (hasData) {
         $('#welcome-canvas').addClass('d-none');
         $('#main-workspace').removeClass('d-none').addClass('d-flex');
-
-        // Update Main Title
+        
+        // Show home button and update title
+        $('#btn-return-home').removeClass('d-none');
         if (rawTrackerData.meta && rawTrackerData.meta.title) {
             $('#tracker-main-title').text(rawTrackerData.meta.title);
         }
     } else {
         $('#welcome-canvas').removeClass('d-none');
         $('#main-workspace').addClass('d-none').removeClass('d-flex');
+        
+        // Hide home button and reset title
+        $('#btn-return-home').addClass('d-none');
         $('#tracker-main-title').text("ProjectTracker Pro");
     }
 }
@@ -97,19 +101,16 @@ function initGlobalControls() {
         }
     });
 
-    // 🟢 [NEW] Scheme 2: Return to Home by clicking the main title
-    $('#tracker-main-title')
-        .css('cursor', 'pointer')
-        .attr('title', 'Return to Welcome Screen')
-        .click(function () {
-            // If already on welcome screen (rawTrackerData is null), do nothing
-            if (!rawTrackerData) return;
-
-            showConfirm("⚠️ Return to Welcome Screen?\nAny unsaved changes in your current workspace will be lost.", function() {
-                rawTrackerData = null; 
-                runPipeline();         
-            });
+    // --- [NEW] Return Home / Close Workspace Action ---
+    $('#btn-return-home').off('click').on('click', function() {
+        if (!rawTrackerData) return;
+        
+        showConfirm("⚠️ Close current workspace?\nAny unsaved changes will be lost.", function() {
+            rawTrackerData = null; 
+            runPipeline(); 
+            showToast("Workspace closed securely.", "info");
         });
+    });
 }
 
 // Initialize

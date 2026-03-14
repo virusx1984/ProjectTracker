@@ -32,14 +32,14 @@
         <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
 
             <div class="d-flex align-items-center">
+                <button class="btn btn-light text-secondary border-0 shadow-sm me-3 d-none" id="btn-return-home"
+                    title="Close Workspace & Return Home">
+                    <i class="bi bi-house-door-fill fs-5"></i>
+                </button>
                 <div>
-                    <div class="d-flex align-items-center">
-                        <h4 class="m-0 fw-bold text-dark" id="tracker-main-title">ProjectTracker Pro</h4>
-                        <button class="btn btn-link text-secondary ms-2 p-0 border-0" id="btn-edit-meta"
-                            title="Project Settings">
-                            <i class="bi bi-pencil-square" style="font-size: 1rem;"></i>
-                        </button>
-                    </div>
+                    <h4 id="tracker-main-title" class="mb-0 fw-bold text-dark text-truncate" style="max-width: 300px;">
+                        ProjectTracker Pro
+                    </h4>
                     <div class="text-muted small">Target vs Actual Performance</div>
                 </div>
             </div>
@@ -218,7 +218,8 @@
 
                         <div class="execution-card mb-3">
                             <div class="mb-3">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom position-relative"
+                                    style="z-index: 1050;">
                                     <label class="form-label fw-bold mb-0 text-secondary"
                                         style="font-size:12px;">Progress</label>
                                     <span class="small fw-bold text-primary" id="edit-progress-val">0%</span>
