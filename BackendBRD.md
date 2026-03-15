@@ -1,13 +1,13 @@
 # ProjectTracker Pro - Backend API Specifications
 
-**Version:** 1.3.1 (Case-insensitive Search & Enhanced UI Support)
-**Date:** 2026-03-12
+**Version:** 1.4.0 (Database Namespace & API Routing Isolation)
+**Date:** 2026-03-15
 **Status:** Approved
 
 ---
 
 ## 1. Overview
-The goal of this document is to define the backend RESTful API requirements for the **ProjectTracker Pro** application. 
+The goal of this document is to define the backend RESTful API requirements for the **ProjectTracker Pro (PTP)** application. 
 The backend will serve as a data persistence layer, handling JSON data sent by the frontend, compressing it, and archiving it into an Oracle database.
 
 **Core Architecture:**
@@ -29,9 +29,9 @@ The backend will serve as a data persistence layer, handling JSON data sent by t
 
 ## 3. Database Schema Design
 
-The backend must create a single table to store project versions.
+The backend must create a single table to store project versions. **Note: The table name uses the `PTP_` prefix for namespace management to prevent collisions in a shared Oracle instance.**
 
-### Table: `PROJECT_VERSIONS`
+### Table: `PTP_PROJECT_VERSIONS`
 
 | Column Name | Data Type | Constraints | Description |
 | :--- | :--- | :--- | :--- |
@@ -51,7 +51,8 @@ The backend must create a single table to store project versions.
 
 ## 4. API Interface Specifications
 
-**Base URL:** `/api/v1`
+**Base URL:** `/api/v1/ptp`  
+*(Note: Added `/ptp` namespace to prevent API routing collisions with other applications on the same server/gateway).*
 
 ### 4.1. Save Project Version
 Creates a new version record in the database.
@@ -72,14 +73,12 @@ Creates a new version record in the database.
     }
     ```
 * **Backend Logic:**
-    1.  **Audit Extraction:**
-        * Extract the client IP from the HTTP Header `X-Real-IP`.
-        * If the header is missing, fallback to `request.remote_addr`.
+    1.  **Audit Extraction:** Extract client IP from header `X-Real-IP` (fallback to `request.remote_addr`).
     2.  Validate `projectName` and `data` are present.
     3.  Convert `data` object to JSON string.
     4.  **Compress:** Use `gzip.compress()` to convert the JSON string into binary bytes.
     5.  Generate a new UUID for `VERSION_ID`.
-    6.  `INSERT` into `PROJECT_VERSIONS` (Include `SOURCE_IP`).
+    6.  `INSERT` into `PTP_PROJECT_VERSIONS` (Include `SOURCE_IP`).
     7.  Commit transaction.
 * **Success Response (200 OK):**
     ```json
@@ -87,7 +86,7 @@ Creates a new version record in the database.
       "code": 200,
       "message": "Saved successfully",
       "versionId": "550e8400-e29b-41d4-a716-446655440000",
-      "timestamp": "2026-03-11 14:30:00"
+      "timestamp": "2026-03-15 14:30:00"
     }
     ```
 
@@ -98,56 +97,21 @@ Retrieves the most recent data for a specific project.
 * **Query Parameters:**
     * `projectName` (Required): e.g., `Fab2_Schedule`
 * **Backend Logic:**
-    1.  Query `PROJECT_VERSIONS` filtered by `projectName`.
-    2.  Order by `CREATED_AT DESC`.
-    3.  Fetch the first row (Limit 1).
-    4.  **Decompress:** Read the `DATA_BLOB` and use `gzip.decompress()` to restore the JSON string.
-    5.  Parse and return the JSON object.
-* **Success Response (200 OK):**
-    ```json
-    {
-      "code": 200,
-      "projectName": "Fab2_Schedule",
-      "versionId": "...",
-      "timestamp": "...",
-      "data": {
-        // ... The Decompressed JSON Data ...
-      }
-    }
-    ```
+    1.  Query `PTP_PROJECT_VERSIONS` filtered by `projectName`.
+    2.  Order by `CREATED_AT DESC`, fetch the first row (Limit 1).
+    3.  **Decompress:** Read `DATA_BLOB` and use `gzip.decompress()` to restore the JSON string.
+    4.  Parse and return the JSON object.
 
 ### 4.3. Get Version History (Global Fuzzy & Case-insensitive Search)
-Retrieves a list of historical versions across all projects based on a fuzzy search keyword. **Do NOT return the BLOB data here.**
+Retrieves a list of historical versions across all projects. **Do NOT return the BLOB data here.**
 
 * **Endpoint:** `GET /project/history`
 * **Query Parameters:**
-    * `keyword` (Optional): A string to fuzzy match against `PROJECT_NAME`. If empty, return the most recent versions across all projects.
+    * `keyword` (Optional): A string to fuzzy match against `PROJECT_NAME`. If empty, return the most recent versions.
     * `limit` (Optional, default 50)
 * **Backend Logic:**
     * Must support **case-insensitive** matching. Use `UPPER()` or `LOWER()` function to ensure accurate results.
-    * `SELECT VERSION_ID, PROJECT_NAME, CREATED_AT, REMARK, SOURCE_IP FROM PROJECT_VERSIONS WHERE UPPER(PROJECT_NAME) LIKE '%' || UPPER(:keyword) || '%' ORDER BY CREATED_AT DESC`
-* **Success Response (200 OK):**
-    ```json
-    {
-      "code": 200,
-      "history": [
-        {
-          "versionId": "uuid-1",
-          "projectName": "Fab2_Schedule",
-          "createdAt": "2026-03-12 14:30:00",
-          "sourceIP": "202.106.0.5",
-          "remark": "Updated phase 1 milestones"
-        },
-        {
-          "versionId": "uuid-2",
-          "projectName": "Fab1_Alpha_Plan",
-          "createdAt": "2026-03-10 09:15:00",
-          "sourceIP": "192.168.1.10",
-          "remark": "Initial commit"
-        }
-      ]
-    }
-    ```
+    * `SELECT VERSION_ID, PROJECT_NAME, CREATED_AT, REMARK, SOURCE_IP FROM PTP_PROJECT_VERSIONS WHERE UPPER(PROJECT_NAME) LIKE '%' || UPPER(:keyword) || '%' ORDER BY CREATED_AT DESC`
 
 ### 4.4. Load Specific Version
 Retrieves the full data for a specific historical version.
@@ -156,27 +120,16 @@ Retrieves the full data for a specific historical version.
 * **Query Parameters:**
     * `versionId` (Required): UUID of the version.
 * **Backend Logic:**
-    1.  Select `DATA_BLOB` by `VERSION_ID`.
+    1.  Select `DATA_BLOB` by `VERSION_ID` from `PTP_PROJECT_VERSIONS`.
     2.  **Decompress** and return JSON.
 
 ### 4.5. Get Project List
-Retrieves a distinct list of all project names currently stored in the database. Used to populate the cloud workspace search datalist.
+Retrieves a distinct list of all project names currently stored in the database.
 
 * **Endpoint:** `GET /project/list`
 * **Query Parameters:** None
 * **Backend Logic:**
-    * `SELECT DISTINCT PROJECT_NAME FROM PROJECT_VERSIONS ORDER BY PROJECT_NAME ASC`
-* **Success Response (200 OK):**
-    ```json
-    {
-      "code": 200,
-      "projects": [
-        "Alpha Launch",
-        "Fab2_Schedule",
-        "My_Project_Schedule"
-      ]
-    }
-    ```
+    * `SELECT DISTINCT PROJECT_NAME FROM PTP_PROJECT_VERSIONS ORDER BY PROJECT_NAME ASC`
 
 ---
 

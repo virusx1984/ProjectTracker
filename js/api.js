@@ -3,7 +3,8 @@
  * Connects to the real Python Flask backend via RESTful APIs.
  */
 
-const BASE_URL = 'http://127.0.0.1:5000/api/v1';
+// 🟢 [MODIFIED] Added /ptp namespace to match backend routing
+const BASE_URL = 'http://localhost:5000/api/v1/ptp'; // Update port/domain as needed for production
 
 const TrackerAPI = {
     
