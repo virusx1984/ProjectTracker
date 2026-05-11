@@ -1,0 +1,751 @@
+{
+  "meta": {
+    "title": "My Workspace",
+    "version": "1.0",
+    "last_updated": "2026-04-28T05:41:36.511Z"
+  },
+  "config": {
+    "pixelsPerDay": 0.8053063680000012,
+    "filter": "ALL"
+  },
+  "data": [
+    {
+      "group_name": "HD03",
+      "is_expanded": true,
+      "projects": [
+        {
+          "project_id": "PROJ-355309",
+          "project_name": "HD03-營建工程",
+          "description": "",
+          "start_date": "2026-04-22",
+          "milestones": [
+            {
+              "name": "營建工程",
+              "description": "4/22開工典禮",
+              "status_progress": 0.02,
+              "planned_end": "2027-04-17",
+              "demand_due_date": "2027-04-17",
+              "color": "#0d6efd"
+            }
+          ],
+          "_computedStatus": {
+            "code": "ON_TRACK",
+            "label": "On Track",
+            "class": "bg-success"
+          }
+        },
+        {
+          "project_id": "PROJ-633827",
+          "project_name": "HD03-機電一次配",
+          "description": "",
+          "start_date": "2026-12-01",
+          "milestones": [
+            {
+              "name": "機電一次配",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2027-04-15",
+              "demand_due_date": "2027-04-15",
+              "color": "#0d6efd"
+            }
+          ],
+          "_computedStatus": {
+            "code": "ON_TRACK",
+            "label": "On Track",
+            "class": "bg-success"
+          }
+        },
+        {
+          "project_id": "PROJ-875281",
+          "project_name": "HD03-設備進機",
+          "description": "",
+          "start_date": "2027-03-16",
+          "milestones": [
+            {
+              "name": "設備進機",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2027-05-15",
+              "demand_due_date": "2027-05-15",
+              "color": "#0d6efd"
+            }
+          ],
+          "_computedStatus": {
+            "code": "ON_TRACK",
+            "label": "On Track",
+            "class": "bg-success"
+          }
+        },
+        {
+          "project_id": "PROJ-114201",
+          "project_name": "HD03-設備試車",
+          "description": "",
+          "start_date": "2027-05-15",
+          "milestones": [
+            {
+              "name": "設備試車",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2027-06-19",
+              "demand_due_date": "2027-06-19",
+              "color": "#0d6efd"
+            }
+          ],
+          "_computedStatus": {
+            "code": "ON_TRACK",
+            "label": "On Track",
+            "class": "bg-success"
+          }
+        },
+        {
+          "project_id": "PROJ-209306",
+          "project_name": "HD03-客戶認證",
+          "description": "",
+          "start_date": "2027-06-20",
+          "milestones": [
+            {
+              "name": "客戶認證",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2027-08-19",
+              "demand_due_date": "2027-08-19",
+              "color": "#0d6efd"
+            }
+          ],
+          "_computedStatus": {
+            "code": "ON_TRACK",
+            "label": "On Track",
+            "class": "bg-success"
+          }
+        },
+        {
+          "project_id": "PROJ-313509",
+          "project_name": "HD03-樣品生產",
+          "description": "",
+          "start_date": "2027-06-20",
+          "milestones": [
+            {
+              "name": "樣品生產",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2027-08-09",
+              "demand_due_date": "2027-08-09",
+              "color": "#0d6efd"
+            }
+          ],
+          "_computedStatus": {
+            "code": "ON_TRACK",
+            "label": "On Track",
+            "class": "bg-success"
+          }
+        },
+        {
+          "project_id": "PROJ-551924",
+          "project_name": "HD03-PRQ認證",
+          "description": "",
+          "start_date": "2027-08-09",
+          "milestones": [
+            {
+              "name": "PRQ認證",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2027-10-18",
+              "demand_due_date": "2027-10-18",
+              "color": "#0d6efd"
+            }
+          ],
+          "_computedStatus": {
+            "code": "ON_TRACK",
+            "label": "On Track",
+            "class": "bg-success"
+          }
+        },
+        {
+          "project_id": "PROJ-641732",
+          "project_name": "HD03-量產(一期)",
+          "description": "",
+          "start_date": "2027-10-18",
+          "milestones": [
+            {
+              "name": "量產(一期)第一批",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2027-11-27",
+              "demand_due_date": "2027-11-27",
+              "color": "#0d6efd"
+            }
+          ],
+          "_computedStatus": {
+            "code": "ON_TRACK",
+            "label": "On Track",
+            "class": "bg-success"
+          }
+        },
+        {
+          "project_id": "PROJ-458923",
+          "project_name": "HD03-量產(二期)",
+          "description": "",
+          "start_date": "2028-02-21",
+          "milestones": [
+            {
+              "name": "量產(二期)",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2028-04-01",
+              "demand_due_date": "2028-04-01",
+              "color": "#0d6efd"
+            }
+          ],
+          "_computedStatus": {
+            "code": "ON_TRACK",
+            "label": "On Track",
+            "class": "bg-success"
+          }
+        },
+        {
+          "project_id": "PROJ-573113",
+          "project_name": "HD03-量產(三期)",
+          "description": "",
+          "start_date": "2028-08-22",
+          "milestones": [
+            {
+              "name": "量產(三期)",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2028-10-01",
+              "demand_due_date": "2028-10-01",
+              "color": "#0d6efd"
+            }
+          ],
+          "_computedStatus": {
+            "code": "ON_TRACK",
+            "label": "On Track",
+            "class": "bg-success"
+          }
+        },
+        {
+          "project_id": "PROJ-717288",
+          "project_name": "HD03-量產(四期)",
+          "description": "",
+          "start_date": "2029-05-22",
+          "milestones": [
+            {
+              "name": "量產(四期)",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2029-07-01",
+              "demand_due_date": "2029-07-01",
+              "color": "#0d6efd"
+            }
+          ],
+          "_computedStatus": {
+            "code": "ON_TRACK",
+            "label": "On Track",
+            "class": "bg-success"
+          }
+        }
+      ],
+      "_computedStatus": {
+        "code": "ON_TRACK",
+        "label": "On Track",
+        "class": "bg-success"
+      }
+    },
+    {
+      "group_name": "SN02",
+      "is_expanded": true,
+      "projects": [
+        {
+          "project_id": "PROJ-039850",
+          "project_name": "SN02-營建工程",
+          "description": "",
+          "start_date": "2026-07-18",
+          "milestones": [
+            {
+              "name": "營建工程",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2027-11-10",
+              "demand_due_date": "2027-11-10",
+              "color": "#0d6efd"
+            }
+          ],
+          "_computedStatus": {
+            "code": "ON_TRACK",
+            "label": "On Track",
+            "class": "bg-success"
+          }
+        },
+        {
+          "project_id": "PROJ-802320",
+          "project_name": "SN02-機電一次配",
+          "description": "",
+          "start_date": "2027-05-14",
+          "milestones": [
+            {
+              "name": "機電施工",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2027-10-11",
+              "demand_due_date": "2027-10-11",
+              "color": "#0d6efd"
+            }
+          ],
+          "_computedStatus": {
+            "code": "ON_TRACK",
+            "label": "On Track",
+            "class": "bg-success"
+          }
+        },
+        {
+          "project_id": "PROJ-948376",
+          "project_name": "SN02-設備進機",
+          "description": "",
+          "start_date": "2027-09-11",
+          "milestones": [
+            {
+              "name": "設備進機",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2027-10-26",
+              "demand_due_date": "2027-10-26",
+              "color": "#0d6efd"
+            }
+          ],
+          "_computedStatus": {
+            "code": "ON_TRACK",
+            "label": "On Track",
+            "class": "bg-success"
+          }
+        },
+        {
+          "project_id": "PROJ-001370",
+          "project_name": "SN02-設備試車",
+          "description": "",
+          "start_date": "2027-10-26",
+          "milestones": [
+            {
+              "name": "設備試車",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2027-12-10",
+              "demand_due_date": "2027-12-10",
+              "color": "#0d6efd"
+            }
+          ],
+          "_computedStatus": {
+            "code": "ON_TRACK",
+            "label": "On Track",
+            "class": "bg-success"
+          }
+        },
+        {
+          "project_id": "PROJ-035045",
+          "project_name": "SN02-客戶認證",
+          "description": "",
+          "start_date": "2027-12-10",
+          "milestones": [
+            {
+              "name": "客戶認證",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2028-01-09",
+              "demand_due_date": "2028-01-09",
+              "color": "#0d6efd"
+            }
+          ],
+          "_computedStatus": {
+            "code": "ON_TRACK",
+            "label": "On Track",
+            "class": "bg-success"
+          }
+        },
+        {
+          "project_id": "PROJ-083275",
+          "project_name": "SN02-樣品生產",
+          "description": "",
+          "start_date": "2027-12-10",
+          "milestones": [
+            {
+              "name": "樣品生產",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2028-01-09",
+              "demand_due_date": "2028-01-09",
+              "color": "#0d6efd"
+            }
+          ],
+          "_computedStatus": {
+            "code": "ON_TRACK",
+            "label": "On Track",
+            "class": "bg-success"
+          }
+        },
+        {
+          "project_id": "PROJ-119336",
+          "project_name": "SN02-PRQ認證",
+          "description": "",
+          "start_date": "2028-01-09",
+          "milestones": [
+            {
+              "name": "PRQ認證",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2028-05-08",
+              "demand_due_date": "2028-05-08",
+              "color": "#0d6efd"
+            }
+          ],
+          "_computedStatus": {
+            "code": "ON_TRACK",
+            "label": "On Track",
+            "class": "bg-success"
+          }
+        },
+        {
+          "project_id": "PROJ-159959",
+          "project_name": "SN02-量產(一期)",
+          "description": "",
+          "start_date": "2028-05-08",
+          "milestones": [
+            {
+              "name": "量產(一期)",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2028-07-07",
+              "actual_completion_date": null,
+              "demand_due_date": "2028-07-07",
+              "color": "#0d6efd"
+            }
+          ]
+        }
+      ],
+      "_computedStatus": {
+        "code": "ON_TRACK",
+        "label": "On Track",
+        "class": "bg-success"
+      }
+    },
+    {
+      "group_name": "PA07",
+      "is_expanded": true,
+      "projects": [
+        {
+          "project_id": "PROJ-703670",
+          "project_name": "PA07-營建工程",
+          "description": "",
+          "start_date": "2027-02-01",
+          "milestones": [
+            {
+              "name": "營建工程",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2028-11-22",
+              "demand_due_date": "2028-11-22",
+              "color": "#0d6efd"
+            }
+          ],
+          "_computedStatus": {
+            "code": "ON_TRACK",
+            "label": "On Track",
+            "class": "bg-success"
+          }
+        },
+        {
+          "project_id": "PROJ-797226",
+          "project_name": "PA07-機電一次配",
+          "description": "",
+          "start_date": "2028-11-22",
+          "milestones": [
+            {
+              "name": "機電一次配",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2029-06-05",
+              "demand_due_date": "2029-06-05",
+              "color": "#0d6efd"
+            }
+          ],
+          "_computedStatus": {
+            "code": "ON_TRACK",
+            "label": "On Track",
+            "class": "bg-success"
+          }
+        },
+        {
+          "project_id": "PROJ-951364",
+          "project_name": "PA07-設備進機",
+          "description": "",
+          "start_date": "2029-07-23",
+          "milestones": [
+            {
+              "name": "設備進機",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2029-10-06",
+              "demand_due_date": "2029-10-06",
+              "color": "#0d6efd"
+            }
+          ],
+          "_computedStatus": {
+            "code": "ON_TRACK",
+            "label": "On Track",
+            "class": "bg-success"
+          }
+        },
+        {
+          "project_id": "PROJ-020234",
+          "project_name": "PA07-設備試車",
+          "description": "",
+          "start_date": "2029-10-06",
+          "milestones": [
+            {
+              "name": "設備試車",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2029-11-28",
+              "demand_due_date": "2029-11-28",
+              "color": "#0d6efd"
+            }
+          ],
+          "_computedStatus": {
+            "code": "ON_TRACK",
+            "label": "On Track",
+            "class": "bg-success"
+          }
+        },
+        {
+          "project_id": "PROJ-108539",
+          "project_name": "PA07-客戶認證",
+          "description": "",
+          "start_date": "2029-11-28",
+          "milestones": [
+            {
+              "name": "客戶認證",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2030-01-12",
+              "demand_due_date": "2030-01-12",
+              "color": "#0d6efd"
+            }
+          ],
+          "_computedStatus": {
+            "code": "ON_TRACK",
+            "label": "On Track",
+            "class": "bg-success"
+          }
+        },
+        {
+          "project_id": "PROJ-221330",
+          "project_name": "PA07-樣品生產",
+          "description": "",
+          "start_date": "2029-11-28",
+          "milestones": [
+            {
+              "name": "樣品生產",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2029-12-28",
+              "demand_due_date": "2029-12-28",
+              "color": "#0d6efd"
+            }
+          ],
+          "_computedStatus": {
+            "code": "ON_TRACK",
+            "label": "On Track",
+            "class": "bg-success"
+          }
+        },
+        {
+          "project_id": "PROJ-293420",
+          "project_name": "PA07-PRQ認證",
+          "description": "",
+          "start_date": "2029-12-28",
+          "milestones": [
+            {
+              "name": "PRQ認證",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2030-05-27",
+              "demand_due_date": "2030-05-27",
+              "color": "#0d6efd"
+            }
+          ],
+          "_computedStatus": {
+            "code": "ON_TRACK",
+            "label": "On Track",
+            "class": "bg-success"
+          }
+        },
+        {
+          "project_id": "PROJ-377865",
+          "project_name": "PA07-量產(一期)",
+          "description": "",
+          "start_date": "2030-05-27",
+          "milestones": [
+            {
+              "name": "量產(一期)",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2030-07-01",
+              "demand_due_date": "2030-07-01",
+              "color": "#0d6efd"
+            }
+          ],
+          "_computedStatus": {
+            "code": "ON_TRACK",
+            "label": "On Track",
+            "class": "bg-success"
+          }
+        }
+      ],
+      "_computedStatus": {
+        "code": "ON_TRACK",
+        "label": "On Track",
+        "class": "bg-success"
+      }
+    },
+    {
+      "group_name": "SN01",
+      "is_expanded": true,
+      "projects": [
+        {
+          "project_id": "PROJ-481523",
+          "project_name": "SN01-營建工程",
+          "description": "",
+          "start_date": "2026-07-18",
+          "milestones": [
+            {
+              "name": "營建工程",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2027-11-10",
+              "actual_completion_date": null,
+              "demand_due_date": "2027-11-10",
+              "color": "#0d6efd"
+            }
+          ]
+        },
+        {
+          "project_id": "PROJ-608532",
+          "project_name": "SN01-機電一次配",
+          "description": "",
+          "start_date": "2028-09-10",
+          "milestones": [
+            {
+              "name": "機電一次配",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2029-02-22",
+              "actual_completion_date": null,
+              "demand_due_date": "2029-02-22",
+              "color": "#0d6efd"
+            }
+          ]
+        },
+        {
+          "project_id": "PROJ-523674",
+          "project_name": "SN01-設備進機",
+          "description": "",
+          "start_date": "2029-02-22",
+          "milestones": [
+            {
+              "name": "設備進機",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2029-04-23",
+              "actual_completion_date": null,
+              "demand_due_date": "2029-04-23",
+              "color": "#0d6efd"
+            }
+          ]
+        },
+        {
+          "project_id": "PROJ-594659",
+          "project_name": "SN01-設備試車",
+          "description": "",
+          "start_date": "2029-04-23",
+          "milestones": [
+            {
+              "name": "設備試車",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2029-07-07",
+              "actual_completion_date": null,
+              "demand_due_date": "2029-07-07",
+              "color": "#0d6efd"
+            }
+          ]
+        },
+        {
+          "project_id": "PROJ-647018",
+          "project_name": "SN01-客戶認證",
+          "description": "",
+          "start_date": "2029-07-07",
+          "milestones": [
+            {
+              "name": "客戶認證",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2029-09-05",
+              "actual_completion_date": null,
+              "demand_due_date": "2029-09-05",
+              "color": "#0d6efd"
+            }
+          ]
+        },
+        {
+          "project_id": "PROJ-693413",
+          "project_name": "SN01-樣品生產",
+          "description": "",
+          "start_date": "2029-07-07",
+          "milestones": [
+            {
+              "name": "樣品生產",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2029-09-05",
+              "actual_completion_date": null,
+              "demand_due_date": "2029-09-05",
+              "color": "#0d6efd"
+            }
+          ]
+        },
+        {
+          "project_id": "PROJ-734131",
+          "project_name": "SN01-PRQ認證",
+          "description": "",
+          "start_date": "2029-09-05",
+          "milestones": [
+            {
+              "name": "PRQ認證",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2030-01-03",
+              "actual_completion_date": null,
+              "demand_due_date": "2030-01-03",
+              "color": "#0d6efd"
+            }
+          ]
+        },
+        {
+          "project_id": "PROJ-775395",
+          "project_name": "SN01-量產(一期)",
+          "description": "",
+          "start_date": "2030-01-03",
+          "milestones": [
+            {
+              "name": "量產(一期)",
+              "description": "Project initialization",
+              "status_progress": 0,
+              "planned_end": "2030-03-04",
+              "actual_completion_date": null,
+              "demand_due_date": "2030-03-04",
+              "color": "#0d6efd"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -32,19 +32,24 @@
         <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
 
             <div class="d-flex align-items-center">
-                <button class="btn btn-light text-secondary border-0 shadow-sm me-3 d-none" id="btn-return-home" title="Close Workspace & Return Home">
+                <button class="btn btn-light text-secondary border-0 shadow-sm me-3 d-none" id="btn-return-home"
+                    title="Close Workspace & Return Home">
                     <i class="bi bi-house-door-fill fs-5"></i>
                 </button>
-                
-                <div class="workspace-title-wrapper position-relative pe-4" data-bs-toggle="modal" data-bs-target="#workspaceSettingsModal" title="Edit Workspace Settings">
-                    <div class="text-muted fw-bold text-uppercase mb-1" style="font-size: 0.65rem; letter-spacing: 1px;">
+
+                <div class="workspace-title-wrapper position-relative pe-4" data-bs-toggle="modal"
+                    data-bs-target="#workspaceSettingsModal" title="Edit Workspace Settings">
+                    <div class="text-muted fw-bold text-uppercase mb-1"
+                        style="font-size: 0.65rem; letter-spacing: 1px;">
                         ProjectTracker Pro
                     </div>
                     <div class="d-flex align-items-center">
-                        <h4 id="tracker-workspace-title" class="mb-0 fw-bold text-dark text-truncate" style="max-width: 300px; cursor: pointer;">
+                        <h4 id="tracker-workspace-title" class="mb-0 fw-bold text-dark text-truncate"
+                            style="max-width: 300px; cursor: pointer;">
                             Untitled Workspace
                         </h4>
-                        <i class="bi bi-pencil-fill text-primary ms-2 edit-icon" style="font-size: 0.9rem; opacity: 0; transition: opacity 0.2s; cursor: pointer;"></i>
+                        <i class="bi bi-pencil-fill text-primary ms-2 edit-icon"
+                            style="font-size: 0.9rem; opacity: 0; transition: opacity 0.2s; cursor: pointer;"></i>
                     </div>
                 </div>
             </div>
@@ -456,24 +461,35 @@
 
                         <div class="tab-pane fade" id="local-pane">
                             <div class="row">
-                                <div class="col-md-6 border-end">
-                                    <h6 class="fw-bold">Export JSON</h6>
-                                    <p class="small text-muted">Download a standalone backup file.</p>
-                                    <div class="mb-2">
+                                <div class="col-md-5 border-end">
+                                    <h6 class="fw-bold"><i class="bi bi-file-earmark-arrow-down me-2"></i>Export JSON
+                                    </h6>
+                                    <p class="small text-muted">Download a standalone backup file of your current
+                                        workspace.</p>
+                                    <div class="mb-3">
+                                        <label class="small text-muted mb-1">Backup Filename</label>
                                         <input type="text" class="form-control form-control-sm" id="export-filename"
                                             value="tracker_backup.json">
                                     </div>
-                                    <button class="btn btn-sm btn-outline-dark w-100" id="btn-download-json">
-                                        <i class="bi bi-download"></i> Download
+                                    <button class="btn btn-sm btn-outline-dark w-100 fw-bold" id="btn-download-json">
+                                        <i class="bi bi-download me-1"></i>Download Backup
                                     </button>
                                 </div>
-                                <div class="col-md-6">
-                                    <h6 class="fw-bold">Import JSON</h6>
-                                    <p class="small text-muted">Overwrite current data from file.</p>
-                                    <input type="file" id="import-file-input" accept=".json"
-                                        class="form-control form-control-sm mb-2">
-                                    <button class="btn btn-sm btn-danger w-100" id="btn-import-json" disabled>
-                                        <i class="bi bi-upload"></i> Load File
+
+                                <div class="col-md-7">
+                                    <h6 class="fw-bold"><i class="bi bi-file-earmark-arrow-up me-2"></i>Import JSON</h6>
+                                    <p class="small text-muted">Drag a file here or click to upload and overwrite
+                                        current data.</p>
+
+                                    <div id="import-drop-zone" class="upload-drop-zone mb-3">
+                                        <i class="bi bi-cloud-upload display-6 text-primary mb-2"></i>
+                                        <div id="import-file-name" class="small text-muted">Click or Drag & Drop .json file</div>
+                                    </div>
+                                    <input type="file" id="import-file-input" accept=".json" class="d-none">
+
+                                    <button class="btn btn-sm btn-danger w-100 fw-bold shadow-sm" id="btn-import-json"
+                                        disabled>
+                                        <i class="bi bi-upload me-1"></i>Load Project File
                                     </button>
                                 </div>
                             </div>
@@ -496,12 +512,14 @@
                     <form id="metaForm">
                         <div class="mb-3">
                             <label class="form-label fw-bold">Workspace Title</label>
-                            <input type="text" class="form-control fw-bold" id="meta-title-input" placeholder="Enter workspace title">
+                            <input type="text" class="form-control fw-bold" id="meta-title-input"
+                                placeholder="Enter workspace title">
                         </div>
                         <div class="row">
                             <div class="col-6">
                                 <label class="form-label small text-muted">Version</label>
-                                <input type="text" class="form-control form-control-sm" id="meta-version-input" placeholder="e.g. 1.0">
+                                <input type="text" class="form-control form-control-sm" id="meta-version-input"
+                                    placeholder="e.g. 1.0">
                             </div>
                             <div class="col-6">
                                 <label class="form-label small text-muted">Last Updated</label>
