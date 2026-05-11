@@ -2,7 +2,7 @@
 
 // [MODIFIED] Helper: Toggle between Welcome Canvas and Main Workspace
 function toggleWorkspaceState() {
-    // 1. Rigorously check if there is any REAL data (Scheme 3: Auto-return)
+    // 1. Rigorously check if there is any REAL data
     let hasData = false;
     if (rawTrackerData && rawTrackerData.data) {
         // Iterate through groups to see if any project exists
@@ -14,10 +14,12 @@ function toggleWorkspaceState() {
         }
     }
 
-    // 🟢 [FIX] If the structure is empty (e.g., user deleted all projects), reset to null
+    // If the structure is empty, reset to null
     if (!hasData) {
         rawTrackerData = null;
     }
+
+    const $titleWrapper = $('.workspace-title-wrapper');
 
     // 2. Toggle UI based on data existence
     if (hasData) {
@@ -31,6 +33,10 @@ function toggleWorkspaceState() {
             wsTitle = rawTrackerData.meta.title;
         }
         $('#tracker-workspace-title').text(wsTitle);
+
+        // ENABLE editing: Restore click events, hover effects, and tooltip
+        $titleWrapper.css('pointer-events', 'auto');
+        $titleWrapper.attr('title', 'Edit Workspace Settings');
         
     } else {
         $('#welcome-canvas').removeClass('d-none');
@@ -39,6 +45,10 @@ function toggleWorkspaceState() {
         $('#btn-return-home').addClass('d-none');
         
         $('#tracker-workspace-title').text("Untitled Workspace");
+
+        // DISABLE editing: Block click events and hover effects on Home Canvas
+        $titleWrapper.css('pointer-events', 'none');
+        $titleWrapper.removeAttr('title');
     }
 }
 
