@@ -810,7 +810,7 @@ div.status-strip.bg-critical {
     opacity: 0;    /* Hidden by default until initialized */
     transition: opacity 0.2s;
     pointer-events: none; /* Let clicks pass through */
-    z-index: 10;
+    z-index: 1100 !important;
 }
 
 /* The little triangle arrow at the bottom */
