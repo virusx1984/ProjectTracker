@@ -77,67 +77,87 @@ function runPipeline() {
 /**
  * Initialize all global UI controls (Zoom, Search, Workspace Management)
  */
+/**
+ * Initialize all global UI controls (Zoom, Search, Workspace Management)
+ */
 function initGlobalControls() {
     
     // ==========================================
-    // 1. View & Zoom Controls
+    // 1. View & Zoom Controls (Multiplicative Logic)
     // ==========================================
-    $('#btn-expand-all').click(function() {
-        $('.project-row:not(.group-row)').show();
-        $('.bi-chevron-right').removeClass('bi-chevron-right').addClass('bi-chevron-down');
-    });
 
-    $('#btn-collapse-all').click(function() {
-        $('.project-row:not(.group-row)').hide();
-        $('.bi-chevron-down').removeClass('bi-chevron-down').addClass('bi-chevron-right');
-    });
-
-    $('#btn-zoom-in').click(function() {
-        ZOOM_LEVEL = Math.min(ZOOM_LEVEL + 0.2, 2.0);
+    // Add this to initGlobalControls() in js/app.js
+    $('#btn-sync-today').click(function () {
+        // 1. Refresh the core reference time
+        CONFIG.CURRENT_DATE = new Date();
+        
+        // 2. Re-run the full pipeline (re-calculate waterfall and re-render UI)
         runPipeline();
+        
+        // 3. UI Feedback
+        showToast("Timeline synchronized to current time.", "info");
+
+        // 4. [UX Detail] Smooth scroll to the 'Today' marker position
+        // Calculate position based on current zoom and start date
+        const todayOffsetDays = getDaysDiff(CONFIG.TRACKER_START_DATE, CONFIG.CURRENT_DATE);
+        const scrollPos = todayOffsetDays * pixelsPerDay;
+
+        $('#tracker-wrapper').animate({
+            scrollLeft: scrollPos
+        }, 400); // 400ms smooth transition
+    });
+    
+    // Zoom In: Increase by 25% each click
+    $('#btn-zoom-in').click(function () {
+        if (pixelsPerDay < 50) {
+            pixelsPerDay = pixelsPerDay * 1.25;
+            // Use renderTracker directly for immediate visual feedback
+            renderTracker(currentRevisedData);
+        }
     });
 
-    $('#btn-zoom-out').click(function() {
-        ZOOM_LEVEL = Math.max(ZOOM_LEVEL - 0.2, 0.5);
-        runPipeline();
+    // Zoom Out: Decrease by 20% each click (Inverse of 1.25)
+    $('#btn-zoom-out').click(function () {
+        if (pixelsPerDay > 0.15) {
+            pixelsPerDay = pixelsPerDay * 0.8;
+            renderTracker(currentRevisedData);
+        }
     });
 
-    $('#btn-zoom-reset').click(function() {
-        ZOOM_LEVEL = 1.0;
-        runPipeline();
+    // Reset Zoom to Default (currently 6px/day)
+    $('#btn-zoom-reset').click(function () {
+        pixelsPerDay = CONFIG.DEFAULT_PIXELS_PER_DAY;
+        renderTracker(currentRevisedData);
+    });
+
+    // Group Expansion: Toggle all is_expanded states in raw data
+    $('#btn-expand-all').click(function () {
+        if (currentFilter === 'ALL' && currentRevisedData.data) {
+            currentRevisedData.data.forEach(g => g.is_expanded = true);
+            renderTracker(currentRevisedData);
+        }
+    });
+
+    $('#btn-collapse-all').click(function () {
+        if (currentFilter === 'ALL' && currentRevisedData.data) {
+            currentRevisedData.data.forEach(g => g.is_expanded = false);
+            renderTracker(currentRevisedData);
+        }
     });
 
     // ==========================================
     // 2. Search & Filter Controls
     // ==========================================
+    
+    // Clear search input and trigger UI refresh
     $('#btn-search-clear').click(function() {
         $('#project-search-input').val('');
         $(this).addClass('d-none');
         runPipeline();
     });
 
-    $('#project-search-input').on('input', function() {
-        if ($(this).val().length > 0) {
-            $('#btn-search-clear').removeClass('d-none');
-        } else {
-            $('#btn-search-clear').addClass('d-none');
-        }
-        runPipeline();
-    });
-
-    $('#btn-search-regex').click(function() {
-        $(this).toggleClass('active');
-        // Toggle visual state of the regex button
-        if ($(this).hasClass('active')) {
-            $(this).removeClass('btn-outline-secondary').addClass('btn-primary');
-        } else {
-            $(this).removeClass('btn-primary').addClass('btn-outline-secondary');
-        }
-        runPipeline();
-    });
-
     // ==========================================
-    // 3. Workspace Level Controls (Level 1)
+    // 3. Workspace Level Controls (Home & Metadata)
     // ==========================================
     
     // Action: Return Home / Close Workspace securely
@@ -145,8 +165,8 @@ function initGlobalControls() {
         if (!rawTrackerData) return;
         
         showConfirm("⚠️ Close current workspace?\nAny unsaved changes will be lost.", function() {
-            rawTrackerData = null; // Clear memory
-            runPipeline();         // Re-render UI to zero-state
+            rawTrackerData = null; // Clear memory state
+            runPipeline();         // Re-render UI to welcome-canvas
             showToast("Workspace closed securely.", "info");
         });
     });
@@ -162,8 +182,6 @@ function initGlobalControls() {
 
     // Action: Save changes from Workspace Settings Modal
     $('#btn-save-workspace-meta').click(function() {
-        const newTitle = $('#meta-title-input').val().trim();
-        
         if (!rawTrackerData) {
             rawTrackerData = { meta: {}, data: [] };
         }
@@ -171,15 +189,12 @@ function initGlobalControls() {
             rawTrackerData.meta = {};
         }
         
-        // Update the data model
-        rawTrackerData.meta.title = newTitle || "Untitled Workspace";
+        rawTrackerData.meta.title = $('#meta-title-input').val().trim() || "Untitled Workspace";
         rawTrackerData.meta.version = $('#meta-version-input').val().trim();
         rawTrackerData.meta.last_updated = $('#meta-date-input').val().trim();
         
-        // Trigger UI refresh to show the new title instantly
         runPipeline(); 
         
-        // Close modal and show success feedback
         const modalEl = document.getElementById('workspaceSettingsModal');
         const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
         modalInstance.hide();

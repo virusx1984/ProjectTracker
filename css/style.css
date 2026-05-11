@@ -889,3 +889,11 @@ div.status-strip.bg-critical {
 .workspace-title-wrapper:hover #tracker-workspace-title {
     color: #0d6efd !important; /* Bootstrap primary blue */
 }
+
+#btn-sync-today i {
+    transition: transform 0.3s ease;
+}
+
+#btn-sync-today:active i {
+    transform: scale(0.8) rotate(15deg);
+}
