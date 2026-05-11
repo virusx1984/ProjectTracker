@@ -29,9 +29,16 @@ function initEditHandlers() {
         $('#display-group-name').text(group.group_name);
         $('#display-project-name').text(project.project_name);
 
+        // 🟢 [FIX] Next task starts the day AFTER previous planned end
         let origStart = project.start_date;
-        if (mIdx > 0) origStart = project.milestones[mIdx - 1].planned_end;
-        const origDuration = Math.max(1, getDaysDiff(origStart, msData.planned_end));
+        if (mIdx > 0) {
+            let prevEnd = new Date(project.milestones[mIdx - 1].planned_end);
+            prevEnd.setDate(prevEnd.getDate() + 1);
+            origStart = prevEnd.toISOString().split('T')[0];
+        }
+        
+        // 🟢 [FIX] Duration = End - Start + 1
+        const origDuration = Math.max(1, getDaysDiff(origStart, msData.planned_end) + 1);
 
         $('#read-orig-start').val(origStart);
         $('#read-orig-duration').val(origDuration + ' Days');
@@ -155,9 +162,12 @@ function initEditHandlers() {
 
         if (!inputRevisedEnd) { $errorMsg.text("Revised End Date cannot be empty.").removeClass('d-none'); return; }
 
-        const newDurationDays = Math.max(1, getDaysDiff(inputRevisedStart, inputRevisedEnd));
+        // 🟢 [FIX] New Duration = End - Start + 1
+        const newDurationDays = Math.max(1, getDaysDiff(inputRevisedStart, inputRevisedEnd) + 1);
         const origStartRef = $('#read-orig-start').val();
-        const inputPlannedEnd = addDays(origStartRef, newDurationDays).toISOString().split('T')[0];
+        
+        // 🟢 [FIX] Planned End = Start + Duration - 1
+        const inputPlannedEnd = addDays(origStartRef, newDurationDays - 1).toISOString().split('T')[0];
 
         // [UPDATED] Access .data instead of .groups
         const project = rawTrackerData.data[gIdx].projects[pIdx];
@@ -309,8 +319,15 @@ function initProjectStructureHandlers() {
         tempMilestones = JSON.parse(JSON.stringify(project.milestones));
         let cursorDate = new Date(project.start_date);
         tempMilestones.forEach((ms, index) => {
-            let prevDate = index === 0 ? cursorDate : new Date(tempMilestones[index - 1].planned_end);
-            ms._temp_duration = Math.max(1, getDaysDiff(prevDate, ms.planned_end));
+            // 🟢 [FIX] Task start is the day after previous task ends
+            let taskStartDate = cursorDate;
+            if (index > 0) {
+                taskStartDate = new Date(tempMilestones[index - 1].planned_end);
+                taskStartDate.setDate(taskStartDate.getDate() + 1); 
+            }
+            
+            // 🟢 [FIX] Duration = End - Start + 1
+            ms._temp_duration = Math.max(1, getDaysDiff(taskStartDate, ms.planned_end) + 1);
             ms._is_locked = (ms.status_progress === 1.0);
             if (!ms.color) ms.color = "#0d6efd";
             if (!ms.description) ms.description = "";
@@ -343,11 +360,38 @@ function initProjectStructureHandlers() {
         $('.ms-color-input').on('change', function () { tempMilestones[$(this).data('idx')].color = $(this).val(); $(this).css('background-color', $(this).val()); });
         $('.btn-delete-ms').on('click', function () { tempMilestones.splice($(this).data('idx'), 1); renderMilestoneList(); recalculateSchedule(); });
     }
+
     function recalculateSchedule() {
-        const startVal = $('#struct-proj-start').val(); if (!startVal) return; let cursor = new Date(startVal), totalDays = 0; const dateInputs = $('.ms-calc-date');
-        tempMilestones.forEach((ms, i) => { const dur = ms._temp_duration || 1; const endDate = addDays(cursor, dur); $(dateInputs[i]).val(`${endDate.toISOString().split('T')[0]} (End)`); cursor = endDate; totalDays += dur; ms._calc_planned_end = endDate.toISOString().split('T')[0]; });
-        $('#struct-total-days').text(totalDays); $('#struct-final-date').text(cursor.toISOString().split('T')[0]);
+        const startVal = $('#struct-proj-start').val();
+        if (!startVal) return; 
+        
+        let cursor = new Date(startVal);
+        let totalDays = 0; 
+        const dateInputs = $('.ms-calc-date');
+        
+        tempMilestones.forEach((ms, i) => { 
+            const dur = ms._temp_duration || 1; 
+            
+            // 🟢 [FIX] End Date = Start + Duration - 1
+            const endDate = addDays(cursor, dur - 1); 
+            $(dateInputs[i]).val(`${endDate.toISOString().split('T')[0]} (End)`); 
+            ms._calc_planned_end = endDate.toISOString().split('T')[0]; 
+            
+            // 🟢 [FIX] Next task starts the day AFTER this task ends
+            cursor = new Date(endDate);
+            cursor.setDate(cursor.getDate() + 1);
+            
+            totalDays += dur; 
+        });
+        
+        $('#struct-total-days').text(totalDays); 
+        
+        // Final project end date is the end date of the last task
+        const finalDate = new Date(cursor);
+        finalDate.setDate(finalDate.getDate() - 1); 
+        $('#struct-final-date').text(finalDate.toISOString().split('T')[0]);
     }
+
     $('#btn-add-milestone').click(function () { tempMilestones.push({ name: "New Milestone", description: "", status_progress: 0.0, _temp_duration: 10, _is_locked: false, color: "#0d6efd", demand_due_date: "" }); renderMilestoneList(); recalculateSchedule(); });
     $('#struct-proj-start').on('change', function () { recalculateSchedule(); });
 

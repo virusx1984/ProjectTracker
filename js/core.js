@@ -67,8 +67,8 @@ function reviseProjectData(originalData) {
                         currentPlannedEnd.setDate(currentPlannedEnd.getDate() + 10);
                     }
 
-                    // Duration should be at least 1 day
-                    let durationDays = Math.max(1, getDiff(prevPlannedEnd, currentPlannedEnd));
+                    // 🟢 [FIX] Duration = End - Start + 1
+                    let durationDays = Math.max(1, getDiff(prevPlannedEnd, currentPlannedEnd) + 1);
                     ms.duration_days = durationDays; // Store for UI
 
                     // --- B. Determine Revised Start Date ---
@@ -82,9 +82,9 @@ function reviseProjectData(originalData) {
                     }
 
                     // --- C. Determine Revised End Date ---
-                    // End = New Start + Duration
+                    // 🟢 [FIX] End = Start + Duration - 1
                     let newEnd = new Date(newStart);
-                    newEnd.setDate(newEnd.getDate() + durationDays);
+                    newEnd.setDate(newEnd.getDate() + durationDays - 1);
 
                     // --- D. Write Back to Data ---
                     ms.revised_start_date = toLocalYMD(newStart);
