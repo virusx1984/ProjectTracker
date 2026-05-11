@@ -877,3 +877,11 @@ div.status-strip.bg-critical {
     margin-left: -1px; /* Overlap to maintain seamless line with input */
     z-index: 4; /* Ensure it stays clickable over input borders */
 }
+
+/* 🌟 [NEW] Hover effect for workspace title editing */
+.workspace-title-wrapper:hover .edit-icon {
+    opacity: 1 !important;
+}
+.workspace-title-wrapper:hover #tracker-workspace-title {
+    color: #0d6efd !important; /* Bootstrap primary blue */
+}

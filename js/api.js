@@ -4,7 +4,7 @@
  */
 
 // 🟢 [MODIFIED] Added /ptp namespace to match backend routing
-const BASE_URL = 'http://localhost:5000/api/v1/ptp'; // Update port/domain as needed for production
+const BASE_URL = '/api/v1/ptp'; // Update port/domain as needed for production
 
 const TrackerAPI = {
     

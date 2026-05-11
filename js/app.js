@@ -24,18 +24,21 @@ function toggleWorkspaceState() {
         $('#welcome-canvas').addClass('d-none');
         $('#main-workspace').removeClass('d-none').addClass('d-flex');
         
-        // Show home button and update title
         $('#btn-return-home').removeClass('d-none');
-        if (rawTrackerData.meta && rawTrackerData.meta.title) {
-            $('#tracker-main-title').text(rawTrackerData.meta.title);
+        
+        let wsTitle = "Untitled Workspace";
+        if (rawTrackerData && rawTrackerData.meta && rawTrackerData.meta.title) {
+            wsTitle = rawTrackerData.meta.title;
         }
+        $('#tracker-workspace-title').text(wsTitle);
+        
     } else {
         $('#welcome-canvas').removeClass('d-none');
         $('#main-workspace').addClass('d-none').removeClass('d-flex');
         
-        // Hide home button and reset title
         $('#btn-return-home').addClass('d-none');
-        $('#tracker-main-title').text("ProjectTracker Pro");
+        
+        $('#tracker-workspace-title').text("Untitled Workspace");
     }
 }
 
@@ -60,56 +63,117 @@ function runPipeline() {
     renderTracker(currentRevisedData);
 }
 
-// Global Controls
+
+/**
+ * Initialize all global UI controls (Zoom, Search, Workspace Management)
+ */
 function initGlobalControls() {
-    // [MODIFIED] Smooth Zoom Logic (Multiplicative)
+    
+    // ==========================================
+    // 1. View & Zoom Controls
+    // ==========================================
+    $('#btn-expand-all').click(function() {
+        $('.project-row:not(.group-row)').show();
+        $('.bi-chevron-right').removeClass('bi-chevron-right').addClass('bi-chevron-down');
+    });
 
-    // Zoom In: Increase by 25% each click
-    $('#btn-zoom-in').click(function () {
-        if (pixelsPerDay < 50) {
-            pixelsPerDay = pixelsPerDay * 1.25;
-            renderTracker(currentRevisedData);
+    $('#btn-collapse-all').click(function() {
+        $('.project-row:not(.group-row)').hide();
+        $('.bi-chevron-down').removeClass('bi-chevron-down').addClass('bi-chevron-right');
+    });
+
+    $('#btn-zoom-in').click(function() {
+        ZOOM_LEVEL = Math.min(ZOOM_LEVEL + 0.2, 2.0);
+        runPipeline();
+    });
+
+    $('#btn-zoom-out').click(function() {
+        ZOOM_LEVEL = Math.max(ZOOM_LEVEL - 0.2, 0.5);
+        runPipeline();
+    });
+
+    $('#btn-zoom-reset').click(function() {
+        ZOOM_LEVEL = 1.0;
+        runPipeline();
+    });
+
+    // ==========================================
+    // 2. Search & Filter Controls
+    // ==========================================
+    $('#btn-search-clear').click(function() {
+        $('#project-search-input').val('');
+        $(this).addClass('d-none');
+        runPipeline();
+    });
+
+    $('#project-search-input').on('input', function() {
+        if ($(this).val().length > 0) {
+            $('#btn-search-clear').removeClass('d-none');
+        } else {
+            $('#btn-search-clear').addClass('d-none');
         }
+        runPipeline();
     });
 
-    // Zoom Out: Decrease by 20% each click (Inverse of 1.25)
-    // Lower bound set to 0.25 to prevent it from becoming invisible
-    $('#btn-zoom-out').click(function () {
-        if (pixelsPerDay > 0.15) {
-            pixelsPerDay = pixelsPerDay * 0.8;
-            renderTracker(currentRevisedData);
+    $('#btn-search-regex').click(function() {
+        $(this).toggleClass('active');
+        // Toggle visual state of the regex button
+        if ($(this).hasClass('active')) {
+            $(this).removeClass('btn-outline-secondary').addClass('btn-primary');
+        } else {
+            $(this).removeClass('btn-primary').addClass('btn-outline-secondary');
         }
+        runPipeline();
     });
 
-    // Reset
-    $('#btn-zoom-reset').click(function () {
-        pixelsPerDay = CONFIG.DEFAULT_PIXELS_PER_DAY;
-        renderTracker(currentRevisedData);
-    });
-
-    // Group Expansion (Use .data)
-    $('#btn-expand-all').click(function () {
-        if (currentFilter === 'ALL' && currentRevisedData.data) {
-            currentRevisedData.data.forEach(g => g.is_expanded = true);
-            renderTracker(currentRevisedData);
-        }
-    });
-    $('#btn-collapse-all').click(function () {
-        if (currentFilter === 'ALL' && currentRevisedData.data) {
-            currentRevisedData.data.forEach(g => g.is_expanded = false);
-            renderTracker(currentRevisedData);
-        }
-    });
-
-    // --- [NEW] Return Home / Close Workspace Action ---
+    // ==========================================
+    // 3. Workspace Level Controls (Level 1)
+    // ==========================================
+    
+    // Action: Return Home / Close Workspace securely
     $('#btn-return-home').off('click').on('click', function() {
         if (!rawTrackerData) return;
         
         showConfirm("⚠️ Close current workspace?\nAny unsaved changes will be lost.", function() {
-            rawTrackerData = null; 
-            runPipeline(); 
+            rawTrackerData = null; // Clear memory
+            runPipeline();         // Re-render UI to zero-state
             showToast("Workspace closed securely.", "info");
         });
+    });
+
+    // Action: Populate Workspace Settings Modal when opened
+    $('#workspaceSettingsModal').on('show.bs.modal', function () {
+        if (rawTrackerData && rawTrackerData.meta) {
+            $('#meta-title-input').val(rawTrackerData.meta.title || "");
+            $('#meta-version-input').val(rawTrackerData.meta.version || "");
+            $('#meta-date-input').val(rawTrackerData.meta.last_updated || ""); 
+        }
+    });
+
+    // Action: Save changes from Workspace Settings Modal
+    $('#btn-save-workspace-meta').click(function() {
+        const newTitle = $('#meta-title-input').val().trim();
+        
+        if (!rawTrackerData) {
+            rawTrackerData = { meta: {}, data: [] };
+        }
+        if (!rawTrackerData.meta) {
+            rawTrackerData.meta = {};
+        }
+        
+        // Update the data model
+        rawTrackerData.meta.title = newTitle || "Untitled Workspace";
+        rawTrackerData.meta.version = $('#meta-version-input').val().trim();
+        rawTrackerData.meta.last_updated = $('#meta-date-input').val().trim();
+        
+        // Trigger UI refresh to show the new title instantly
+        runPipeline(); 
+        
+        // Close modal and show success feedback
+        const modalEl = document.getElementById('workspaceSettingsModal');
+        const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modalInstance.hide();
+        showToast("Workspace settings updated.", "success");
     });
 }
 
@@ -126,7 +190,6 @@ $(document).ready(function () {
     initProjectStructureHandlers();
     initDataManager();
     initCreateProjectHandler();
-    initMetaHandler();
     initDataSyncHandlers();
 
     // 4. Enable Dragging
@@ -135,7 +198,6 @@ $(document).ready(function () {
 
     // 🟢 [FIX] Register the new modals for dragging
     makeModalDraggable('#dataSettingsModal');
-    makeModalDraggable('#projectSettingsModal');
     makeModalDraggable('#createProjectModal');
 
     // 5. Initial Run
