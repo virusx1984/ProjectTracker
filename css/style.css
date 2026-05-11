@@ -69,7 +69,7 @@ body {
     border: 1px solid #dee2e6;
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-    max-height: 650px;
+    height: calc(100vh - 200px); /* Original: max-height: 650px;*/
     overflow: auto;
     scrollbar-width: thin;
     scrollbar-color: #adb5bd #f1f3f5;
